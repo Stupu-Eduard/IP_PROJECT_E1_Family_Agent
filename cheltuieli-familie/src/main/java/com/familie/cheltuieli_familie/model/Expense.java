@@ -5,17 +5,17 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "cheltuieli")
+@Table(name = "expenses")
 @Data
-public class Cheltuiala {
+public class Expense {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private BigDecimal suma;
-    private String descriere;
+    private BigDecimal sum;
+    private String description;
 
     @ManyToOne
-    @JoinColumn(name = "categorie_id")
-    private Categorie categorie;
+    @JoinColumn(name = "category_id")
+    private Category category;
 }
