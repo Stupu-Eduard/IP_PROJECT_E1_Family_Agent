@@ -17,6 +17,6 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(name = "password_h", nullable = false)
+    @Column(name = "password_h", nullable = false) // schimbare nume coloana
     private String parola;
 }
