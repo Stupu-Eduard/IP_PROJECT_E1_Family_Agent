@@ -7,9 +7,10 @@ import lombok.Data;
 @Table(name = "families")
 @Data
 public class Family {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private String nume;
 }
