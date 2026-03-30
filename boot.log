@@ -1,0 +1,94 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.proiect:family-agent >----------------------
+[INFO] Building family-agent 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.4:run (default-cli) > test-compile @ family-agent >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ family-agent ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ family-agent ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 25 source files with javac [debug release 21] to target/classes
+[WARNING] /home/teodor/IP_PROJECT_E1_Family_Agent/src/main/java/com/proiect/model/ExpenseEntityDumitrita.java:[35,27] @Builder will ignore the initializing expression entirely. If you want the initializing expression to serve as default, add @Builder.Default. If it is not supposed to be settable during building, make the field final.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ family-agent ---
+[INFO] skip non existing resourceDirectory /home/teodor/IP_PROJECT_E1_Family_Agent/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ family-agent ---
+[INFO] Changes detected - recompiling the module! :dependency
+[INFO] Compiling 2 source files with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] <<< spring-boot:3.2.4:run (default-cli) < test-compile @ family-agent <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.4:run (default-cli) @ family-agent ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.4)
+
+2026-03-30T20:38:13.865+03:00  INFO 28697 --- [           main] com.proiect.FamilyAgentApplication       : Starting FamilyAgentApplication using Java 21.0.10 with PID 28697 (/home/teodor/IP_PROJECT_E1_Family_Agent/target/classes started by teodor in /home/teodor/IP_PROJECT_E1_Family_Agent)
+2026-03-30T20:38:13.866+03:00  INFO 28697 --- [           main] com.proiect.FamilyAgentApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-03-30T20:38:14.214+03:00  INFO 28697 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-30T20:38:14.250+03:00  INFO 28697 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 30 ms. Found 2 JPA repository interfaces.
+2026-03-30T20:38:14.530+03:00  INFO 28697 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-30T20:38:14.538+03:00  INFO 28697 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-30T20:38:14.538+03:00  INFO 28697 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-03-30T20:38:14.574+03:00  INFO 28697 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-30T20:38:14.575+03:00  INFO 28697 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 682 ms
+2026-03-30T20:38:14.655+03:00  INFO 28697 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-30T20:38:14.681+03:00  INFO 28697 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-03-30T20:38:14.697+03:00  INFO 28697 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-30T20:38:14.811+03:00  INFO 28697 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-30T20:38:14.825+03:00  INFO 28697 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-30T20:38:14.909+03:00  INFO 28697 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@23e2c1ca
+2026-03-30T20:38:14.910+03:00  INFO 28697 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-30T20:38:15.364+03:00  INFO 28697 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-30T20:38:15.399+03:00  INFO 28697 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-30T20:38:15.904+03:00  WARN 28697 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-30T20:38:16.095+03:00  INFO 28697 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-03-30T20:38:16.100+03:00  INFO 28697 --- [           main] com.proiect.FamilyAgentApplication       : Started FamilyAgentApplication in 2.478 seconds (process running for 2.667)
+2026-03-30T20:38:48.502+03:00  INFO 28697 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-30T20:38:48.503+03:00  INFO 28697 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-30T20:38:48.505+03:00  INFO 28697 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-03-30T20:38:48.596+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.ExpensePipelineService       : Starting pipeline for raw text: Astazi 24 Aprilie, am mancat la KFC din mall 45.5 lei pe un meniu.
+2026-03-30T20:38:52.468+03:00  INFO 28697 --- [nio-8080-exec-1] com.proiect.service.ExtractionService    : AI Raw Extraction: ```json
+{
+  "amount": 45.5,
+  "category": "food",
+  "location": "KFC din mall",
+  "person": null,
+  "transactionDate": "2025-04-24"
+}
+```
+2026-03-30T20:38:52.468+03:00  INFO 28697 --- [nio-8080-exec-1] com.proiect.service.ExtractionService    : AI Cleaned JSON: {
+  "amount": 45.5,
+  "category": "food",
+  "location": "KFC din mall",
+  "person": null,
+  "transactionDate": "2025-04-24"
+}
+
+Hibernate: insert into expenses (amount,category,created_at,location,person,raw_input,transaction_date) values (?,?,?,?,?,?,?)
+2026-03-30T20:38:52.493+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.ExpensePipelineService       : Extraction result: ExtractionResponse(amount=45.5, category=food, location=KFC din mall, person=Familie, transactionDate=2026-03-30T20:38:52.472433638, rawInput=Astazi 24 Aprilie, am mancat la KFC din mall 45.5 lei pe un meniu.)
+Hibernate: insert into expense_entity (amount,category,date) values (?,?,?)
+2026-03-30T20:38:52.496+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.ExpensePipelineService       : Saved entity to SQL Database: 4
+2026-03-30T20:38:52.536+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.ExpensePipelineService       : Sent dummy vector to Alexia's Vector Repository.
+2026-03-30T20:38:52.537+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.PipelineValidationService    : Validating persistence for ID: 4
+Hibernate: select count(*) from expense_entity ee1_0 where ee1_0.id=?
+2026-03-30T20:38:52.726+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.PipelineValidationService    : Entity ID 4 confirmed in Qdrant vector store.
+2026-03-30T20:38:52.726+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.PipelineValidationService    : Validation successful for ID: 4
+2026-03-30T20:38:52.726+03:00  INFO 28697 --- [nio-8080-exec-1] c.p.service.ExpensePipelineService       : Pipeline completed successfully for ID: 4
+2026-03-30T21:17:12.887+03:00  INFO 28697 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-03-30T21:17:12.891+03:00  INFO 28697 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-30T21:17:12.893+03:00  INFO 28697 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
