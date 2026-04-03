@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* Definirea temei personalizate conform standardelor v4 */
+@theme {
+    /* Paleta Sage Green */
+    --color-sage-50: #f2f5f2;
+    --color-sage-100: #e1e9e1;
+    --color-sage-200: #c5d4c5;
+    --color-sage-300: #a4bca4;
+    --color-sage-400: #819f81;
+    --color-sage-500: #668266; /* Culoarea Principală */
+    --color-sage-600: #516951;
+    --color-sage-700: #425542;
+    --color-sage-800: #364436;
+    --color-sage-900: #2f3a2f;
+    --color-sage-950: #191e19;
+
+    /* Definirea Animației de intrare (Fade In Up) */
+    --animate-fade-in-up: fade-in-up 0.6s ease-out forwards;
+
+    @keyframes fade-in-up {
+        0% {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+/* Setări globale pentru font și fundal general */
+:root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    background-color: #fdfdfc; /* Un fundal crem foarte deschis, cald */
+    color: #1a1a1a;
+}
