@@ -13,7 +13,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ./cheltuieli-familie
     steps:
       - name: Trage codul de pe GitHub
         uses: actions/checkout@v4
@@ -40,9 +42,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
+          source: "cheltuieli-familie/target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
           target: "/root/FamilyAgent/target/" # Il punem unde Dockerfile-ul de pe server îl asteapta
-          strip_components: 1
+          strip_components: 2
 
       - name: Reconstruieste și Restarteaza Docker pe Server
         if: github.ref == 'refs/heads/main'
