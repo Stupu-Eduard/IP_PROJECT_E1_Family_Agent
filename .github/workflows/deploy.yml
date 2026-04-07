@@ -57,3 +57,14 @@ jobs:
             cd /root/FamilyAgent/
             # Folosim Dockerfile-ul existent pe server pentru a crea noua imagine
             docker compose up -d --build backend
+      - name: Trimite notificare pe Discord
+        uses: Ilshidur/action-discord@master
+        if: always() 
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USERNAME: "GitHub Actions"
+          DISCORD_AVATAR: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+        with:
+          args: |
+            Avem un nou update de la **${{ github.actor }}** pe branch-ul `${{ github.ref_name }}`!
+            Statusul verificării: **${{ job.status }}** 🚀
