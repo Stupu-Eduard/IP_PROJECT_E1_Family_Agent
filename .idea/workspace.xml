@@ -4,14 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="369cf640-f479-4c0f-b9c7-19490d2c8fbf" name="Changes" comment="added test data for expense_items">
-      <change afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/db/h2_tests/V10__columns_expenses_expenseitem_h2.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cheltuieli-familie/src/test/java/com/familie/cheltuieli_familie/repository/ExpenseRepositoryTest.java" afterDir="false" />
+    <list default="true" id="369cf640-f479-4c0f-b9c7-19490d2c8fbf" name="Changes" comment="configured h2 tests and the migration scripts to work">
+      <change afterPath="$PROJECT_DIR$/cheltuieli-familie/src/test/java/com/familie/cheltuieli_familie/repository/ExpenseItemRepositoryTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/db/migration/V10__columns_expenses_expenseitem.sql" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/db/postgres/V10__columns_expenses_expenseitem.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/db/migration/V7__enable_postGIS.sql" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/resources/db/postgis/V7__enable_postGIS.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/test/resources/application-test.properties" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/test/resources/application-test.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/Category.java" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/Category.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/Family.java" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/Family.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/FamilyMember.java" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/FamilyMember.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/cheltuieli-familie/src/main/java/com/familie/cheltuieli_familie/model/User.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,40 +71,43 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.CheltuieliFamilieApplication.executor": "Run",
-    "JUnit.CheltuieliFamilieApplicationTests.executor": "Run",
-    "JUnit.ExpenseRepositoryTest.executor": "Run",
-    "JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor": "Run",
-    "Maven.cheltuieli-familie [clean].executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "Spring Boot.CheltuieliFamilieApplication.executor": "Run",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/crist/IdeaProjects/Copiere cheltuieli_familie_db/cheltuieli-familie/src/test/resources/db/migration",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.CheltuieliFamilieApplication.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CheltuieliFamilieApplicationTests.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.shouldDeleteExpenseItem.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseRepositoryTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.cheltuieli-familie [clean].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.CheltuieliFamilieApplication.executor&quot;: &quot;Run&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/crist/IdeaProjects/Copiere cheltuieli_familie_db/cheltuieli-familie/src/test/resources/db/migration&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\crist\IdeaProjects\Copiere cheltuieli_familie_db\cheltuieli-familie\src\test\resources\db\migration" />
@@ -124,7 +126,54 @@
       <recent name="com.familie.cheltuieli_familie.repository" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.CheltuieliFamilieApplication">
+  <component name="RunManager" selected="JUnit.ExpenseItemRepositoryTest">
+    <configuration name="ExpenseItemRepositoryTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="cheltuieli-familie" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseItemRepositoryTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExpenseItemRepositoryTest.shouldDeleteExpenseItem" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="cheltuieli-familie" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseItemRepositoryTest" />
+      <option name="METHOD_NAME" value="shouldDeleteExpenseItem" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExpenseItemRepositoryTest.shouldFindAllExpenseItems" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="cheltuieli-familie" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseItemRepositoryTest" />
+      <option name="METHOD_NAME" value="shouldFindAllExpenseItems" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="ExpenseRepositoryTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
@@ -136,20 +185,6 @@
       <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
       <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseRepositoryTest" />
       <option name="TEST_OBJECT" value="class" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="com.familie.cheltuieli_familie in cheltuieli-familie" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="cheltuieli-familie" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.familie.cheltuieli_familie.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie" />
-      <option name="TEST_OBJECT" value="package" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -176,9 +211,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.ExpenseItemRepositoryTest" />
+        <item itemvalue="JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems" />
         <item itemvalue="Spring Boot.CheltuieliFamilieApplication" />
+        <item itemvalue="JUnit.ExpenseItemRepositoryTest.shouldDeleteExpenseItem" />
         <item itemvalue="JUnit.ExpenseRepositoryTest" />
-        <item itemvalue="JUnit.com.familie.cheltuieli_familie in cheltuieli-familie" />
       </list>
     </recent_temporary>
   </component>
@@ -214,7 +251,7 @@
       <workItem from="1775315542409" duration="523000" />
       <workItem from="1775392718829" duration="13000" />
       <workItem from="1775732303053" duration="2171000" />
-      <workItem from="1775734533953" duration="8312000" />
+      <workItem from="1775734533953" duration="11248000" />
     </task>
     <task id="LOCAL-00001" summary="renamed tables and columns in english (V3)">
       <option name="closed" value="true" />
@@ -240,7 +277,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774618870387</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="configured h2 tests and the migration scripts to work">
+      <option name="closed" value="true" />
+      <created>1775744884552</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1775744884552</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -278,7 +323,8 @@
     <MESSAGE value="renamed tables and columns in english (V3)" />
     <MESSAGE value="finished tasks (ExpenseItem entity, updated Location fields and mapped all relations for Expense)" />
     <MESSAGE value="added test data for expense_items" />
-    <option name="LAST_COMMIT_MESSAGE" value="added test data for expense_items" />
+    <MESSAGE value="configured h2 tests and the migration scripts to work" />
+    <option name="LAST_COMMIT_MESSAGE" value="configured h2 tests and the migration scripts to work" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

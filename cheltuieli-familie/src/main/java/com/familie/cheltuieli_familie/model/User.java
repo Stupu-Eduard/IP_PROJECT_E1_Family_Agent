@@ -12,11 +12,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nume;
+    private String name;
 
     @Column(unique = true, nullable = false)
     private String email;
 
     @Column(name = "password_h", nullable = false) // schimbare nume coloana
-    private String parola;
+    private String password_h;
 }
