@@ -12,7 +12,7 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")  // aplică pe TOATE endpoint-urile
             .allowedOrigins(
                 "https://family-agent-frontend.vercel.app",
-                "https://api.family-agent.me",
+                "https://family-agent.me",
                 "http://localhost:4173" //pepntru vite preview
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
