@@ -28,8 +28,14 @@ jobs:
           cache: maven
 
     
-      - name:  Ruleaza Testele JUnit
+      - name: Ruleaza Testele JUnit
         run: mvn test
+
+      - name: Scaneaza codul cu SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
 
       - name: Compileaza aplicatia (Creeaza .jar)
         if: github.ref == 'refs/heads/main'
