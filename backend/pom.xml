@@ -15,9 +15,9 @@
 	<description>Family Agent Project</description>
 	<properties>
 		<java.version>21</java.version>
-		<sonar.organization>Stupu Eduard</sonar.organization>
+		<sonar.organization>stupu-eduard</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.projectKey>stupu-eduard</sonar.projectKey>
+        <sonar.projectKey>Stupu-Eduard_IP_PROJECT_E1_Family_Agent</sonar.projectKey>
 	</properties>
 	<dependencies>
 		<dependency>
