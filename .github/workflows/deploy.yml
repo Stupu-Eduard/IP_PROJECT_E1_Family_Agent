@@ -73,4 +73,4 @@ jobs:
         with:
           args: |
             Avem un nou update de la **${{ github.actor }}** pe branch-ul `${{ github.ref_name }}`!
-            Statusul verificării: **${{ job.status }}** 🚀
+            Statusul verificării: **${{ job.status }}** 🚀 
