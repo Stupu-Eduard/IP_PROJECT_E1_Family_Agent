@@ -28,7 +28,8 @@ class ExpenseRepositoryTest {
         // Arrange
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(100));
-        expense.setDate(LocalDateTime.now());
+        expense.setCurrency("RON");
+        expense.setExpense_date(LocalDateTime.now());
 
         // Act
         Expense saved = expenseRepository.save(expense);
@@ -43,12 +44,13 @@ class ExpenseRepositoryTest {
         // Arrange
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(50));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         expense.setItems(new ArrayList<>());
 
         ExpenseItem item = new ExpenseItem();
-        item.setDescription("Milk");
+        item.setItemName("Milk");
         item.setAmount(BigDecimal.valueOf(10));
+        item.setQuantity(BigDecimal.valueOf(2));
         item.setExpense(expense);
 
         expense.getItems().add(item);

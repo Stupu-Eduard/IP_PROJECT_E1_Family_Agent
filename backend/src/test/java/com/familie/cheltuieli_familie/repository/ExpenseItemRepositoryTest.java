@@ -31,12 +31,13 @@ class ExpenseItemRepositoryTest {
     void shouldGenerateIdWhenExpenseItemIsSaved() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(100));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
-        item.setDescription("Bread");
+        item.setItemName("Bread");
         item.setAmount(BigDecimal.valueOf(5));
+        item.setQuantity(BigDecimal.valueOf(2));
         item.setExpense(savedExpense);
 
         ExpenseItem savedItem = expenseItemRepository.save(item);
@@ -49,16 +50,16 @@ class ExpenseItemRepositoryTest {
     void shouldFindAllExpenseItems() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(50));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item1 = new ExpenseItem();
-        item1.setDescription("Milk");
+        item1.setItemName("Milk");
         item1.setAmount(BigDecimal.valueOf(10));
         item1.setExpense(savedExpense);
 
         ExpenseItem item2 = new ExpenseItem();
-        item2.setDescription("Eggs");
+        item2.setItemName("Eggs");
         item2.setAmount(BigDecimal.valueOf(5));
         item2.setExpense(savedExpense);
 
@@ -67,12 +68,12 @@ class ExpenseItemRepositoryTest {
 
         List<ExpenseItem> items = expenseItemRepository.findAll();
 
-        List<String> itemDescriptions = items.stream()
-                .map(ExpenseItem::getDescription)
+        List<String> itemNames = items.stream()
+                .map(ExpenseItem::getItemName)
                 .collect(Collectors.toList());
 
-        assertTrue(itemDescriptions.contains("Milk"));
-        assertTrue(itemDescriptions.contains("Eggs"));
+        assertTrue(itemNames.contains("Milk"));
+        assertTrue(itemNames.contains("Eggs"));
 
     }
 
@@ -81,11 +82,11 @@ class ExpenseItemRepositoryTest {
     void shouldUpdateExpenseItemAmount() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(70));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
-        item.setDescription("Cheese");
+        item.setItemName("Cheese");
         item.setAmount(BigDecimal.valueOf(15));
         item.setExpense(savedExpense);
 
@@ -102,11 +103,11 @@ class ExpenseItemRepositoryTest {
     void shouldDeleteExpenseItem() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(90));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
-        item.setDescription("Butter");
+        item.setItemName("Butter");
         item.setAmount(BigDecimal.valueOf(12));
         item.setExpense(savedExpense);
 
@@ -123,11 +124,11 @@ class ExpenseItemRepositoryTest {
     void shouldSaveExpenseItemWithExpenseAssociation() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(120));
-        expense.setDate(LocalDateTime.now());
+        expense.setExpense_date(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
-        item.setDescription("Juice");
+        item.setItemName("Juice");
         item.setAmount(BigDecimal.valueOf(8));
         item.setExpense(savedExpense);
 

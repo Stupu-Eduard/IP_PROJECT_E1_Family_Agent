@@ -21,5 +21,5 @@ public class FamilyMember {
     private Family family;
 
     @Column(nullable = false)
-    private String rol;
+    private String role;
 }
