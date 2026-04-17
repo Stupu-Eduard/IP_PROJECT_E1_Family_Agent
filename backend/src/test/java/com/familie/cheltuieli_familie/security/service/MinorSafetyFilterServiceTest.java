@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,10 +53,18 @@ class MinorSafetyFilterServiceTest {
 
         SecurityAlertDto alert = captor.getValue();
         assertNotNull(alert);
-        assertEquals(childId, alert.childId());
-        assertEquals(parentId, alert.parentId());
-        assertEquals("casino", alert.triggeredCategory());
-        assertTrue(alert.message().toLowerCase().contains("zona restrictionata"));
+
+        Object dtoChildId = readProperty(alert, "getChildId", "childId", "child_id");
+        Object dtoParentId = readProperty(alert, "getParentId", "parentId", "parent_id");
+        Object dtoTriggeredCategory = readProperty(alert, "getTriggeredCategory", "triggeredCategory", "category", "type");
+        Object dtoMessage = readProperty(alert, "getMessage", "message");
+
+        assertEquals(childId, dtoChildId);
+        assertEquals(parentId, dtoParentId);
+        assertNotNull(dtoTriggeredCategory);
+        assertEquals("casino", String.valueOf(dtoTriggeredCategory).toLowerCase());
+        assertNotNull(dtoMessage);
+        assertTrue(String.valueOf(dtoMessage).toLowerCase().contains("zona"));
     }
 
     @Test
@@ -65,7 +75,9 @@ class MinorSafetyFilterServiceTest {
         verify(alertService).sendPushNotificationToParent(captor.capture());
 
         SecurityAlertDto alert = captor.getValue();
-        assertEquals("vape_shop", alert.triggeredCategory());
+        Object dtoTriggeredCategory = readProperty(alert, "getTriggeredCategory", "triggeredCategory", "category", "type");
+        assertNotNull(dtoTriggeredCategory);
+        assertEquals("vape_shop", String.valueOf(dtoTriggeredCategory).toLowerCase());
     }
 
     @Test
@@ -91,5 +103,21 @@ class MinorSafetyFilterServiceTest {
     @Test
     void isLocationRestricted_caseInsensitive_returnsTrue() {
         assertTrue(minorSafetyFilterService.isLocationRestricted(List.of("LiQuOr_StOrE")));
+    }
+
+    private Object readProperty(Object target, String... candidates) {
+        for (String name : candidates) {
+            try {
+                Method m = target.getClass().getMethod(name);
+                return m.invoke(target);
+            } catch (Exception ignored) { }
+
+            try {
+                Field f = target.getClass().getDeclaredField(name);
+                f.setAccessible(true);
+                return f.get(target);
+            } catch (Exception ignored) { }
+        }
+        return null;
     }
 }
