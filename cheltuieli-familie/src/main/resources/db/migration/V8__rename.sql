@@ -1,1 +1,0 @@
-ALTER TABLE users RENAME COLUMN password_h TO password_test;
