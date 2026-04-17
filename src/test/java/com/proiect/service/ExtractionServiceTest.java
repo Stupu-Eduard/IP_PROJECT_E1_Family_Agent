@@ -1,13 +1,12 @@
 package com.proiect.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;
 import com.proiect.model.ExpenseEntityDumitrita;
 import com.proiect.repository.ExpenseRepositoryDumitrita;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
-import dev.langchain4j.data.message.AiMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,16 +14,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ExtractionServiceTest {
+class ExtractionServiceTest {
 
     @Mock
     private ChatLanguageModel chatLanguageModel;

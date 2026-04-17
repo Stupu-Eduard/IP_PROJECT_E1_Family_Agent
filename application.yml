@@ -1,16 +1,20 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/family_agent
-    username: user
-    password: password
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:family_agent;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
 qdrant:
   host: localhost
   port: 6333
-  url: http://localhost:6333
   collection-name: expenses

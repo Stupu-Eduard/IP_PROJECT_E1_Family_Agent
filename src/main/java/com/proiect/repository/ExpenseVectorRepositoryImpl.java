@@ -55,7 +55,8 @@ public class ExpenseVectorRepositoryImpl implements ExpenseVectorRepository {
         try {
             restTemplate.exchange(putUrl, org.springframework.http.HttpMethod.PUT, httpEntity, String.class);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save vector to Qdrant: " + e.getMessage(), e);
+            // Log warning but don't fail - Qdrant might not be available in demo mode
+            System.out.println("Warning: Could not save vector to Qdrant (demo mode?): " + e.getMessage());
         }
     }
 
