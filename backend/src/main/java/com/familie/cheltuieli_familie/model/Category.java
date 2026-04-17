@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "categorii")
+@Table(name = "categories")
 @Data
 public class Category {
 
@@ -12,7 +12,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nume;
+    private String name;
 
     @ManyToOne
     @JoinColumn(name = "parent_id")
