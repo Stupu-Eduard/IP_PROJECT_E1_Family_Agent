@@ -4,16 +4,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
 
-// Mock pentru store-ul de autentificare
 vi.mock('../store/authStore', () => ({
     useAuthStore: () => ({
         logout: vi.fn(),
     }),
 }))
 
-describe('ExpenseForm - Manual Entry Validation', () => {
-
-    it('ar trebui să randeze toate elementele formularului pentru introducere manuală', () => {
+describe('ExpenseForm Component (Task 2.2)', () => {
+    it('ar trebui să randeze toate elementele formularului', () => {
         render(
             <BrowserRouter>
                 <ExpenseForm />
@@ -26,18 +24,17 @@ describe('ExpenseForm - Manual Entry Validation', () => {
         expect(screen.getByText('Salvează Cheltuiala')).toBeInTheDocument()
     })
 
-    it('ar trebui să valideze suma minimă și să afișeze eroarea asincron', async () => {
+    it('ar trebui să arate o eroare dacă se încearcă submit cu sumă 0 sau mai mică', () => {
         render(
             <BrowserRouter>
                 <ExpenseForm />
             </BrowserRouter>
         )
 
-        // 1. Selectăm o categorie pentru a trece de validarea 'required' a browserului
-        const categorySelect = screen.getByRole('combobox')
-        fireEvent.change(categorySelect, { target: { value: 'mancare' } })
+        // 1. Selectăm o categorie pentru a trece de atributul 'required'
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'mancare' } })
 
-        // 2. Setăm suma la 0 (valoare invalidă)
+        // 2. Setăm suma la 0
         const amountInput = screen.getByPlaceholderText('Ex: 50.50')
         fireEvent.change(amountInput, { target: { value: '0' } })
 
@@ -45,10 +42,8 @@ describe('ExpenseForm - Manual Entry Validation', () => {
         const submitButton = screen.getByText('Salvează Cheltuiala')
         fireEvent.click(submitButton)
 
-        // 4. Folosim findByText pentru a aștepta apariția mesajului în DOM
-        // findByText = getByText + waitFor
-        const errorMessage = await screen.findByText('Suma trebuie să fie strict mai mare ca 0!')
-        expect(errorMessage).toBeInTheDocument()
+        // Acum eroarea va apărea pe ecran
+        expect(screen.getByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument()
     })
 
     it('ar trebui să simuleze adăugarea cu succes a unei cheltuieli', async () => {
@@ -58,19 +53,18 @@ describe('ExpenseForm - Manual Entry Validation', () => {
             </BrowserRouter>
         )
 
-        // Completăm datele corecte
+        // Completăm formularul
         fireEvent.change(screen.getByPlaceholderText('Ex: 50.50'), { target: { value: '150' } })
         fireEvent.change(screen.getByRole('combobox'), { target: { value: 'mancare' } })
 
-        // Declanșăm salvarea
+        // Trimitem formularul
         fireEvent.click(screen.getByText('Salvează Cheltuiala'))
 
-        // Verificăm starea intermediară (Loading)
+        // Așteptăm să apară starea de încărcare, apoi mesajul de succes
         expect(screen.getByText('Se salvează...')).toBeInTheDocument()
 
-        // Așteptăm mesajul de succes (setTimeout de 1s în componentă)
         await waitFor(() => {
             expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
-        }, { timeout: 2000 })
+        }, { timeout: 1500 }) // Așteptăm să treacă setTimeout-ul de 1 secundă din componentă
     })
 })
