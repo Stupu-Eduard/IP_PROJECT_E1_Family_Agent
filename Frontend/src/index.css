@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* ========================================== */
-/* TEMA PREMIUM: Soft Modern (Tailwind v4)    */
-/* ========================================== */
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
 

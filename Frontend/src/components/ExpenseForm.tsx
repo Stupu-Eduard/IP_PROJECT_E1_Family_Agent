@@ -3,14 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft } from 'lucide-react';
 import type { ExpenseDTO } from '../types/ExpenseDTO';
+import { ImageUploader } from './ImageUploader';
 
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
 
+
   const [amount, setAmount] = useState<number | ''>('');
   const [category, setCategory] = useState<string>('');
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
@@ -32,7 +35,6 @@ const ExpenseForm: React.FC = () => {
 
     setLoading(true);
 
-    // Tipizare strictă prin DTO-ul existent
     const payload: ExpenseDTO = {
       amount: Number(amount),
       category,
@@ -40,6 +42,9 @@ const ExpenseForm: React.FC = () => {
     };
 
     console.log('Date pregătite pentru trimitere:', payload);
+    if (receiptFile) {
+      console.log('Fișier pregătit pentru OCR:', receiptFile.name);
+    }
 
     // Simulare API Call
     setTimeout(() => {
@@ -50,15 +55,18 @@ const ExpenseForm: React.FC = () => {
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
+      setReceiptFile(null);
 
       setTimeout(() => setSuccess(false), 3000);
     }, 1000);
   };
 
+
   const inputClasses = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-3 text-[14px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors";
 
   return (
       <div className="flex-1 w-full bg-[#FAF8F5] font-sans flex flex-col">
+
         {/* Topbar Navigation */}
         <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
@@ -107,6 +115,7 @@ const ExpenseForm: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
               {/* Amount Input */}
               <div>
                 <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
@@ -161,6 +170,14 @@ const ExpenseForm: React.FC = () => {
                     className={inputClasses}
                     required
                 />
+              </div>
+
+              {/* Image Uploader */}
+              <div>
+                <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
+                  Atașament Bon Fiscal (Opțional)
+                </label>
+                <ImageUploader onImageSelect={setReceiptFile} />
               </div>
 
               {/* Submit Button */}
