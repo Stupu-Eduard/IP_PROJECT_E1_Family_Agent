@@ -2,14 +2,17 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import PrivateRoute from './components/PrivateRoute'
 import Dashboard from './pages/Dashboard'
 import LoginForm from './pages/LoginForm'
-import ExpenseForm from './components/ExpenseForm' // 1. IMPORTĂ COMPONENTA AICI
+import ExpenseForm from './components/ExpenseForm'
+import Expenses from './pages/Expenses'
 
 function App() {
     return (
-        <div className="min-h-screen w-full flex flex-col bg-brand-bg font-sans text-brand-dark">
+        <div className="min-h-screen w-full flex flex-col bg-[#FAF8F5] font-sans text-[#2D2926]">
             <Routes>
+                {/* Ruta Publică */}
                 <Route path="/login" element={<LoginForm />} />
 
+                {/* Rute Protejate */}
                 <Route
                     path="/dashboard"
                     element={(
@@ -19,7 +22,6 @@ function App() {
                     )}
                 />
 
-                {/* 2. ADAUGĂ RUTA ASTA - FĂRĂ EA NU SE DESCHIDE NIMIC */}
                 <Route
                     path="/add-expense"
                     element={(
@@ -29,7 +31,16 @@ function App() {
                     )}
                 />
 
-                {/* Ruta Catch-all - acum va ignora /add-expense pentru că are potrivire mai sus */}
+                <Route
+                    path="/expenses"
+                    element={(
+                        <PrivateRoute>
+                            <Expenses />
+                        </PrivateRoute>
+                    )}
+                />
+
+                {/* Ruta Catch-all: Dacă utilizatorul introduce un URL invalid, este trimis la dashboard */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
         </div>
