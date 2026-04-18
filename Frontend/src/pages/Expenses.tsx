@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
-    ArrowLeft, Search, Filter, Edit2, Trash2, Plus,
+    ArrowLeft, Filter, Plus,
     ChevronDown, MapPin, User, Calendar,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, Search
 } from 'lucide-react';
 
 interface ExpenseListDTO {
@@ -18,10 +18,8 @@ interface ExpenseListDTO {
 }
 
 export default function Expenses() {
-
     const navigate = useNavigate();
     const logout = useAuthStore((state) => state.logout);
-    const [searchTerm, setSearchTerm] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = 2;
@@ -38,9 +36,36 @@ export default function Expenses() {
         { id: 4, date: '09.04.2026', category: '🎮 Divertisment', description: 'Abonament Netflix', amount: 60.00, location: 'Online', person: 'Ion' },
     ]);
 
+    // ==========================================
+    // STĂRILE FILTRELOR
+    // ==========================================
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedPerson, setSelectedPerson] = useState('');
+
+    // ==========================================
+    // LOGICA DE FILTRARE (Derived State cu useMemo)
+    // ==========================================
+    const filteredExpenses = useMemo(() => {
+        return expenses.filter((expense) => {
+            // Conversie dată din YYYY-MM-DD (format input) în DD.MM.YYYY (format DTO)
+            let formattedDate = '';
+            if (selectedDate) {
+                formattedDate = selectedDate.split('-').reverse().join('.');
+            }
+
+            const matchesDate = formattedDate === '' || expense.date === formattedDate;
+            const matchesCategory = selectedCategory === '' || expense.category === selectedCategory;
+            const matchesPerson = selectedPerson === '' || expense.person === selectedPerson;
+
+            return matchesDate && matchesCategory && matchesPerson;
+        });
+    }, [expenses, selectedDate, selectedCategory, selectedPerson]);
 
 
-    // Stil reutilizabil pentru inputuri și select-uri
+    // ==========================================
+    // UI / PREZENTARE
+    // ==========================================
     const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
     return (
@@ -83,147 +108,181 @@ export default function Expenses() {
                     </button>
                 </div>
 
-                {/* Filtre */}
+                {/* Filtre Funcționale */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
                     <div className="relative">
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
-                        <input type="date" className={`${inputStyle} pl-10`} title="Perioadă" />
+                        <input
+                            type="date"
+                            className={`${inputStyle} pl-10`}
+                            title="Perioadă"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                        />
                     </div>
                     <div className="relative">
-                        <select className={inputStyle}>
+                        {/* Value-urile trebuie să fie exact ca în DTO pentru o potrivire perfectă */}
+                        <select
+                            className={inputStyle}
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                        >
                             <option value="">Toate Categoriile</option>
-                            <option value="mancare">🍕 Mâncare & Alimente</option>
-                            <option value="facturi">📄 Facturi & Utilități</option>
-                            <option value="transport">🚗 Transport</option>
-                            <option value="divertisment">🎮 Divertisment</option>
+                            <option value="🍕 Mâncare & Alimente">🍕 Mâncare & Alimente</option>
+                            <option value="📄 Facturi & Utilități">📄 Facturi & Utilități</option>
+                            <option value="🚗 Transport">🚗 Transport</option>
+                            <option value="🎮 Divertisment">🎮 Divertisment</option>
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>
                     <div className="relative">
-                        <select className={inputStyle}>
+                        <select
+                            className={inputStyle}
+                            value={selectedPerson}
+                            onChange={(e) => setSelectedPerson(e.target.value)}
+                        >
                             <option value="">Orice Persoană</option>
-                            <option value="maria">Maria</option>
-                            <option value="ion">Ion</option>
+                            <option value="Maria">Maria</option>
+                            <option value="Ion">Ion</option>
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>
-                    <button className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors">
-                        <Filter size={16} /><span>Aplică Filtre</span>
+                    <button
+                        onClick={() => { setSelectedDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+                        className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors"
+                        title="Resetează filtrele"
+                    >
+                        <Filter size={16} /><span>Resetează Filtre</span>
                     </button>
                 </div>
 
-                {/* --- Versiune Mobil (Carduri) --- */}
-                <div className="md:hidden flex flex-col gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.2s' }}>
-                    {expenses.map((expense) => (
-                        <div key={expense.id} className="bg-white border border-[#EDE9E3] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-                            <div className="flex justify-between items-start mb-3">
-                                <div>
-                                    <span className="inline-block px-3 py-1 bg-[#FFF8F2] text-[#7A5C44] rounded-[6px] border border-[#F0DFD0] text-[11px] font-medium mb-2.5">
-                                        {expense.category}
-                                    </span>
-                                    <h3 className="text-[15px] font-medium text-[#2D2926] leading-tight">{expense.description}</h3>
-                                </div>
-                                <span className="text-[16px] font-medium text-[#2D2926] tracking-tight whitespace-nowrap">{expense.amount.toFixed(2)} RON</span>
-                            </div>
-                            <div className="flex flex-col gap-2 text-[12px] text-[#9A8A7C] mt-4 pt-4 border-t border-[#EDE9E3]/50">
-                                <div className="flex items-center gap-2"><Calendar size={14} className="text-[#D4C9BC]" /> {expense.date}</div>
-                                <div className="flex items-center gap-2"><MapPin size={14} className="text-[#D4C9BC]" /> {expense.location}</div>
-                                <div className="flex items-center gap-2"><User size={14} className="text-[#D4C9BC]" /> {expense.person}</div>
-                            </div>
+                {/* Fallback pentru lipsa rezultatelor */}
+                {filteredExpenses.length === 0 && (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 flex flex-col items-center justify-center text-center shadow-sm fade-in-up">
+                        <div className="w-16 h-16 bg-[#FAF8F5] rounded-full flex items-center justify-center mb-4 text-[#C4B9AC]">
+                            <Search size={24} />
                         </div>
-                    ))}
-                </div>
+                        <div className="text-[15px] font-medium text-[#2D2926]">Nu s-au găsit cheltuieli</div>
+                        <div className="text-[13px] text-[#9A8A7C] mt-1">Nu există nicio înregistrare care să corespundă filtrelor selectate.</div>
+                    </div>
+                )}
 
-                {/* --- Versiune Desktop (Tabel) --- */}
-                <div className="hidden md:block bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up" style={{ animationDelay: '0.2s' }}>
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                        <tr className="bg-[#FAF8F5] border-b border-[#EDE9E3]">
-                            <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] cursor-pointer hover:text-[#2D2926] transition-colors w-[15%]">
-                                <div className="flex items-center gap-1.5">Dată <ChevronDown size={14} /></div>
-                            </th>
-                            <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[25%]">Categorie</th>
-                            <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[30%]">Descriere & Locație</th>
-                            <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[15%]">Persoană</th>
-                            <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] text-right cursor-pointer hover:text-[#2D2926] transition-colors w-[15%]">
-                                <div className="flex items-center justify-end gap-1.5">Sumă <ChevronDown size={14} /></div>
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#EDE9E3]">
-                        {expenses.map((expense) => (
-                            <tr key={expense.id} className="hover:bg-[#FAF8F5]/60 transition-colors group">
-                                <td className="px-6 py-4 text-[13px] text-[#9A8A7C] font-medium">{expense.date}</td>
-                                <td className="px-6 py-4">
-                                        <span className="inline-block px-3 py-1 bg-[#FFF8F2] text-[#7A5C44] rounded-[6px] border border-[#F0DFD0] text-[11px] font-medium">
+                {/* --- Versiune Mobil (Carduri) --- */}
+                {filteredExpenses.length > 0 && (
+                    <div className="md:hidden flex flex-col gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        {filteredExpenses.map((expense) => (
+                            <div key={expense.id} className="bg-white border border-[#EDE9E3] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <span className="inline-block px-3 py-1 bg-[#FFF8F2] text-[#7A5C44] rounded-[6px] border border-[#F0DFD0] text-[11px] font-medium mb-2.5">
                                             {expense.category}
                                         </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="text-[14px] font-medium text-[#2D2926] mb-0.5">{expense.description}</div>
-                                    <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-1"><MapPin size={12}/> {expense.location}</div>
-                                </td>
-                                <td className="px-6 py-4 text-[13px] text-[#9A8A7C] flex items-center gap-2"><User size={14} className="text-[#D4C9BC]"/> {expense.person}</td>
-                                <td className="px-6 py-4 text-[15px] font-medium text-right text-[#2D2926]">{expense.amount.toFixed(2)} RON</td>
-                            </tr>
+                                        <h3 className="text-[15px] font-medium text-[#2D2926] leading-tight">{expense.description}</h3>
+                                    </div>
+                                    <span className="text-[16px] font-medium text-[#2D2926] tracking-tight whitespace-nowrap">{expense.amount.toFixed(2)} RON</span>
+                                </div>
+                                <div className="flex flex-col gap-2 text-[12px] text-[#9A8A7C] mt-4 pt-4 border-t border-[#EDE9E3]/50">
+                                    <div className="flex items-center gap-2"><Calendar size={14} className="text-[#D4C9BC]" /> {expense.date}</div>
+                                    <div className="flex items-center gap-2"><MapPin size={14} className="text-[#D4C9BC]" /> {expense.location}</div>
+                                    <div className="flex items-center gap-2"><User size={14} className="text-[#D4C9BC]" /> {expense.person}</div>
+                                </div>
+                            </div>
                         ))}
-                        </tbody>
-                    </table>
+                    </div>
+                )}
 
-                    {/* Paginare Design Nou */}
-                    <div className="bg-white px-6 py-4 border-t border-[#EDE9E3] flex items-center justify-between">
-                        <span className="text-[13px] text-[#9A8A7C]">
-                            Pagina <span className="font-medium text-[#2D2926]">{currentPage}</span> din {totalPages}
-                        </span>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                                className={`w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors ${
-                                    currentPage === 1
-                                        ? 'border border-[#EDE9E3] text-[#D4C9BC] bg-[#FAF8F5] cursor-not-allowed'
-                                        : 'border border-[#EDE9E3] text-[#2D2926] bg-white hover:border-[#C4B9AC]'
-                                }`}
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
+                {/* --- Versiune Desktop (Tabel) --- */}
+                {filteredExpenses.length > 0 && (
+                    <div className="hidden md:block bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                            <tr className="bg-[#FAF8F5] border-b border-[#EDE9E3]">
+                                <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[15%]">
+                                    <div className="flex items-center gap-1.5">Dată</div>
+                                </th>
+                                <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[25%]">Categorie</th>
+                                <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[30%]">Descriere & Locație</th>
+                                <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] w-[15%]">Persoană</th>
+                                <th className="px-6 py-4 text-[11px] font-medium text-[#B8A99A] uppercase tracking-[1px] text-right w-[15%]">
+                                    <div className="flex items-center justify-end gap-1.5">Sumă</div>
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#EDE9E3]">
+                            {filteredExpenses.map((expense) => (
+                                <tr key={expense.id} className="hover:bg-[#FAF8F5]/60 transition-colors group">
+                                    <td className="px-6 py-4 text-[13px] text-[#9A8A7C] font-medium">{expense.date}</td>
+                                    <td className="px-6 py-4">
+                                            <span className="inline-block px-3 py-1 bg-[#FFF8F2] text-[#7A5C44] rounded-[6px] border border-[#F0DFD0] text-[11px] font-medium">
+                                                {expense.category}
+                                            </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-[14px] font-medium text-[#2D2926] mb-0.5">{expense.description}</div>
+                                        <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-1"><MapPin size={12}/> {expense.location}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-[13px] text-[#9A8A7C] flex items-center gap-2"><User size={14} className="text-[#D4C9BC]"/> {expense.person}</td>
+                                    <td className="px-6 py-4 text-[15px] font-medium text-right text-[#2D2926]">{expense.amount.toFixed(2)} RON</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
 
-                            <button
-                                onClick={() => setCurrentPage(1)}
-                                className={`w-8 h-8 rounded-[8px] text-[13px] font-medium transition-colors ${
-                                    currentPage === 1
-                                        ? 'bg-[#2D2926] text-white border border-[#2D2926]'
-                                        : 'border border-[#EDE9E3] text-[#9A8A7C] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926]'
-                                }`}
-                            >
-                                1
-                            </button>
+                        {/* Paginare Design Nou */}
+                        <div className="bg-white px-6 py-4 border-t border-[#EDE9E3] flex items-center justify-between">
+                            <span className="text-[13px] text-[#9A8A7C]">
+                                Pagina <span className="font-medium text-[#2D2926]">{currentPage}</span> din {totalPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className={`w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors ${
+                                        currentPage === 1
+                                            ? 'border border-[#EDE9E3] text-[#D4C9BC] bg-[#FAF8F5] cursor-not-allowed'
+                                            : 'border border-[#EDE9E3] text-[#2D2926] bg-white hover:border-[#C4B9AC]'
+                                    }`}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
 
-                            <button
-                                onClick={() => setCurrentPage(2)}
-                                className={`w-8 h-8 rounded-[8px] text-[13px] font-medium transition-colors ${
-                                    currentPage === 2
-                                        ? 'bg-[#2D2926] text-white border border-[#2D2926]'
-                                        : 'border border-[#EDE9E3] text-[#9A8A7C] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926]'
-                                }`}
-                            >
-                                2
-                            </button>
+                                <button
+                                    onClick={() => setCurrentPage(1)}
+                                    className={`w-8 h-8 rounded-[8px] text-[13px] font-medium transition-colors ${
+                                        currentPage === 1
+                                            ? 'bg-[#2D2926] text-white border border-[#2D2926]'
+                                            : 'border border-[#EDE9E3] text-[#9A8A7C] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926]'
+                                    }`}
+                                >
+                                    1
+                                </button>
 
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                                className={`w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors ${
-                                    currentPage === totalPages
-                                        ? 'border border-[#EDE9E3] text-[#D4C9BC] bg-[#FAF8F5] cursor-not-allowed'
-                                        : 'border border-[#EDE9E3] text-[#2D2926] bg-white hover:border-[#C4B9AC]'
-                                }`}
-                            >
-                                <ChevronRight size={16} />
-                            </button>
+                                <button
+                                    onClick={() => setCurrentPage(2)}
+                                    className={`w-8 h-8 rounded-[8px] text-[13px] font-medium transition-colors ${
+                                        currentPage === 2
+                                            ? 'bg-[#2D2926] text-white border border-[#2D2926]'
+                                            : 'border border-[#EDE9E3] text-[#9A8A7C] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926]'
+                                    }`}
+                                >
+                                    2
+                                </button>
+
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className={`w-8 h-8 rounded-[8px] flex items-center justify-center transition-colors ${
+                                        currentPage === totalPages
+                                            ? 'border border-[#EDE9E3] text-[#D4C9BC] bg-[#FAF8F5] cursor-not-allowed'
+                                            : 'border border-[#EDE9E3] text-[#2D2926] bg-white hover:border-[#C4B9AC]'
+                                    }`}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
             </div>
         </div>
