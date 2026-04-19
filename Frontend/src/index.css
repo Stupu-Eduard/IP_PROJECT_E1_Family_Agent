@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --color-brand-bg: #FAF8F5;
+  --color-brand-dark: #2D2926;
+  --color-brand-accent: #C97B4B;
+  --color-brand-border: #EDE9E3;
+  --color-brand-muted: #9A8A7C;
+  --color-brand-surface: #F4F0EB;
+}
+
+/* 1. Resetare Globală și Aplicare Temă */
+:root {
+  font-family: var(--font-sans);
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. Coloana Vertebrală Flexbox (Prevenirea Turtirii) */
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. Prevenirea overflow-ului pe componente box */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 4. Animații Utilitare Globale */
+.fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
