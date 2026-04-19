@@ -25,6 +25,10 @@ public class SecurityConfig {
                     // Cheltuieli (folosite de frontend pentru harta/istoric)
                     .requestMatchers("/api/v1/expenses/**").permitAll()
 
+                        // Lookups pentru filtre (categoriile/persoanele existente in DB)
+                        .requestMatchers("/api/v1/categories/**").permitAll()
+                        .requestMatchers("/api/v1/users/**").permitAll()
+
                         // Persistare coordonate geocodate in PostGIS
                         .requestMatchers("/api/v1/locations/**").permitAll()
 

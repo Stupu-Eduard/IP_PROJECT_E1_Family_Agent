@@ -5,6 +5,7 @@ import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -19,8 +20,18 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public List<ExpenseListDto> list() {
-        return expenseRepository.findAllWithLocation().stream().map(this::toDto).toList();
+    public List<ExpenseListDto> list(
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String person
+    ) {
+        String categoryFilter = (category == null || category.isBlank()) ? null : category;
+        String personFilter = (person == null || person.isBlank()) ? null : person;
+
+        return expenseRepository.findAllWithLocationFiltered(date, categoryFilter, personFilter)
+                .stream()
+                .map(this::toDto)
+                .toList();
     }
 
     @GetMapping("/{id}")

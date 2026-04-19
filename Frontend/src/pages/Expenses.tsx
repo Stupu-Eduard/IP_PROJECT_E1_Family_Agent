@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { fetchExpenses } from '../services/expenses';
+import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
 import {
     ArrowLeft, Filter, Plus,
     ChevronDown, MapPin, User, Calendar,
@@ -39,15 +40,54 @@ export default function Expenses() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
+    const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+    const [availablePeople, setAvailablePeople] = useState<string[]>([]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const run = async () => {
+            try {
+                const [cats, people] = await Promise.all([
+                    fetchCategoryNames(controller.signal),
+                    fetchUserNames(controller.signal),
+                ]);
+
+                setAvailableCategories((cats ?? []).filter(Boolean));
+                setAvailablePeople((people ?? []).filter(Boolean));
+            } catch {
+                // ignore (fallback: dropdowns will still work if user types/selects)
+            }
+        };
+
+        void run();
+        return () => controller.abort();
+    }, []);
+
+    // ==========================================
+    // STĂRILE FILTRELOR
+    // ==========================================
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedPerson, setSelectedPerson] = useState('');
+
     useEffect(() => {
         let isCancelled = false;
+        const controller = new AbortController();
 
         const run = async () => {
             setIsLoading(true);
             setLoadError(null);
 
             try {
-                const data = await fetchExpenses();
+                const data = await fetchExpenses(
+                    {
+                        date: selectedDate || undefined,
+                        category: selectedCategory || undefined,
+                        person: selectedPerson || undefined,
+                    },
+                    controller.signal,
+                );
 
                 if (isCancelled) return;
 
@@ -95,8 +135,9 @@ export default function Expenses() {
 
         return () => {
             isCancelled = true;
+            controller.abort();
         };
-    }, []);
+    }, [selectedCategory, selectedDate, selectedPerson]);
 
     const openMap = (expense: ExpenseListDTO) => {
         navigate('/expenses/map', {
@@ -112,31 +153,7 @@ export default function Expenses() {
         });
     };
 
-    // ==========================================
-    // STĂRILE FILTRELOR
-    // ==========================================
-    const [selectedDate, setSelectedDate] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedPerson, setSelectedPerson] = useState('');
-
-    // ==========================================
-    // LOGICA DE FILTRARE (Derived State cu useMemo)
-    // ==========================================
-    const filteredExpenses = useMemo(() => {
-        return expenses.filter((expense) => {
-            // Conversie dată din YYYY-MM-DD (format input) în DD.MM.YYYY (format DTO)
-            let formattedDate = '';
-            if (selectedDate) {
-                formattedDate = selectedDate.split('-').reverse().join('.');
-            }
-
-            const matchesDate = formattedDate === '' || expense.date === formattedDate;
-            const matchesCategory = selectedCategory === '' || expense.category === selectedCategory;
-            const matchesPerson = selectedPerson === '' || expense.person === selectedPerson;
-
-            return matchesDate && matchesCategory && matchesPerson;
-        });
-    }, [expenses, selectedDate, selectedCategory, selectedPerson]);
+    const filteredExpenses = expenses;
 
 
     // ==========================================
@@ -197,17 +214,17 @@ export default function Expenses() {
                         />
                     </div>
                     <div className="relative">
-                        {/* Value-urile trebuie să fie exact ca în DTO pentru o potrivire perfectă */}
                         <select
                             className={inputStyle}
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option value="">Toate Categoriile</option>
-                            <option value="🍕 Mâncare & Alimente">🍕 Mâncare & Alimente</option>
-                            <option value="📄 Facturi & Utilități">📄 Facturi & Utilități</option>
-                            <option value="🚗 Transport">🚗 Transport</option>
-                            <option value="🎮 Divertisment">🎮 Divertisment</option>
+                            {availableCategories.map((c) => (
+                                <option key={c} value={c}>
+                                    {c}
+                                </option>
+                            ))}
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>
@@ -218,8 +235,11 @@ export default function Expenses() {
                             onChange={(e) => setSelectedPerson(e.target.value)}
                         >
                             <option value="">Orice Persoană</option>
-                            <option value="Maria">Maria</option>
-                            <option value="Ion">Ion</option>
+                            {availablePeople.map((p) => (
+                                <option key={p} value={p}>
+                                    {p}
+                                </option>
+                            ))}
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>

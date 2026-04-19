@@ -21,7 +21,18 @@ export interface ApiExpenseListDto {
   location: ApiLocationDto | null
 }
 
-export async function fetchExpenses(): Promise<ApiExpenseListDto[]> {
-  const response = await api.get<ApiExpenseListDto[]>('/api/v1/expenses')
+export type ExpenseFilters = {
+  date?: string
+  category?: string
+  person?: string
+}
+
+export async function fetchExpenses(filters?: ExpenseFilters, signal?: AbortSignal): Promise<ApiExpenseListDto[]> {
+  const params: Record<string, string> = {}
+  if (filters?.date) params.date = filters.date
+  if (filters?.category) params.category = filters.category
+  if (filters?.person) params.person = filters.person
+
+  const response = await api.get<ApiExpenseListDto[]>('/api/v1/expenses', { params, signal })
   return response.data
 }
