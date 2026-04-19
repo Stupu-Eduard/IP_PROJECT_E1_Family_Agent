@@ -3,10 +3,10 @@ package com.proiect.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proiect.exception.AmountNotFoundException;
-import com.proiect.model.ExpenseEntityDumitrita;
+import com.proiect.model.ExpenseEntity;
 import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;
-import com.proiect.repository.ExpenseRepositoryDumitrita;
+import com.proiect.repository.ExpenseJpaRepository;
 import com.proiect.util.NormalizerUtil;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 public class ExtractionService {
 
     private final ChatLanguageModel chatLanguageModel;
-    private final ExpenseRepositoryDumitrita expenseRepository;
+    private final ExpenseJpaRepository expenseRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     interface ExtractionAssistant {
@@ -99,18 +99,17 @@ public class ExtractionService {
                 throw new AmountNotFoundException("Nu s-a putut identifica suma tranzacției în textul: " + request.getRawText());
             }
 
-            LocalDateTime transactionDate = NormalizerUtil.normalizeDate(request.getRawText());
-            String currency = root.path("currency").asText("RON");
+            LocalDate transactionDate = NormalizerUtil.normalizeDate(request.getRawText());
             String category = root.path("category").asText("Altele");
             String location = root.path("location").asText("Necunoscut");
             String person = root.path("person").asText("Familie");
 
-            ExpenseEntityDumitrita entity = ExpenseEntityDumitrita.builder()
+            ExpenseEntity entity = ExpenseEntity.builder()
                     .amount(amount)
                     .category(category)
                     .location(location)
                     .person(person)
-                    .transactionDate(transactionDate)
+                    .date(transactionDate)
                     .rawInput(request.getRawText())
                     .build();
 

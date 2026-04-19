@@ -2,8 +2,6 @@ package com.proiect.util;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 public class NormalizerUtil {
 
@@ -29,8 +27,8 @@ public class NormalizerUtil {
         return null;
     }
 
-    public static LocalDateTime normalizeDate(String text) {
-        if (text == null) return LocalDateTime.now();
+    public static LocalDate normalizeDate(String text) {
+        if (text == null) return LocalDate.now();
         
         String cleanText = text.toLowerCase().trim();
         LocalDate date = LocalDate.now();
@@ -41,6 +39,6 @@ public class NormalizerUtil {
             date = date.minusDays(1);
         }
         
-        return LocalDateTime.of(date, LocalTime.now());
+        return date;
     }
 }

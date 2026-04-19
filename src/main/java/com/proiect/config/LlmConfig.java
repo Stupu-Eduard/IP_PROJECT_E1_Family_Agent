@@ -1,7 +1,10 @@
 package com.proiect.config;
 
+import com.proiect.service.AnalyticsAssistant;
+import com.proiect.service.ExpenseTools;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.service.AiServices;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,8 +22,6 @@ public class LlmConfig {
 
     @Bean
     public ChatLanguageModel chatLanguageModel() {
-        // Prefer DeepSeek if available, otherwise fallback to OpenRouter (Nemotron3)
-        // Adjust the base URL and model name based on the provider
         if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
             return OpenAiChatModel.builder()
                     .apiKey(deepseekApiKey)
@@ -33,12 +34,20 @@ public class LlmConfig {
             return OpenAiChatModel.builder()
                     .apiKey(openRouterApiKey)
                     .baseUrl("https://openrouter.ai/api/v1")
-                    .modelName("nvidia/nemotron-3-super-120b-a12b:free") // or similar nemotron3 available in openrouter
+                    .modelName("nvidia/nemotron-4-340b-instruct") 
                     .temperature(0.1)
                     .timeout(Duration.ofSeconds(60))
                     .build();
         } else {
             throw new IllegalStateException("Nu s-a găsit niciun API Key pentru LLM în variabilele de mediu.");
         }
+    }
+
+    @Bean
+    public AnalyticsAssistant analyticsAssistant(ChatLanguageModel chatLanguageModel, ExpenseTools expenseTools) {
+        return AiServices.builder(AnalyticsAssistant.class)
+                .chatLanguageModel(chatLanguageModel)
+                .tools(expenseTools)
+                .build();
     }
 }

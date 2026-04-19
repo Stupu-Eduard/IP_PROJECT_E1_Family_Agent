@@ -8,6 +8,9 @@ import java.util.Properties;
 import java.io.FileInputStream;
 import java.nio.file.Paths;
 
+import org.springframework.test.context.ActiveProfiles;
+
+@ActiveProfiles("test")
 public class ApiConnectivityTest {
 
     @Test

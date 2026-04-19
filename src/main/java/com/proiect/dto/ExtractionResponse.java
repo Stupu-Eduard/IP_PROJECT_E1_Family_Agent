@@ -3,7 +3,7 @@ package com.proiect.dto;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -12,6 +12,6 @@ public class ExtractionResponse {
     private String category;
     private String location;
     private String person;
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
     private String rawInput;
 }

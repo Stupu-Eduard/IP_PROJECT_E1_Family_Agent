@@ -2,8 +2,8 @@ package com.proiect.service;
 
 import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;
-import com.proiect.model.ExpenseEntityDumitrita;
-import com.proiect.repository.ExpenseRepositoryDumitrita;
+import com.proiect.model.ExpenseEntity;
+import com.proiect.repository.ExpenseJpaRepository;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
@@ -23,13 +23,14 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.springframework.test.context.ActiveProfiles("test")
 class ExtractionServiceTest {
 
     @Mock
     private ChatLanguageModel chatLanguageModel;
 
     @Mock
-    private ExpenseRepositoryDumitrita expenseRepository;
+    private ExpenseJpaRepository expenseRepository;
 
     @InjectMocks
     private ExtractionService extractionService;
@@ -60,7 +61,7 @@ class ExtractionServiceTest {
         Response<AiMessage> mockResponse = Response.from(AiMessage.from(VALID_JSON_RSP));
             
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(expenseRepository.save(any())).thenReturn(new ExpenseEntityDumitrita());
+        when(expenseRepository.save(any())).thenReturn(new ExpenseEntity());
 
         // Act
         ExtractionResponse response = extractionService.process(req);
@@ -75,10 +76,10 @@ class ExtractionServiceTest {
         verify(chatLanguageModel, times(1)).generate(anyList());
         
         // Verify Postgres Saving logic (PostgreSQL Validation)
-        ArgumentCaptor<ExpenseEntityDumitrita> entityCaptor = ArgumentCaptor.forClass(ExpenseEntityDumitrita.class);
+        ArgumentCaptor<ExpenseEntity> entityCaptor = ArgumentCaptor.forClass(ExpenseEntity.class);
         verify(expenseRepository, times(1)).save(entityCaptor.capture());
         
-        ExpenseEntityDumitrita savedEntity = entityCaptor.getValue();
+        ExpenseEntity savedEntity = entityCaptor.getValue();
         assertEquals(new BigDecimal("50.50"), savedEntity.getAmount());
         assertEquals("transport", savedEntity.getCategory());
     }

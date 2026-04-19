@@ -32,13 +32,15 @@ public class ExpensePipelineService {
         log.info("Extraction result: {}", extracted);
 
         // save SQL (M1's PostgreSQL)
-        // Note: Using old entity constructor. Alexia/Dumitrita must resolve the Entity shape later!
-        ExpenseEntity entity = new ExpenseEntity();
-        entity.setAmount(extracted.getAmount());
-        entity.setCategory(extracted.getCategory());
-        if (extracted.getTransactionDate() != null) {
-            entity.setDate(extracted.getTransactionDate().toLocalDate());
-        }
+        ExpenseEntity entity = ExpenseEntity.builder()
+                .amount(extracted.getAmount())
+                .category(extracted.getCategory())
+                .location(extracted.getLocation())
+                .person(extracted.getPerson())
+                .date(extracted.getTransactionDate())
+                .rawInput(extracted.getRawInput())
+                .build();
+        
         entity = repository.save(entity);
         log.info("Saved entity to SQL Database: {}", entity.getId());
 

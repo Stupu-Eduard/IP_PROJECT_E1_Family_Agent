@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/vectors")
+@RequestMapping("/v1/vectors")
 public class VectorController {
 
     private final ExpenseVectorRepositoryImpl repository;
