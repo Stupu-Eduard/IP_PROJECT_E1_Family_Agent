@@ -10,9 +10,6 @@ interface ExpenseReportDTO {
 }
 
 export default function Reports() {
-    // ==========================================
-    // LOGICA (100% Intactă)
-    // ==========================================
     const navigate = useNavigate();
     const logout = useAuthStore((state) => state.logout);
 
@@ -80,9 +77,6 @@ export default function Reports() {
         setEndDate('');
     };
 
-    // ==========================================
-    // UI / PREZENTARE (Tema Soft Modern)
-    // ==========================================
 
     const inputStyle = "bg-white border border-[#EDE9E3] rounded-[10px] px-3.5 py-2.5 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors w-[140px]";
     const inputErrorStyle = "!border-red-300 !bg-red-50/50 focus:!border-red-400";
