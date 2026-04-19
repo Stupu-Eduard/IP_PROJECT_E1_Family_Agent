@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import LoginForm from './pages/LoginForm'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
+import ExpenseMap from './pages/ExpenseMap'
 import Reports from './pages/Reports'
 import ChatAI from './components/ChatAi'
 
@@ -22,6 +23,7 @@ function App() {
                 <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                 <Route path="/add-expense" element={<PrivateRoute><ExpenseForm /></PrivateRoute>} />
                 <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
+                <Route path="/expenses/map" element={<PrivateRoute><ExpenseMap /></PrivateRoute>} />
                 <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
 
                 {/* Ruta Catch-all (Redirecționare fallback) */}

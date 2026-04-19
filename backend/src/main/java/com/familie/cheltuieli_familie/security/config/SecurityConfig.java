@@ -22,6 +22,12 @@ public class SecurityConfig {
                         // Rute publice
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
+                    // Cheltuieli (folosite de frontend pentru harta/istoric)
+                    .requestMatchers("/api/v1/expenses/**").permitAll()
+
+                        // Persistare coordonate geocodate in PostGIS
+                        .requestMatchers("/api/v1/locations/**").permitAll()
+
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
                         .requestMatchers("/api/v1/parent/**").hasRole("PARENT")
                         .requestMatchers("/api/v1/alerts/**").hasRole("PARENT")
