@@ -3,8 +3,15 @@ package com.proiect.config;
 import com.proiect.service.AnalyticsAssistant;
 import com.proiect.service.ExpenseTools;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.rag.DefaultRetrievalAugmentor;
+import dev.langchain4j.rag.RetrievalAugmentor;
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.data.segment.TextSegment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +48,36 @@ public class LlmConfig {
         } else {
             throw new IllegalStateException("Nu s-a găsit niciun API Key pentru LLM în variabilele de mediu.");
         }
+    }
+
+    @Bean
+    public RetrievalAugmentor retrievalAugmentor(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+        EmbeddingStoreContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
+                .maxResults(5)
+                .build();
+
+        return DefaultRetrievalAugmentor.builder()
+                .contentRetriever(retriever)
+                .build();
+    }
+
+    public interface RagAssistant {
+        @SystemMessage("""
+            Ești un asistent de cheltuieli de familie. Răspunde la întrebările despre cheltuieli folosind DOAR contextul furnizat.
+            Dacă contextul nu conține suficiente informații pentru a răspunde exact la întrebare, spune "Nu am suficiente date."
+            Răspunde în limba română.
+            """)
+        String chat(String userMessage);
+    }
+
+    @Bean
+    public RagAssistant ragAssistant(ChatLanguageModel chatLanguageModel, RetrievalAugmentor retrievalAugmentor) {
+        return AiServices.builder(RagAssistant.class)
+                .chatLanguageModel(chatLanguageModel)
+                .retrievalAugmentor(retrievalAugmentor)
+                .build();
     }
 
     @Bean

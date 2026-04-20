@@ -6,7 +6,6 @@ import com.proiect.exception.AmountNotFoundException;
 import com.proiect.model.ExpenseEntity;
 import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;
-import com.proiect.repository.ExpenseJpaRepository;
 import com.proiect.util.NormalizerUtil;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
@@ -26,7 +25,7 @@ import java.time.LocalDate;
 public class ExtractionService {
 
     private final ChatLanguageModel chatLanguageModel;
-    private final ExpenseJpaRepository expenseRepository;
+    private final SyncService syncService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     interface ExtractionAssistant {
@@ -113,7 +112,7 @@ public class ExtractionService {
                     .rawInput(request.getRawText())
                     .build();
 
-            expenseRepository.save(entity);
+            syncService.syncExpense(entity);
 
             return ExtractionResponse.builder()
                     .amount(amount)

@@ -2,7 +2,6 @@ package com.proiect.service;
 
 import com.proiect.model.ExpenseEntity;
 import com.proiect.repository.ExpenseJpaRepository;
-import com.proiect.repository.ExpenseVectorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +16,7 @@ public class SyncService {
     private ExpenseJpaRepository jpaRepository;
 
     @Autowired
-    private EmbeddingService embeddingService;
-
-    @Autowired
-    private ExpenseVectorRepository vectorRepository;
+    private QdrantVectorService qdrantVectorService;
 
     /**
      * Synchronizes the given expense by saving it to the database and vector store.
@@ -33,13 +29,12 @@ public class SyncService {
         // 1. Save to ExpenseJpaRepository
         ExpenseEntity savedEntity = jpaRepository.save(entity);
 
-        // 2. Calls EmbeddingService to get the vector
-        // Using category as the text for embedding
-        String textToEmbed = savedEntity.getCategory() != null ? savedEntity.getCategory() : "";
-        float[] vector = embeddingService.getEmbedding(textToEmbed);
-
-        // 3. Saves to ExpenseVectorRepository
-        vectorRepository.saveVector(savedEntity, vector);
+        // 2. Save to Vector Store via QdrantVectorService
+        // It uses rawInput or category internally. We ensure rawInput is set.
+        if (savedEntity.getRawInput() == null && savedEntity.getCategory() != null) {
+            savedEntity.setRawInput(savedEntity.getCategory());
+        }
+        qdrantVectorService.storeExpense(savedEntity);
 
         return savedEntity;
     }
