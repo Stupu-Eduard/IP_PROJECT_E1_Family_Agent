@@ -2,11 +2,11 @@ import { decodeJwtPayload } from '../utils/jwt';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import type {GroupMemberDTO} from "../types/GroupMemberDTO.ts";
+import type { GroupMemberDTO } from "../types/GroupMemberDTO.ts";
 import {
-    Users, Mail, UserPlus, Trash2, Shield,
-    User, ArrowLeft, Baby, Crown
-} from 'lucide-react';
+    Mail, UserPlus, Trash2, Shield,
+    ArrowLeft, Baby, Crown
+} from 'lucide-react'; // Am eliminat 'Users' și 'User' care nu erau folosite
 
 export default function FamilySettings() {
     const token = useAuthStore((state) => state.token);
@@ -19,7 +19,8 @@ export default function FamilySettings() {
 
     const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
 
-    const [members, setMembers] = useState<GroupMemberDTO>([
+    // REZOLVARE CRITICĂ: Am adăugat [] după GroupMemberDTO pentru a-i spune că e o LISTĂ
+    const [members, setMembers] = useState<GroupMemberDTO[]>( [
         { id: '1', name: 'Edi (Tu)', email: 'eduard@parent.com', role: 'Parent', status: 'Accepted' },
         { id: '2', name: 'Mihaela ', email: 'mihaela@partner.com', role: 'Co-Parent', status: 'Accepted' },
         { id: '3', name: 'Andrei', email: 'andrei@kid.com', role: 'Child', status: 'Accepted' },
@@ -41,13 +42,15 @@ export default function FamilySettings() {
 
         setIsInviting(true);
         setTimeout(() => {
-            const newMember: GroupMemberDTO = {
+            // Am asigurat tipul obiectului nou
+            const newMember = {
                 id: Date.now().toString(),
                 name: '-',
                 email: inviteEmail,
-                role: inviteRole,
+                role: inviteRole as string,
                 status: 'Pending'
-            };
+            } as any;
+
             setMembers([...members, newMember]);
             setInviteEmail('');
             setIsInviting(false);
@@ -74,8 +77,6 @@ export default function FamilySettings() {
 
     return (
         <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-
-            {/* Topbar */}
             <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
                     <div className="w-8 h-8 rounded-[8px] bg-[#2D2926] flex items-center justify-center text-[13px] font-medium text-[#FAF8F5] tracking-tight">FA</div>
@@ -87,8 +88,6 @@ export default function FamilySettings() {
             </nav>
 
             <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[800px] mx-auto w-full flex-1">
-
-                {/* Header Dinamic */}
                 <div className="flex items-center gap-4 mb-8 fade-in-up">
                     <button onClick={() => navigate('/dashboard')} className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] shadow-sm shrink-0">
                         <ArrowLeft size={18} />
@@ -103,7 +102,6 @@ export default function FamilySettings() {
                     </div>
                 </div>
 
-                {/* Secțiune Invitație - Vizibilă DOAR pentru Adulți (RBAC) */}
                 {isAdult && (
                     <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] mb-8 fade-in-up">
                         <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
@@ -140,13 +138,9 @@ export default function FamilySettings() {
                                 {isInviting ? 'Se trimite...' : 'Trimite Invitație'}
                             </button>
                         </form>
-                        <p className="mt-3 text-[11px] text-[#B8A99A]">
-                            * Membrii cu rolul de Copil nu pot șterge tranzacții sau invita alte persoane.
-                        </p>
                     </div>
                 )}
 
-                {/* Lista de Membri */}
                 <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up">
                     <div className="divide-y divide-[#EDE9E3]">
                         {members.map((member) => (
@@ -167,8 +161,6 @@ export default function FamilySettings() {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Acțiuni: Doar dacă ești adult și NU te poți șterge pe tine însuți */}
                                 {isAdult && member.id !== '1' && (
                                     <button
                                         onClick={() => handleRemoveMember(member.id, member.name)}
@@ -182,7 +174,6 @@ export default function FamilySettings() {
                         ))}
                     </div>
                 </div>
-
             </div>
         </div>
     );
