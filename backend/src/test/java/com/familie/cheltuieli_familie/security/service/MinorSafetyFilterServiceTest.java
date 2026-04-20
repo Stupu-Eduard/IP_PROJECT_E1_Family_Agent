@@ -1,4 +1,4 @@
-package com.familie.cheltuieli_familie.service;
+package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.security.service.AlertService;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
