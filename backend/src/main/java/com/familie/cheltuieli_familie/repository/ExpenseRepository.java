@@ -14,110 +14,110 @@ import java.util.List;
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
-	interface ExpenseWithLocationProjection {
-		Long getId();
+    interface ExpenseWithLocationProjection {
+        Long getId();
 
-		BigDecimal getAmount();
+        BigDecimal getAmount();
 
-		String getCurrency();
+        String getCurrency();
 
-		String getDescription();
+        String getDescription();
 
-		LocalDateTime getExpenseDate();
+        LocalDateTime getExpenseDate();
 
-		String getCategory();
+        String getCategory();
 
-		String getPerson();
+        String getPerson();
 
-		Long getLocationId();
+        Long getLocationId();
 
-		String getStore();
+        String getStore();
 
-		String getAddress();
+        String getAddress();
 
-		String getCity();
+        String getCity();
 
-		String getCountry();
+        String getCountry();
 
-		Double getLat();
+        Double getLat();
 
-		Double getLng();
-	}
+        Double getLng();
+    }
 
-	@Query(value = """
-			SELECT
-				e.id AS id,
-				e.amount AS amount,
-				e.currency AS currency,
-				e.description AS description,
-				e.expense_date AS expenseDate,
-				c.name AS category,
-				u.name AS person,
-				l.id AS locationId,
-				l.store AS store,
-				l.adress AS address,
-				l.city AS city,
-				l.country AS country,
-				ST_Y(l.location::geometry) AS lat,
-				ST_X(l.location::geometry) AS lng
-			FROM expenses e
-			LEFT JOIN categories c ON c.id = e.category_id
-			LEFT JOIN users u ON u.id = e.user_id
-			LEFT JOIN locations l ON l.id = e.location_id
-			""", nativeQuery = true)
-	List<ExpenseWithLocationProjection> findAllWithLocation();
+    @Query(value = """
+            SELECT
+                e.id AS id,
+                e.amount AS amount,
+                e.currency AS currency,
+                e.description AS description,
+                e.expense_date AS expenseDate,
+                c.name AS category,
+                u.name AS person,
+                l.id AS locationId,
+                l.store AS store,
+                l.adress AS address,
+                l.city AS city,
+                l.country AS country,
+                ST_Y(l.location::geometry) AS lat,
+                ST_X(l.location::geometry) AS lng
+            FROM expenses e
+            LEFT JOIN categories c ON c.id = e.category_id
+            LEFT JOIN users u ON u.id = e.user_id
+            LEFT JOIN locations l ON l.id = e.location_id
+            """, nativeQuery = true)
+    List<ExpenseWithLocationProjection> findAllWithLocation();
 
-	@Query(value = """
-			SELECT
-				e.id AS id,
-				e.amount AS amount,
-				e.currency AS currency,
-				e.description AS description,
-				e.expense_date AS expenseDate,
-				c.name AS category,
-				u.name AS person,
-				l.id AS locationId,
-				l.store AS store,
-				l.adress AS address,
-				l.city AS city,
-				l.country AS country,
-				ST_Y(l.location::geometry) AS lat,
-				ST_X(l.location::geometry) AS lng
-			FROM expenses e
-			LEFT JOIN categories c ON c.id = e.category_id
-			LEFT JOIN users u ON u.id = e.user_id
-			LEFT JOIN locations l ON l.id = e.location_id
-			WHERE (:expenseDate IS NULL OR CAST(e.expense_date AS date) = :expenseDate)
-			  AND (:category IS NULL OR c.name = :category)
-			  AND (:person IS NULL OR u.name = :person)
-			""", nativeQuery = true)
-	List<ExpenseWithLocationProjection> findAllWithLocationFiltered(
-			@Param("expenseDate") LocalDate expenseDate,
-			@Param("category") String category,
-			@Param("person") String person
-	);
+    @Query(value = """
+            SELECT
+                e.id AS id,
+                e.amount AS amount,
+                e.currency AS currency,
+                e.description AS description,
+                e.expense_date AS expenseDate,
+                c.name AS category,
+                u.name AS person,
+                l.id AS locationId,
+                l.store AS store,
+                l.adress AS address,
+                l.city AS city,
+                l.country AS country,
+                ST_Y(l.location::geometry) AS lat,
+                ST_X(l.location::geometry) AS lng
+            FROM expenses e
+            LEFT JOIN categories c ON c.id = e.category_id
+            LEFT JOIN users u ON u.id = e.user_id
+            LEFT JOIN locations l ON l.id = e.location_id
+            WHERE (:expenseDate IS NULL OR CAST(e.expense_date AS date) = :expenseDate)
+              AND (:category IS NULL OR c.name = :category)
+              AND (:person IS NULL OR u.name = :person)
+            """, nativeQuery = true)
+    List<ExpenseWithLocationProjection> findAllWithLocationFiltered(
+            @Param("expenseDate") LocalDate expenseDate,
+            @Param("category") String category,
+            @Param("person") String person
+    );
 
-	@Query(value = """
-			SELECT
-				e.id AS id,
-				e.amount AS amount,
-				e.currency AS currency,
-				e.description AS description,
-				e.expense_date AS expenseDate,
-				c.name AS category,
-				u.name AS person,
-				l.id AS locationId,
-				l.store AS store,
-				l.adress AS address,
-				l.city AS city,
-				l.country AS country,
-				ST_Y(l.location::geometry) AS lat,
-				ST_X(l.location::geometry) AS lng
-			FROM expenses e
-			LEFT JOIN categories c ON c.id = e.category_id
-			LEFT JOIN users u ON u.id = e.user_id
-			LEFT JOIN locations l ON l.id = e.location_id
-			WHERE e.id = ?1
-			""", nativeQuery = true)
-	ExpenseWithLocationProjection findOneWithLocation(Long id);
+    @Query(value = """
+            SELECT
+                e.id AS id,
+                e.amount AS amount,
+                e.currency AS currency,
+                e.description AS description,
+                e.expense_date AS expenseDate,
+                c.name AS category,
+                u.name AS person,
+                l.id AS locationId,
+                l.store AS store,
+                l.adress AS address,
+                l.city AS city,
+                l.country AS country,
+                ST_Y(l.location::geometry) AS lat,
+                ST_X(l.location::geometry) AS lng
+            FROM expenses e
+            LEFT JOIN categories c ON c.id = e.category_id
+            LEFT JOIN users u ON u.id = e.user_id
+            LEFT JOIN locations l ON l.id = e.location_id
+            WHERE e.id = ?1
+            """, nativeQuery = true)
+    ExpenseWithLocationProjection findOneWithLocation(Long id);
 }
