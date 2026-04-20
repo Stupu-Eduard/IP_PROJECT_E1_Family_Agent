@@ -1,7 +1,5 @@
 package com.familie.cheltuieli_familie.security.service;
 
-import com.familie.cheltuieli_familie.security.service.AlertService;
-import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import com.familie.cheltuieli_familie.security.model.SecurityAlertDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
