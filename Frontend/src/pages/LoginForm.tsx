@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as yup from 'yup';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from "../store/authStore";
 import { isTokenExpired } from '../utils/jwt';
 
@@ -124,7 +124,9 @@ export default function Login() {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-[11px] tracking-[1px] text-brand-muted font-medium uppercase">Parolă</label>
-                <a href="#" className="text-xs font-medium text-brand-muted hover:text-brand-dark transition-colors">Ai uitat?</a>
+                <Link to="/forgot-password" className="text-xs font-medium text-brand-muted hover:text-brand-dark transition-colors">
+                  Ai uitat?
+                </Link>
               </div>
               <input
                   type="password"
@@ -141,6 +143,7 @@ export default function Login() {
                 disabled={isLoading}
                 className="mt-2 w-full bg-brand-dark text-white rounded-[10px] py-3.5 text-sm font-medium flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+
               {isLoading ? (
                   <>
                     <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -151,6 +154,19 @@ export default function Login() {
                   </>
               ) : 'Intră în cont'}
             </button>
+
+            <div className="mt-8 text-center border-t border-[#EDE9E3] pt-6">
+              <p className="text-[13px] text-[#9A8A7C]">
+                Nu ai un cont?{' '}
+                <Link
+                    to="/register"
+                    className="font-medium text-[#2D2926] hover:text-[#C97B4B] transition-colors"
+                >
+                  Înregistrează-te aici
+                </Link>
+              </p>
+            </div>
+
           </form>
 
           {/* Demo Credentials */}
