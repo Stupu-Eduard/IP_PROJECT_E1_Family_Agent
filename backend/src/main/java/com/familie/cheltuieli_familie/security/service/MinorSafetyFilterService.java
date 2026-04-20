@@ -22,10 +22,6 @@ public class MinorSafetyFilterService {
         this.alertService = alertService;
     }
 
-    /**
-     * Evalueaza o locatie vizitata de copil.
-     * Daca contine categorii interzise, declanseaza alerta catre parinte.
-     */
     public void evaluateChildLocation(Long childId, Long parentId, List<String> placeTypes) {
         if (placeTypes == null || placeTypes.isEmpty()) {
             return;
@@ -51,9 +47,6 @@ public class MinorSafetyFilterService {
         }
     }
 
-    /**
-     * Verifica simplu daca o lista de tipuri de locuri contine categorii restrictionate.
-     */
     public boolean isLocationRestricted(List<String> placeTypes) {
         if (placeTypes == null || placeTypes.isEmpty()) return false;
         return placeTypes.stream()
