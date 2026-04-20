@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.security.service;
 
+import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -18,46 +19,43 @@ class LocationStreamServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Aici nu folosim @Mock sau @InjectMocks pentru ca serviciul nu are alte dependente (gen Repository)
+        // Instanțiem serviciul real
         locationStreamService = new LocationStreamService();
     }
 
     @Test
-    void testSubscribeParent() {
+    void testSubscribeParent_CreatesAndStoresEmitter() {
         Long parentId = 1L;
 
         // Act
         SseEmitter emitter = locationStreamService.subscribeParent(parentId);
 
         // Assert
-        assertNotNull(emitter);
+        assertNotNull(emitter, "Emitter-ul nu ar trebui să fie null");
 
-        // Folosim Reflection pentru a accesa map-ul privat si a verifica daca a intrat conexiunea
+        // Verificăm prin Reflection dacă a fost adăugat în map-ul privat
         @SuppressWarnings("unchecked")
-        Map<Long, SseEmitter> parentEmitters = (Map<Long, SseEmitter>) ReflectionTestUtils.getField(locationStreamService, "parentEmitters");
+        Map<Long, SseEmitter> map = (Map<Long, SseEmitter>) ReflectionTestUtils.getField(locationStreamService, "parentEmitters");
 
-        assertNotNull(parentEmitters);
-        assertTrue(parentEmitters.containsKey(parentId));
-        assertEquals(emitter, parentEmitters.get(parentId));
-
-        // Declansam finalizarea conexiunii manual pentru a acoperi si liniile cu lambdas (emitter.onCompletion)
-        emitter.complete();
+        assertNotNull(map);
+        assertTrue(map.containsKey(parentId), "Parintele ar trebui să fie în map");
+        assertEquals(emitter, map.get(parentId));
     }
 
     @Test
-    void testSendLocationToParent_WhenParentNotConnected() {
-        // Act & Assert: Daca parintele nu e in lista, ar trebui sa treaca prin "if (emitter == null)" si sa dea return
-        // Verificam ca pur si simplu nu arunca absolut nicio eroare si trece linistit mai departe
-        assertDoesNotThrow(() -> locationStreamService.sendLocationToParent(99L, 45.0, 25.0));
+    void testSendLocationToParent_WhenNoParentConnected() {
+        // Act & Assert
+        // Dacă parentId nu există în map, nu trebuie să arunce eroare (intră pe ramura if emitter == null)
+        assertDoesNotThrow(() -> locationStreamService.sendLocationToParent(999L, 45.0, 25.0));
     }
 
     @Test
     void testSendLocationToParent_Success() throws IOException {
-        Long parentId = 2L;
-        // Cream un emitter "fals" ca sa ii putem urmari comportamentul
+        Long parentId = 5L;
+        // Cream un mock pentru emitter ca să verificăm dacă primește datele
         SseEmitter mockEmitter = mock(SseEmitter.class);
 
-        // Injectam map-ul falsificat direct in serviciu
+        // Injectăm manual mock-ul în map-ul privat al serviciului
         Map<Long, SseEmitter> mockMap = new ConcurrentHashMap<>();
         mockMap.put(parentId, mockEmitter);
         ReflectionTestUtils.setField(locationStreamService, "parentEmitters", mockMap);
@@ -65,26 +63,28 @@ class LocationStreamServiceTest {
         // Act
         locationStreamService.sendLocationToParent(parentId, 44.42, 26.10);
 
-        // Assert: Verificam ca serviciul a apelat o singura data metoda send() pe emitterul fals
+        // Assert
+        // Verificăm dacă s-a apelat metoda send() cu orice tip de eveniment
         verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
     }
 
     @Test
-    void testSendLocationToParent_ThrowsIOException() throws IOException {
-        Long parentId = 3L;
+    void testSendLocationToParent_HandlesIOException() throws IOException {
+        Long parentId = 10L;
         SseEmitter mockEmitter = mock(SseEmitter.class);
 
         Map<Long, SseEmitter> mockMap = new ConcurrentHashMap<>();
         mockMap.put(parentId, mockEmitter);
         ReflectionTestUtils.setField(locationStreamService, "parentEmitters", mockMap);
 
-        // Simulam o picare a internetului la client (Arunca IOException cand incearca sa trimita date)
-        doThrow(new IOException("Conexiune inchisa brusc")).when(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
+        // Simulăm o eroare de rețea (IOException)
+        doThrow(new IOException("Connection reset")).when(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
 
         // Act
         locationStreamService.sendLocationToParent(parentId, 44.42, 26.10);
 
-        // Assert: Blocul "catch" ar fi trebuit sa prinda exceptia si sa stearga parintele din lista
-        assertFalse(mockMap.containsKey(parentId), "Parintele trebuia sters din map in momentul in care conexiunea a picat");
+        // Assert
+        // Verificăm dacă, în caz de eroare, serviciul a scos părintele din listă (catch block)
+        assertFalse(mockMap.containsKey(parentId), "Parintele ar trebui scos din map dacă trimiterea eșuează");
     }
 }

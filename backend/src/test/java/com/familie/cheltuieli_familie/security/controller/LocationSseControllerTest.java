@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.security.controller;
 
+import com.familie.cheltuieli_familie.security.controller.LocationSseController;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(LocationSseController.class)
+@WebMvcTest(controllers = LocationSseController.class) //
 @AutoConfigureMockMvc(addFilters = false)
 class LocationSseControllerTest {
 
@@ -24,10 +25,15 @@ class LocationSseControllerTest {
     private LocationStreamService locationStreamService;
 
     @Test
-    void testSubscribe() throws Exception {
-        when(locationStreamService.subscribeParent(1L)).thenReturn(new SseEmitter());
+    void testStreamLocation() throws Exception {
+        Long parentId = 1L;
 
-        mockMvc.perform(get("/api/security/location/subscribe/1"))
+        // Mock-uim raspunsul serviciului
+        when(locationStreamService.subscribeParent(parentId)).thenReturn(new SseEmitter());
+
+        // EXECUTIA: Folosim ruta exacta si parametrul cerut de @RequestParam
+        mockMvc.perform(get("/api/v1/parent/location-stream")
+                        .param("parentId", parentId.toString())) // Adaugam ?parentId=1
                 .andExpect(status().isOk());
     }
 }

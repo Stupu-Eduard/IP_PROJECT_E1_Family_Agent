@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AlertController.class)
+@WebMvcTest(controllers = AlertController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AlertControllerTest {
 
@@ -29,19 +30,37 @@ class AlertControllerTest {
 
     @Test
     void testGetAlerts() throws Exception {
-        when(alertService.getAlertsForParent(1L)).thenReturn(List.of());
+        Long parentId = 1L;
+        when(alertService.getAlertsForParent(parentId)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/alerts/1"))
+        // Apelăm URL-ul corect cu Query Parameter (?parentId=1)
+        mockMvc.perform(get("/api/v1/alerts")
+                        .param("parentId", parentId.toString()))
                 .andExpect(status().isOk());
 
-        verify(alertService).getAlertsForParent(1L);
+        verify(alertService).getAlertsForParent(parentId);
+    }
+
+    @Test
+    void testGetUnreadAlerts() throws Exception {
+        Long parentId = 1L;
+        when(alertService.getUnreadAlertsForParent(parentId)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/alerts/unread")
+                        .param("parentId", parentId.toString()))
+                .andExpect(status().isOk());
+
+        verify(alertService).getUnreadAlertsForParent(parentId);
     }
 
     @Test
     void testMarkAsRead() throws Exception {
-        mockMvc.perform(put("/api/alerts/99/read"))
+        Long alertId = 99L;
+
+        // Folosim PATCH așa cum este definit în Controller (@PatchMapping)
+        mockMvc.perform(patch("/api/v1/alerts/" + alertId + "/read"))
                 .andExpect(status().isOk());
 
-        verify(alertService).markAsRead(99L);
+        verify(alertService).markAsRead(alertId);
     }
 }

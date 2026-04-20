@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean; // Folosim MockitoBean pentru Spring Boot 3.4+
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -16,8 +16,8 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ChildLocationController.class)
-@AutoConfigureMockMvc(addFilters = false) // Dezactivam securitatea ca sa nu ne incurce la test
+@WebMvcTest(controllers = ChildLocationController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ChildLocationControllerTest {
 
     @Autowired
@@ -30,15 +30,26 @@ class ChildLocationControllerTest {
     private MinorSafetyFilterService minorSafetyFilterService;
 
     @Test
-    void testUpdateLocation() throws Exception {
-        String json = "{\"childId\":1, \"parentId\":2, \"latitude\":44.4, \"longitude\":26.1, \"placeTypes\":[\"park\"]}";
+    void testSyncLocation() throws Exception {
+        // Trebuie sa folosim URL-ul EXACT din @RequestMapping + @PostMapping
+        // Si cheile JSON identice cu campurile din record-ul LocationSyncRequest
+        String json = """
+                {
+                  "childId": 2,
+                  "parentId": 1,
+                  "latitude": 47.1585,
+                  "longitude": 27.6014,
+                  "placeTypes": ["bar", "restaurant"]
+                }
+                """;
 
-        mockMvc.perform(post("/api/security/location/update")
+        mockMvc.perform(post("/api/v1/child/location/sync")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
 
-        verify(locationStreamService).sendLocationToParent(2L, 44.4, 26.1);
-        verify(minorSafetyFilterService).evaluateChildLocation(1L, 2L, List.of("park"));
+        // Verificam ca serviciile au fost apelate cu datele din JSON
+        verify(locationStreamService).sendLocationToParent(1L, 47.1585, 27.6014);
+        verify(minorSafetyFilterService).evaluateChildLocation(2L, 1L, List.of("bar", "restaurant"));
     }
 }
