@@ -47,9 +47,10 @@ class LocationControllerTest {
         LocationController controller = new LocationController(locationRepository);
 
         when(locationRepository.updateCoordinates(404L, 1.0, 2.0)).thenReturn(0);
+		UpdateLocationCoordinatesRequest request = new UpdateLocationCoordinatesRequest(1.0, 2.0);
 
         assertThrows(IllegalArgumentException.class,
-                () -> controller.updateCoordinates(404L, new UpdateLocationCoordinatesRequest(1.0, 2.0)));
+				() -> controller.updateCoordinates(404L, request));
 
         verify(locationRepository, never()).findById(anyLong());
     }
@@ -61,8 +62,9 @@ class LocationControllerTest {
 
         when(locationRepository.updateCoordinates(6L, 1.0, 2.0)).thenReturn(1);
         when(locationRepository.findById(6L)).thenReturn(Optional.empty());
+		UpdateLocationCoordinatesRequest request = new UpdateLocationCoordinatesRequest(1.0, 2.0);
 
         assertThrows(IllegalArgumentException.class,
-                () -> controller.updateCoordinates(6L, new UpdateLocationCoordinatesRequest(1.0, 2.0)));
+				() -> controller.updateCoordinates(6L, request));
     }
 }
