@@ -23,5 +23,20 @@ buildNumber.properties
 
 .vscode
 .mvn
+!backend/.mvn
+backend/.mvn/wrapper/maven-wrapper.jar
 
 .qoder
+
+# IDE / build artifacts
+*.log
+.classpath
+.factorypath
+.project
+
+# Documentation (team-specific, not app code)
+Documentation/
+
+# Markdown files
+*.md
+
