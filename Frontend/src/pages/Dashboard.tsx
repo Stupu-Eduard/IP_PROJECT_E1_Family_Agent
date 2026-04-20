@@ -42,7 +42,7 @@ export default function Dashboard() {
           <div className="mb-12 fade-in-up">
             <div className="text-[11px] tracking-[1.2px] text-[#B8A99A] font-medium mb-2.5">DASHBOARD · SESIUNE ACTIVĂ</div>
             <div className="text-[36px] font-medium text-[#2D2926] tracking-[-1.2px] leading-[1.15]">
-              Bine ai revenit,<br/><span className="text-[#C97B4B]">Maria!</span>
+              Bine ai revenit,<br/><span className="text-[#C97B4B]">Edi!</span>
             </div>
             <div className="text-[14px] text-[#9A8A7C] mt-2.5 leading-[1.6]">
               Poți gestiona cheltuielile familiei tale ușor și eficient.
