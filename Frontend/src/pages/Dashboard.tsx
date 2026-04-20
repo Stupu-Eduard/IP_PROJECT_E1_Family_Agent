@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-// IMPORTUL KidDashboard ELIMINAT TEMPORAR
+import KidDashboard from './KidDashboard'
 
 export default function Dashboard() {
   const logout = useAuthStore((state) => state.logout)
+  const token = useAuthStore((state) => state.token) // 2. Extragerea token-ului din starea globală
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -11,7 +12,21 @@ export default function Dashboard() {
     navigate('/login', { replace: true })
   }
 
-  // LOGICA PENTRU COPIL ELIMINATĂ TEMPORAR. Randăm direct interfața principală.
+  // 3. Decodarea Token-ului și evaluarea permisiunilor (RBAC)
+  let userRole = 'Parent';
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userRole = payload.role || 'Parent';
+    } catch (error) {
+      console.error("Eroare la parsarea JWT-ului:", error);
+    }
+  }
+
+  // 4. Interceptarea fluxului pentru minori
+  if (userRole === 'Child') {
+    return <KidDashboard />;
+  }
 
   return (
       <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">

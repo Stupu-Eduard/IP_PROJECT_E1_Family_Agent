@@ -33,9 +33,14 @@ export default function Login() {
 
   const createMockJwt = () => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+
+    // Alocăm rolul de 'Child' strict pentru credențialele copilului
+    const assignedRole = email.toLowerCase() === 'copil@example.com' ? 'Child' : 'Parent';
+
     const payload = btoa(
         JSON.stringify({
           sub: email,
+          role: assignedRole,
           exp: Math.floor(Date.now() / 1000) + 60 * 60,
         }),
     );
@@ -153,7 +158,8 @@ export default function Login() {
             <p className="font-medium mb-1 flex items-center gap-1.5">
               <span>💡</span> Date de test:
             </p>
-            <p className="text-[13px] opacity-90">Email: test@example.com</p>
+            <p className="text-[13px] opacity-90">Cont Părinte: test@example.com</p>
+            <p className="text-[13px] opacity-90">Cont Copil: copil@example.com</p>
             <p className="text-[13px] opacity-90">Parola: password123</p>
           </div>
 
