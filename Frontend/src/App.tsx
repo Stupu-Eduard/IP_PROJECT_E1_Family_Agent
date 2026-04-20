@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard'
 import KidDashboard from './pages/KidDashboard'
 import LoginForm from './pages/LoginForm'
 import RegisterForm from './pages/RegisterForm'
-import ForgotPassword from './pages/ForgotPassword' // Importul nou
+import ForgotPassword from './pages/ForgotPassword'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
 import Reports from './pages/Reports'
@@ -14,7 +14,6 @@ import ChatAI from './components/ChatAi'
 function App() {
     const location = useLocation();
 
-    // Am adăugat /forgot-password pe lista de pagini "curate"
     const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname.toLowerCase());
 
     return (

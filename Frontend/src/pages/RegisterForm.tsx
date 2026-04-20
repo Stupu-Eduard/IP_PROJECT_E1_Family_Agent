@@ -22,7 +22,6 @@ export default function RegisterForm() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // CRITIC: Folosim selectori individuali pentru a nu bloca randarea din cauza Zustand
     const token = useAuthStore((state) => state.token);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const login = useAuthStore((state) => state.login);
