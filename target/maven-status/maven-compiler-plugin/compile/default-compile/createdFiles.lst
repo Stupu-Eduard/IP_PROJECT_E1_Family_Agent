@@ -1,0 +1,15 @@
+com\proiect\m3\extraction\model\ExpenseEntity$ExpenseEntityBuilder.class
+com\proiect\m3\extraction\model\ExtractionRequest.class
+com\proiect\m3\extraction\model\ExtractionResponse.class
+com\proiect\m3\extraction\util\NormalizerUtil.class
+com\proiect\m3\extraction\repository\ExpenseRepository.class
+com\proiect\m3\extraction\controller\FileUploadController.class
+com\proiect\m3\extraction\service\ExtractionService.class
+com\proiect\m3\extraction\ExtractionApplication.class
+com\proiect\m3\extraction\exception\GlobalExceptionHandler.class
+com\proiect\m3\extraction\service\ExtractionService$ExtractionAssistant.class
+com\proiect\m3\extraction\model\ExpenseEntity.class
+com\proiect\m3\extraction\exception\AmountNotFoundException.class
+com\proiect\m3\extraction\model\ExtractionResponse$ExtractionResponseBuilder.class
+com\proiect\m3\extraction\service\PdfExtractionService.class
+com\proiect\m3\extraction\controller\ExtractionController.class
