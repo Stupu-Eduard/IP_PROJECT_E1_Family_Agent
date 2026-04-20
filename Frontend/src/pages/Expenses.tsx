@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { fetchExpenses } from '../services/expenses';
+import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
 import {
     ArrowLeft, Filter, Plus,
     ChevronDown, MapPin, User, Calendar,
@@ -14,6 +16,11 @@ interface ExpenseListDTO {
     description: string;
     amount: number;
     location: string;
+    locationId?: number;
+    locationCity?: string;
+    locationCountry?: string;
+    lat?: number;
+    lng?: number;
     person: string;
 }
 
@@ -29,12 +36,33 @@ export default function Expenses() {
         navigate('/login', { replace: true });
     };
 
-    const [expenses] = useState<ExpenseListDTO[]>([
-        { id: 1, date: '12.04.2026', category: '🍕 Mâncare & Alimente', description: 'Cumpărături Kaufland', amount: 245.50, location: 'Kaufland', person: 'Maria' },
-        { id: 2, date: '11.04.2026', category: '📄 Facturi & Utilități', description: 'Factură Energie', amount: 180.00, location: 'Online', person: 'Ion' },
-        { id: 3, date: '10.04.2026', category: '🚗 Transport', description: 'Plin Benzină', amount: 320.00, location: 'OMV', person: 'Maria' },
-        { id: 4, date: '09.04.2026', category: '🎮 Divertisment', description: 'Abonament Netflix', amount: 60.00, location: 'Online', person: 'Ion' },
-    ]);
+    const [expenses, setExpenses] = useState<ExpenseListDTO[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+    const [availablePeople, setAvailablePeople] = useState<string[]>([]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const run = async () => {
+            try {
+                const [cats, people] = await Promise.all([
+                    fetchCategoryNames(controller.signal),
+                    fetchUserNames(controller.signal),
+                ]);
+
+                setAvailableCategories((cats ?? []).filter(Boolean));
+                setAvailablePeople((people ?? []).filter(Boolean));
+            } catch {
+                // ignore (fallback: dropdowns will still work if user types/selects)
+            }
+        };
+
+        void run();
+        return () => controller.abort();
+    }, []);
 
     // ==========================================
     // STĂRILE FILTRELOR
@@ -43,24 +71,89 @@ export default function Expenses() {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson, setSelectedPerson] = useState('');
 
-    // ==========================================
-    // LOGICA DE FILTRARE (Derived State cu useMemo)
-    // ==========================================
-    const filteredExpenses = useMemo(() => {
-        return expenses.filter((expense) => {
-            // Conversie dată din YYYY-MM-DD (format input) în DD.MM.YYYY (format DTO)
-            let formattedDate = '';
-            if (selectedDate) {
-                formattedDate = selectedDate.split('-').reverse().join('.');
+    useEffect(() => {
+        let isCancelled = false;
+        const controller = new AbortController();
+
+        const run = async () => {
+            setIsLoading(true);
+            setLoadError(null);
+
+            try {
+                const data = await fetchExpenses(
+                    {
+                        date: selectedDate || undefined,
+                        category: selectedCategory || undefined,
+                        person: selectedPerson || undefined,
+                    },
+                    controller.signal,
+                );
+
+                if (isCancelled) return;
+
+                const mapped: ExpenseListDTO[] = data.map((expense) => {
+                    const isoDate = expense.expenseDate ?? '';
+                    const datePart = isoDate ? isoDate.slice(0, 10) : '';
+                    const date = datePart ? datePart.split('-').reverse().join('.') : '';
+
+                    const store = expense.location?.store ?? '';
+                    const address = expense.location?.address ?? '';
+                    const city = expense.location?.city ?? '';
+                    const country = expense.location?.country ?? '';
+                    const location = [store, address, city, country].filter(Boolean).join(', ') || 'Fără locație';
+
+                    const amountNumber = typeof expense.amount === 'number' ? expense.amount : Number(expense.amount);
+
+                    return {
+                        id: expense.id,
+                        date,
+                        category: expense.category ?? 'Fără categorie',
+                        description: expense.description ?? '',
+                        amount: Number.isFinite(amountNumber) ? amountNumber : 0,
+                        location,
+                        locationId: expense.location?.id,
+                        locationCity: expense.location?.city ?? undefined,
+                        locationCountry: expense.location?.country ?? undefined,
+                        lat: expense.location?.lat ?? undefined,
+                        lng: expense.location?.lng ?? undefined,
+                        person: expense.person ?? 'N/A',
+                    };
+                });
+
+                setExpenses(mapped);
+            } catch (err) {
+                if (isCancelled) return;
+                setExpenses([]);
+                setLoadError('Nu am putut încărca cheltuielile din backend. Verifică VITE_API_BASE_URL și backend-ul pe 8080.');
+            } finally {
+                if (isCancelled) return;
+                setIsLoading(false);
             }
+        };
 
-            const matchesDate = formattedDate === '' || expense.date === formattedDate;
-            const matchesCategory = selectedCategory === '' || expense.category === selectedCategory;
-            const matchesPerson = selectedPerson === '' || expense.person === selectedPerson;
+        void run();
 
-            return matchesDate && matchesCategory && matchesPerson;
+        return () => {
+            isCancelled = true;
+            controller.abort();
+        };
+    }, [selectedCategory, selectedDate, selectedPerson]);
+
+    const openMap = (expense: ExpenseListDTO) => {
+        navigate('/expenses/map', {
+            state: {
+                lat: expense.lat,
+                lng: expense.lng,
+                locationId: expense.locationId,
+                locationLabel: expense.location,
+                locationCity: expense.locationCity,
+                locationCountry: expense.locationCountry,
+                description: expense.description,
+            },
         });
-    }, [expenses, selectedDate, selectedCategory, selectedPerson]);
+    };
+
+    const filteredExpenses = expenses;
 
 
     // ==========================================
@@ -121,17 +214,17 @@ export default function Expenses() {
                         />
                     </div>
                     <div className="relative">
-                        {/* Value-urile trebuie să fie exact ca în DTO pentru o potrivire perfectă */}
                         <select
                             className={inputStyle}
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option value="">Toate Categoriile</option>
-                            <option value="🍕 Mâncare & Alimente">🍕 Mâncare & Alimente</option>
-                            <option value="📄 Facturi & Utilități">📄 Facturi & Utilități</option>
-                            <option value="🚗 Transport">🚗 Transport</option>
-                            <option value="🎮 Divertisment">🎮 Divertisment</option>
+                            {availableCategories.map((c) => (
+                                <option key={c} value={c}>
+                                    {c}
+                                </option>
+                            ))}
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>
@@ -142,8 +235,11 @@ export default function Expenses() {
                             onChange={(e) => setSelectedPerson(e.target.value)}
                         >
                             <option value="">Orice Persoană</option>
-                            <option value="Maria">Maria</option>
-                            <option value="Ion">Ion</option>
+                            {availablePeople.map((p) => (
+                                <option key={p} value={p}>
+                                    {p}
+                                </option>
+                            ))}
                         </select>
                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                     </div>
@@ -156,8 +252,21 @@ export default function Expenses() {
                     </button>
                 </div>
 
+                {loadError && (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-5 mb-6 shadow-sm text-[13px] text-[#9A8A7C] fade-in-up" style={{ animationDelay: '0.15s' }}>
+                        {loadError}
+                    </div>
+                )}
+
+                {isLoading && (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 flex flex-col items-center justify-center text-center shadow-sm fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        <div className="text-[15px] font-medium text-[#2D2926]">Se încarcă cheltuielile…</div>
+                        <div className="text-[13px] text-[#9A8A7C] mt-1">Așteaptă puțin.</div>
+                    </div>
+                )}
+
                 {/* Fallback pentru lipsa rezultatelor */}
-                {filteredExpenses.length === 0 && (
+                {!isLoading && filteredExpenses.length === 0 && (
                     <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 flex flex-col items-center justify-center text-center shadow-sm fade-in-up">
                         <div className="w-16 h-16 bg-[#FAF8F5] rounded-full flex items-center justify-center mb-4 text-[#C4B9AC]">
                             <Search size={24} />
@@ -168,7 +277,7 @@ export default function Expenses() {
                 )}
 
                 {/* --- Versiune Mobil (Carduri) --- */}
-                {filteredExpenses.length > 0 && (
+                {!isLoading && filteredExpenses.length > 0 && (
                     <div className="md:hidden flex flex-col gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.2s' }}>
                         {filteredExpenses.map((expense) => (
                             <div key={expense.id} className="bg-white border border-[#EDE9E3] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
@@ -183,7 +292,14 @@ export default function Expenses() {
                                 </div>
                                 <div className="flex flex-col gap-2 text-[12px] text-[#9A8A7C] mt-4 pt-4 border-t border-[#EDE9E3]/50">
                                     <div className="flex items-center gap-2"><Calendar size={14} className="text-[#D4C9BC]" /> {expense.date}</div>
-                                    <div className="flex items-center gap-2"><MapPin size={14} className="text-[#D4C9BC]" /> {expense.location}</div>
+                                    <button
+                                        type="button"
+                                        onClick={() => openMap(expense)}
+                                        className="flex items-center gap-2 text-left hover:text-[#2D2926] transition-colors"
+                                    >
+                                        <MapPin size={14} className="text-[#D4C9BC]" />
+                                        <span className="underline underline-offset-2">{expense.location}</span>
+                                    </button>
                                     <div className="flex items-center gap-2"><User size={14} className="text-[#D4C9BC]" /> {expense.person}</div>
                                 </div>
                             </div>
@@ -192,7 +308,7 @@ export default function Expenses() {
                 )}
 
                 {/* --- Versiune Desktop (Tabel) --- */}
-                {filteredExpenses.length > 0 && (
+                {!isLoading && filteredExpenses.length > 0 && (
                     <div className="hidden md:block bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up" style={{ animationDelay: '0.2s' }}>
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -219,7 +335,14 @@ export default function Expenses() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-[14px] font-medium text-[#2D2926] mb-0.5">{expense.description}</div>
-                                        <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-1"><MapPin size={12}/> {expense.location}</div>
+                                        <button
+                                            type="button"
+                                            onClick={() => openMap(expense)}
+                                            className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-1 hover:text-[#2D2926] transition-colors"
+                                        >
+                                            <MapPin size={12} />
+                                            <span className="underline underline-offset-2">{expense.location}</span>
+                                        </button>
                                     </td>
                                     <td className="px-6 py-4 text-[13px] text-[#9A8A7C] flex items-center gap-2"><User size={14} className="text-[#D4C9BC]"/> {expense.person}</td>
                                     <td className="px-6 py-4 text-[15px] font-medium text-right text-[#2D2926]">{expense.amount.toFixed(2)} RON</td>

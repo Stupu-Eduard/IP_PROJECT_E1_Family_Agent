@@ -7,6 +7,7 @@ import RegisterForm from './pages/RegisterForm'
 import ForgotPassword from './pages/ForgotPassword'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
+import ExpenseMap from './pages/ExpenseMap'
 import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
 import ChatAI from './components/ChatAi'
@@ -29,6 +30,7 @@ function App() {
                 <Route path="/kid-dashboard" element={<PrivateRoute><KidDashboard /></PrivateRoute>} />
                 <Route path="/add-expense" element={<PrivateRoute><ExpenseForm /></PrivateRoute>} />
                 <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
+                <Route path="/expenses/map" element={<PrivateRoute><ExpenseMap /></PrivateRoute>} />
                 <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
                 <Route path="/family" element={<PrivateRoute><FamilySettings /></PrivateRoute>} />
 
