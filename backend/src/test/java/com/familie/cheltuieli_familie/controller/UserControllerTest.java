@@ -27,12 +27,12 @@ class UserControllerTest {
         User u3 = new User();
         u3.setName(null);
 
-        when(userRepository.findAll(eq(Sort.by(Sort.Direction.ASC, "name"))))
+        when(userRepository.findAll(Sort.by(Sort.Direction.ASC, "name")))
                 .thenReturn(List.of(u1, u2, u3));
 
         List<String> result = controller.list();
 
         assertEquals(List.of("Ana"), result);
-        verify(userRepository).findAll(eq(Sort.by(Sort.Direction.ASC, "name")));
+        verify(userRepository).findAll(Sort.by(Sort.Direction.ASC, "name"));
     }
 }

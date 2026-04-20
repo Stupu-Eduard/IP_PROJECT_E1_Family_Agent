@@ -27,12 +27,12 @@ class CategoryControllerTest {
         Category c3 = new Category();
         c3.setName(null);
 
-        when(categoryRepository.findAll(eq(Sort.by(Sort.Direction.ASC, "name"))))
+        when(categoryRepository.findAll(Sort.by(Sort.Direction.ASC, "name")))
                 .thenReturn(List.of(c1, c2, c3));
 
         List<String> result = controller.list();
 
         assertEquals(List.of("Food"), result);
-        verify(categoryRepository).findAll(eq(Sort.by(Sort.Direction.ASC, "name")));
+        verify(categoryRepository).findAll(Sort.by(Sort.Direction.ASC, "name"));
     }
 }
