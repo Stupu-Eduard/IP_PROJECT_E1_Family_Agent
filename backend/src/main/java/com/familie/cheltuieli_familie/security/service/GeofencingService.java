@@ -1,4 +1,4 @@
-package com.familie.cheltuieli_familie.service;
+package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.model.GeofenceZone;
 import org.locationtech.jts.geom.Point;
@@ -27,5 +27,9 @@ public class GeofencingService {
         }
 
         return isInside;
+    }
+
+    public void isUserInsideZone(Object locationData) {
+
     }
 }
