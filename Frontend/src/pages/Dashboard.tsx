@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-// IMPORTUL KidDashboard ELIMINAT TEMPORAR
+import KidDashboard from './KidDashboard'
 
 export default function Dashboard() {
   const logout = useAuthStore((state) => state.logout)
+  const token = useAuthStore((state) => state.token) // 2. Extragerea token-ului din starea globală
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -11,7 +12,21 @@ export default function Dashboard() {
     navigate('/login', { replace: true })
   }
 
-  // LOGICA PENTRU COPIL ELIMINATĂ TEMPORAR. Randăm direct interfața principală.
+  // 3. Decodarea Token-ului și evaluarea permisiunilor (RBAC)
+  let userRole = 'Parent';
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userRole = payload.role || 'Parent';
+    } catch (error) {
+      console.error("Eroare la parsarea JWT-ului:", error);
+    }
+  }
+
+  // 4. Interceptarea fluxului pentru minori
+  if (userRole === 'Child') {
+    return <KidDashboard />;
+  }
 
   return (
       <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
@@ -42,7 +57,7 @@ export default function Dashboard() {
           <div className="mb-12 fade-in-up">
             <div className="text-[11px] tracking-[1.2px] text-[#B8A99A] font-medium mb-2.5">DASHBOARD · SESIUNE ACTIVĂ</div>
             <div className="text-[36px] font-medium text-[#2D2926] tracking-[-1.2px] leading-[1.15]">
-              Bine ai revenit,<br/><span className="text-[#C97B4B]">Maria!</span>
+              Bine ai revenit,<br/><span className="text-[#C97B4B]">Edi!</span>
             </div>
             <div className="text-[14px] text-[#9A8A7C] mt-2.5 leading-[1.6]">
               Poți gestiona cheltuielile familiei tale ușor și eficient.
