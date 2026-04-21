@@ -1,0 +1,4 @@
+ALTER TABLE categories ADD COLUMN description VARCHAR(150);
+ALTER TABLE families ADD COLUMN created_at DATE;
+ALTER TABLE users ADD COLUMN created_at DATE;
+ALTER TABLE categories ADD COLUMN is_active BOOLEAN DEFAULT FALSE;
