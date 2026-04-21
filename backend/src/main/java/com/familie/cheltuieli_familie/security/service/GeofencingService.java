@@ -30,6 +30,6 @@ public class GeofencingService {
     }
 
     public void isUserInsideZone(Object locationData) {
-
+        System.out.println("Metoda a fost apelata: " + locationData);
     }
 }
