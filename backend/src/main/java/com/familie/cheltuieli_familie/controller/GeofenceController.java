@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.controller;
 
-// AICI ASIGURA-TE CA AI IMPORTUL CORECT (daca GeofencingService este in 'service' sau 'security.service')
 import com.familie.cheltuieli_familie.security.service.GeofencingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +22,9 @@ public class GeofenceController {
         }
 
         try {
-            // 2. Apelăm motorul tău de geofencing.
-            // Dacă utilizatorul e OUTSIDE, acest service va apela automat AlertService-ul colegului
-            // și Firebase-ul pe care l-ai configurat tu.
+            //  Apelăm motorul de geofencing.
+            // Dacă utilizatorul e OUTSIDE, acest service va apela automat AlertService
+            // și Firebase-ul
             geofencingService.isUserInsideZone(locationData);
 
             // 3. Returnăm mereu un mesaj OK generic pentru a nu da informații atacatorilor

@@ -1,8 +1,6 @@
-package com.familie.cheltuieli_familie;
+package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.model.GeofenceZone;
-import com.familie.cheltuieli_familie.security.service.GeofencingService;
-import com.familie.cheltuieli_familie.security.service.NotificationProvider;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
