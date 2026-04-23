@@ -14,6 +14,12 @@ public class Category {
 
     private String name;
 
+    @Column(name = "description", length = 150)
+    private String description;
+
+    @Column(name = "is_active")
+    private Boolean isActive = false;
+
     @ManyToOne
     @JoinColumn(name = "parent_id")
     private Category parent;
