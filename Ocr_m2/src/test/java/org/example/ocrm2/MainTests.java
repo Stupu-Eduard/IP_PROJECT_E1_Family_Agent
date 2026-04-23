@@ -10,6 +10,7 @@ import java.io.File;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@ActiveProfiles("test") 
 class MainTests {
 
     @Autowired
