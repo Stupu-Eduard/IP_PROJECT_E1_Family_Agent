@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./cheltuieli-familie
+        working-directory: ./backend
     steps:
       - name: Trage codul de pe GitHub
         uses: actions/checkout@v4
@@ -28,8 +28,14 @@ jobs:
           cache: maven
 
     
-      - name:  Ruleaza Testele JUnit
+      - name: Ruleaza Testele JUnit
         run: mvn test
+
+      - name: Scaneaza codul cu SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
 
       - name: Compileaza aplicatia (Creeaza .jar)
         if: github.ref == 'refs/heads/main'
@@ -42,7 +48,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "cheltuieli-familie/target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
+          source: "backend/target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
           target: "/root/FamilyAgent/target/" # Il punem unde Dockerfile-ul de pe server îl asteapta
           strip_components: 2
 
@@ -67,4 +73,4 @@ jobs:
         with:
           args: |
             Avem un nou update de la **${{ github.actor }}** pe branch-ul `${{ github.ref_name }}`!
-            Statusul verificării: **${{ job.status }}** 🚀
+            Statusul verificării: **${{ job.status }}** 🚀 
