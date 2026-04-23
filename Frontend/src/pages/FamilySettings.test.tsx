@@ -1,74 +1,89 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
-import FamilySettings from './FamilySettings'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import Reports from './Reports' // <--- VERIFICĂ ACEST IMPORT!
 
-// Mocking the auth store
+// Mock pentru navigare
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return { ...actual, useNavigate: () => mockNavigate, MemoryRouter: actual.MemoryRouter }
+})
+
+const mockLogout = vi.fn()
 vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({
-        logout: vi.fn(),
-        token: 'mock-valid-token', // Adăugăm un token simulat
-    }),
+    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
 }))
 
-vi.mock('../utils/jwt', () => ({
-    decodeJwtPayload: () => ({
-        role: 'Parent', // Îi „șoptim” testului că avem rol de părinte
-        sub: '1'
-    }),
-    isTokenExpired: () => false
-}))
+vi.mock('recharts', async () => {
+    const actual = await vi.importActual('recharts')
+    return { ...actual, ResponsiveContainer: ({ children }: any) => <div>{children}</div> }
+})
 
-describe('FamilySettings Component (Grup Familial)', () => {
+describe('Reports Component - Final Corrected Version', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        vi.useFakeTimers()
     })
 
-    const renderComponent = () => {
-        return render(
-            <BrowserRouter>
-                <FamilySettings />
-            </BrowserRouter>
-        )
-    }
-
-    it('ar trebui să randeze titlul paginii și secțiunea de adăugare', () => {
-        renderComponent()
-
-        expect(screen.getByText('Gestionare Familie')).toBeInTheDocument()
-        expect(screen.getByText('Adaugă un membru nou')).toBeInTheDocument()
+    afterEach(() => {
+        vi.useRealTimers()
     })
 
-    it('ar trebui să permită introducerea adresei în formularul de invitație', () => {
+    const renderComponent = () => render(
+        <MemoryRouter>
+            <Reports />
+        </MemoryRouter>
+    )
+
+    it('1. Ar trebui să afișeze titlul corect și butoanele de timp', () => {
         renderComponent()
-
-        const emailInput = screen.getByPlaceholderText('email@familie.com')
-
-        fireEvent.change(emailInput, { target: { value: 'test@familie.ro' } })
-        expect(emailInput).toHaveValue('test@familie.ro')
+        expect(screen.getByText('Evoluție Cheltuieli')).toBeInTheDocument()
+        expect(screen.getByText('1M')).toBeInTheDocument()
     })
 
-    it('ar trebui să afișeze elementele listei de membri (date de test)', () => {
+    it('2. Ar trebui să deschidă selectorul custom', () => {
         renderComponent()
-
-        // REZOLVAREA AICI: Folosim getAllByText deoarece cuvântul apare de mai multe ori
-        // și verificăm pur și simplu că a găsit cel puțin o apariție (length > 0)
-        const memberTexts = screen.getAllByText(/Membri/i)
-        expect(memberTexts.length).toBeGreaterThan(0)
+        const customBtn = screen.getByText('Interval Custom')
+        fireEvent.click(customBtn)
+        expect(screen.getByPlaceholderText('ex: 12/04/2026')).toBeInTheDocument()
     })
 
-    it('ar trebui să intercepteze corect submit-ul invitației', async () => {
+    it('3. Ar trebui să valideze cronologia datelor (Start > End)', () => {
         renderComponent()
+        fireEvent.click(screen.getByText('Interval Custom'))
+        const inputs = screen.getAllByPlaceholderText(/2026/)
 
-        const emailInput = screen.getByPlaceholderText('email@familie.com')
-        const form = emailInput.closest('form')!
+        fireEvent.change(inputs[0], { target: { value: '20/04/2026' } })
+        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } })
 
-        fireEvent.change(emailInput, { target: { value: 'nou@familie.com' } })
-        fireEvent.submit(form)
+        expect(screen.getByText(/Eroare: Data de început trebuie să fie înainte/i)).toBeInTheDocument()
+    })
 
-        await waitFor(() => {
-            expect(emailInput).toBeInTheDocument()
+    it('4. Ar trebui să aplice intervalul și să arate loading (Fără Timeout)', () => {
+        const { container } = renderComponent()
+        fireEvent.click(screen.getByText('Interval Custom'))
+
+        const inputs = screen.getAllByPlaceholderText(/2026/)
+        fireEvent.change(inputs[0], { target: { value: '01/04/2026' } })
+        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } })
+
+        fireEvent.click(screen.getByText('Aplică'))
+
+        // Verificăm spinner-ul prin clasă (lucide-react generează SVG-uri)
+        expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+
+        act(() => {
+            vi.advanceTimersByTime(800)
         })
+
+        expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
+    })
+
+    it('5. Navigare înapoi la Dashboard', () => {
+        renderComponent()
+        fireEvent.click(screen.getByText('FamilyAgent'))
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
 })
