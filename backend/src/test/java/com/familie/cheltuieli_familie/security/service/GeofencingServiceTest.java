@@ -5,24 +5,29 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class GeofencingServiceTest {
 
     private final GeometryFactory factory = new GeometryFactory();
 
-    // Creăm un "mock" simplu pentru notificări direct în test
-    private final NotificationProvider mockNotification = new NotificationProvider() {
-        @Override
-        public void sendNotification(String message) {
-            System.out.println("🚨 [TEST ALERT]: " + message);
-        }
-    };
+    // Declarăm variabilele pentru test
+    private FirebaseNotificationService mockFirebaseService;
+    private GeofencingService service;
 
-    // Inițializăm serviciul cu notificarea falsă
-    private final GeofencingService service = new GeofencingService(mockNotification);
+    @BeforeEach
+    void setUp() {
+        // Creăm o clonă falsă (mock) a Firebase-ului ca să nu trimitem notificări reale în teste
+        mockFirebaseService = mock(FirebaseNotificationService.class);
+
+        // Inițializăm serviciul tău folosind clona de Firebase!
+        // Acum se potrivește perfect cu noul constructor.
+        service = new GeofencingService(mockFirebaseService);
+    }
 
     @Test
     void testGeofenceLogic() {
@@ -47,9 +52,12 @@ class GeofencingServiceTest {
         // 3. Testăm un punct din EXTERIOR (15,15 e în afara pătratului)
         Point outsidePoint = factory.createPoint(new Coordinate(15,15));
         assertFalse(service.isUserInsideZone(outsidePoint, zone), "Punctul (15,15) ar trebui să fie OUTSIDE!");
+
+        // Extra verificare profesionistă: ne asigurăm că a apelat o singură dată trimiterea notificării când am fost OUTSIDE
+        verify(mockFirebaseService, times(1)).sendPushNotification(anyString(), anyString(), anyString());
     }
 
-    // --- TESTELE NOI ADAUGATE PENTRU COVERAGE 100% ---
+    // --- TESTELE PENTRU COVERAGE 100% ---
 
     @Test
     void testNullUserLocation() {

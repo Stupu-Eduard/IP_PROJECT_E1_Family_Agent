@@ -12,7 +12,7 @@ public class FirebaseNotificationService {
 
     private static final Logger logger = LoggerFactory.getLogger(FirebaseNotificationService.class);
 
-    // Am făcut constructorul vizibil și i-am dat un mic log pentru a forța coverage-ul
+    // Constructor gol pentru coverage
     public FirebaseNotificationService() {
         logger.debug("FirebaseNotificationService a fost inițializat.");
     }

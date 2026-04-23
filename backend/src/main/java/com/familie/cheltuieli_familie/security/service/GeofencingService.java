@@ -7,11 +7,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class GeofencingService {
 
-    private final NotificationProvider notificationProvider;
+    // 1. Cerem direct serviciul de Firebase în loc de vechiul Provider
+    private final FirebaseNotificationService firebaseNotificationService;
 
-    // Spring va injecta automat MockNotificationService aici
-    public GeofencingService(NotificationProvider notificationProvider) {
-        this.notificationProvider = notificationProvider;
+    // 2. Spring va injecta automat Firebase-ul aici
+    public GeofencingService(FirebaseNotificationService firebaseNotificationService) {
+        this.firebaseNotificationService = firebaseNotificationService;
     }
 
     public boolean isUserInsideZone(Point userLocation, GeofenceZone zone) {
@@ -23,7 +24,12 @@ public class GeofencingService {
 
         // Dacă utilizatorul NU este înăuntru, declanșăm alerta
         if (!isInside) {
-            notificationProvider.sendNotification("Atenție! S-a părăsit zona: " + zone.getName());
+            // Adaptăm pentru Firebase: are nevoie de token, titlu și corp mesaj
+            String tokenTelefon = "token_parinte_default"; // Aici pe viitor vei pune token-ul real din baza de date
+            String titlu = "Alertă Geofence";
+            String mesaj = "Atenție! S-a părăsit zona: " + zone.getName();
+
+            firebaseNotificationService.sendPushNotification(tokenTelefon, titlu, mesaj);
         }
 
         return isInside;
