@@ -16,6 +16,9 @@ import java.util.Map;
 @Configuration
 public class EmbeddingConfig {
 
+    @Value("${OPENAI_API_KEY:}")
+    private String openaiApiKey;
+
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
@@ -62,15 +65,25 @@ public class EmbeddingConfig {
 
     @Bean
     public EmbeddingModel embeddingModel() {
-        String key = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
-        if (key.isEmpty()) {
-            throw new IllegalStateException("OPENROUTER_API_KEY is required for embeddings. Please set it in the .env file or as environment variable.");
+        String openaiKey = resolveKey(openaiApiKey, "OPENAI_API_KEY");
+        if (!openaiKey.isEmpty()) {
+            return OpenAiEmbeddingModel.builder()
+                    .apiKey(openaiKey)
+                    .modelName("text-embedding-3-small")
+                    .dimensions(1536)
+                    .build();
         }
+
+        String openRouterKey = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
+        if (openRouterKey.isEmpty()) {
+            throw new IllegalStateException("OPENAI_API_KEY or OPENROUTER_API_KEY is required for embeddings.");
+        }
+        
         return OpenAiEmbeddingModel.builder()
-                .apiKey(key)
+                .apiKey(openRouterKey)
                 .baseUrl("https://openrouter.ai/api/v1")
-                .modelName("nvidia/llama-nemotron-embed-vl-1b-v2:free")
-                .dimensions(2048)
+                .modelName("openai/text-embedding-3-small")
+                .dimensions(1536)
                 .build();
     }
 }

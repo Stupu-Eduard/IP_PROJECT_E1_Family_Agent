@@ -1,207 +1,160 @@
 package com.proiect.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.proiect.dto.EmbeddedExpense;
 import com.proiect.model.ExpenseEntity;
+import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingSearchResult;
+import dev.langchain4j.store.embedding.filter.Filter;
 import dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
+
+import static dev.langchain4j.store.embedding.filter.MetadataFilterBuilder.metadataKey;
 
 @Service
 @Slf4j
 public class QdrantVectorService {
 
     private final QdrantEmbeddingStore embeddingStore;
-    private final EmbeddingService embeddingService;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final EmbeddingModel embeddingModel;
 
-    @Value("${qdrant.host:localhost}")
-    private String qdrantHost;
-
-    @Value("${qdrant.port:6333}")
-    private int qdrantPort;
-
-    @Value("${qdrant.collection-name:expenses}")
-    private String collectionName;
-
-    public QdrantVectorService(QdrantEmbeddingStore embeddingStore, EmbeddingService embeddingService, RestTemplate restTemplate) {
+    public QdrantVectorService(QdrantEmbeddingStore embeddingStore, EmbeddingModel embeddingModel) {
         this.embeddingStore = embeddingStore;
-        this.embeddingService = embeddingService;
-        this.restTemplate = restTemplate;
+        this.embeddingModel = embeddingModel;
     }
 
     public void storeExpense(ExpenseEntity expense) {
         log.info("Storing expense ID {} in vector store", expense.getId());
         String textToEmbed = expense.getRawInput();
         if (textToEmbed == null || textToEmbed.isEmpty()) {
-            textToEmbed = expense.getCategory();
+            textToEmbed = String.format("Cheltuială: %s, Sumă: %s, Persoană: %s, Locație: %s, Dată: %s",
+                    expense.getCategory(), expense.getAmount(), expense.getPerson(), expense.getLocation(), expense.getDate());
         }
-        if (textToEmbed == null || textToEmbed.isEmpty()) {
-            textToEmbed = "Unknown Expense";
-        }
-
-        float[] vector = embeddingService.getEmbedding(textToEmbed);
-        Embedding embedding = Embedding.from(vector);
 
         Metadata metadata = new Metadata();
-        metadata.add("id", expense.getId());
-        metadata.add("amount", expense.getAmount().doubleValue());
-        if (expense.getCategory() != null) metadata.add("category", expense.getCategory());
-        if (expense.getPerson() != null) metadata.add("person", expense.getPerson());
-        if (expense.getDate() != null) metadata.add("date", expense.getDate().toString());
+        metadata.put("id", expense.getId());
+        metadata.put("amount", expense.getAmount().doubleValue());
+        if (expense.getCategory() != null) metadata.put("category", expense.getCategory());
+        if (expense.getPerson() != null) metadata.put("person", expense.getPerson());
+        if (expense.getLocation() != null) metadata.put("location", expense.getLocation());
+        if (expense.getDate() != null) metadata.put("date", expense.getDate().toString());
 
-        TextSegment segment = TextSegment.from(textToEmbed, metadata);
-
-        embeddingStore.add(embedding, segment);
+        Document document = Document.from(textToEmbed, metadata);
+        // Use recursive splitter to handle potentially long receipts/OCR text
+        List<TextSegment> segments = DocumentSplitters.recursive(1000, 100).split(document);
+        
+        for (TextSegment segment : segments) {
+            Embedding embedding = embeddingModel.embed(segment).content();
+            embeddingStore.add(embedding, segment);
+        }
+        log.info("Stored {} segments for expense ID {}", segments.size(), expense.getId());
     }
 
-    public List<com.proiect.dto.EmbeddedExpense> searchSimilar(String query, int topK) {
+    public List<EmbeddedExpense> searchSimilar(String query, int topK) {
         return searchWithFilter(query, topK, null, null, null, null);
     }
 
-    public List<com.proiect.dto.EmbeddedExpense> searchWithFilter(
+    public List<EmbeddedExpense> searchWithFilter(
             String query, int topK, String category, String person, LocalDate from, LocalDate to) {
 
-        log.info("Searching vector store for query: '{}', topK: {}", query, topK);
-        float[] queryVector = embeddingService.getEmbedding(query);
-        log.info("Query embedding generated, dimensions: {}", queryVector.length);
+        log.info("Searching vector store for query: '{}', topK: {}, category: {}, person: {}", query, topK, category, person);
+        
+        Embedding queryEmbedding = embeddingModel.embed(query).content();
+        
+        Filter filter = null;
+        List<Filter> filters = new ArrayList<>();
 
-        String url = String.format("http://%s:%d/collections/%s/points/search", qdrantHost, qdrantPort, collectionName);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("vector", toDoubleList(queryVector));
-        requestBody.put("limit", topK);
-        requestBody.put("with_payload", true);
-        requestBody.put("with_vector", false);
-
-        List<Map<String, Object>> mustFilters = new ArrayList<>();
         if (category != null && !category.isEmpty()) {
-            mustFilters.add(Map.of("key", "category", "match", Map.of("value", category)));
+            filters.add(metadataKey("category").isEqualTo(category));
         }
         if (person != null && !person.isEmpty()) {
-            mustFilters.add(Map.of("key", "person", "match", Map.of("value", person)));
+            filters.add(metadataKey("person").isEqualTo(person));
         }
         if (from != null) {
-            mustFilters.add(Map.of("key", "date", "range", Map.of("gte", from.toString())));
+            filters.add(metadataKey("date").isGreaterThanOrEqualTo(from.toString()));
         }
         if (to != null) {
-            mustFilters.add(Map.of("key", "date", "range", Map.of("lte", to.toString())));
+            filters.add(metadataKey("date").isLessThanOrEqualTo(to.toString()));
         }
 
-        if (!mustFilters.isEmpty()) {
-            requestBody.put("filter", Map.of("must", mustFilters));
-        }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-            JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode points = root.path("result");
-
-            List<com.proiect.dto.EmbeddedExpense> results = new ArrayList<>();
-            for (JsonNode point : points) {
-                JsonNode payload = point.path("payload");
-                double score = point.path("score").asDouble(0.0);
-
-                com.proiect.dto.EmbeddedExpense embeddedExpense = com.proiect.dto.EmbeddedExpense.builder()
-                        .id(parseLongFromPayload(payload.path("id")))
-                        .amount(parseAmountFromPayload(payload.path("amount")))
-                        .category(payload.path("category").asText(null))
-                        .person(payload.path("person").asText(null))
-                        .date(parseDateFromPayload(payload.path("date")))
-                        .rawInput(payload.path("text_segment").asText(null))
-                        .score(score)
-                        .build();
-
-                results.add(embeddedExpense);
+        if (!filters.isEmpty()) {
+            if (filters.size() == 1) {
+                filter = filters.get(0);
+            } else {
+                // Combine filters with AND logic
+                filter = filters.get(0);
+                for (int i = 1; i < filters.size(); i++) {
+                    filter = Filter.and(filter, filters.get(i));
+                }
             }
+        }
 
-            log.info("Search returned {} results", results.size());
-            return results;
+        EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
+                .queryEmbedding(queryEmbedding)
+                .filter(filter)
+                .maxResults(topK)
+                .build();
+
+        EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
+
+        return searchResult.matches().stream()
+                .map(this::mapToEmbeddedExpense)
+                .collect(Collectors.toList());
+    }
+
+    private EmbeddedExpense mapToEmbeddedExpense(EmbeddingMatch<TextSegment> match) {
+        TextSegment segment = match.embedded();
+        Metadata metadata = segment.metadata();
+
+        return EmbeddedExpense.builder()
+                .id(metadata.getLong("id"))
+                .amount(metadata.getDouble("amount") != null ? BigDecimal.valueOf(metadata.getDouble("amount")) : null)
+                .category(metadata.getString("category"))
+                .person(metadata.getString("person"))
+                .location(metadata.getString("location"))
+                .date(parseLocalDate(metadata.getString("date")))
+                .rawInput(segment.text())
+                .score(match.score())
+                .build();
+    }
+
+    private LocalDate parseLocalDate(String value) {
+        if (value == null) return null;
+        try {
+            return LocalDate.parse(value);
         } catch (Exception e) {
-            log.error("Error searching Qdrant vector store", e);
-            throw new RuntimeException("Eroare la căutarea în vector store", e);
+            return null;
         }
     }
 
     public boolean existsInVectorStore(Long id) {
-        try {
-            String url = String.format("http://%s:%d/collections/%s/points/scroll", qdrantHost, qdrantPort, collectionName);
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("limit", 1);
-            requestBody.put("with_payload", false);
-            requestBody.put("filter", Map.of("must", List.of(Map.of("key", "id", "match", Map.of("value", String.valueOf(id))))));
+        // Since Qdrant doesn't have a direct "exists by metadata" in LangChain4j EmbeddingStore easily
+        // we can search with a filter for the ID and see if we get anything
+        Filter filter = metadataKey("id").isEqualTo(id);
+        
+        // We need a dummy embedding since search requires one
+        Embedding dummyEmbedding = Embedding.from(new float[1536]);
+        
+        EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
+                .queryEmbedding(dummyEmbedding)
+                .filter(filter)
+                .maxResults(1)
+                .build();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Content-Type", "application/json");
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode points = root.path("result").path("points");
-                return points.isArray() && points.size() > 0;
-            }
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private List<Double> toDoubleList(float[] vector) {
-        List<Double> list = new ArrayList<>(vector.length);
-        for (float v : vector) {
-            list.add((double) v);
-        }
-        return list;
-    }
-
-    private Long parseLongFromPayload(JsonNode node) {
-        if (node.isMissingNode() || node.isNull()) return null;
-        if (node.isNumber()) return node.asLong();
-        try {
-            return Long.parseLong(node.asText());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private BigDecimal parseAmountFromPayload(JsonNode node) {
-        if (node.isMissingNode() || node.isNull()) return null;
-        if (node.isNumber()) return BigDecimal.valueOf(node.asDouble());
-        try {
-            return new BigDecimal(node.asText());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private LocalDate parseDateFromPayload(JsonNode node) {
-        if (node.isMissingNode() || node.isNull()) return null;
-        try {
-            return LocalDate.parse(node.asText());
-        } catch (Exception e) {
-            return null;
-        }
+        EmbeddingSearchResult<TextSegment> result = embeddingStore.search(searchRequest);
+        return !result.matches().isEmpty();
     }
 }
