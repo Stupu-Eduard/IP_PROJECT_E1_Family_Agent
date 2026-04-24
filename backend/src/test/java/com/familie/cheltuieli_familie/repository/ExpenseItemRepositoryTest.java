@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.repository;
 
+import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.model.ExpenseItem;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,9 @@ class ExpenseItemRepositoryTest {
 
     @Autowired
     private ExpenseItemRepository expenseItemRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private ExpenseRepository expenseRepository;
@@ -120,6 +124,29 @@ class ExpenseItemRepositoryTest {
     }
 
     @Test
+    @DisplayName("Should NOT delete parent Expense when ExpenseItem is deleted")
+    void shouldNotDeleteExpenseWhenItemIsDeleted() {
+        // Arrange
+        Expense expense = new Expense();
+        expense.setAmount(BigDecimal.TEN);
+        expense.setExpense_date(LocalDateTime.now());
+        Expense savedExpense = expenseRepository.save(expense);
+
+        ExpenseItem item = new ExpenseItem();
+        item.setItemName("Temporary Item");
+        item.setAmount(BigDecimal.TEN);
+        item.setExpense(savedExpense);
+        ExpenseItem savedItem = expenseItemRepository.save(item);
+
+        // Act
+        expenseItemRepository.delete(savedItem);
+
+        // Assert
+        assertTrue(expenseRepository.findById(savedExpense.getId()).isPresent(),
+                "Parent Expense should still exist!");
+    }
+
+    @Test
     @DisplayName("Should save ExpenseItem with Expense association")
     void shouldSaveExpenseItemWithExpenseAssociation() {
         Expense expense = new Expense();
@@ -135,5 +162,59 @@ class ExpenseItemRepositoryTest {
         ExpenseItem savedItem = expenseItemRepository.save(item);
 
         assertEquals(savedExpense.getId(), savedItem.getExpense().getId());
+    }
+
+    @Test
+    @DisplayName("Should save ExpenseItem with Category association")
+    void shouldSaveExpenseItemWithCategory() {
+        // Arrange
+        Category category = new Category();
+        category.setName("Dairy");
+        Category savedCategory = categoryRepository.save(category);
+
+        ExpenseItem item = new ExpenseItem();
+        item.setItemName("Yogurt");
+        item.setAmount(BigDecimal.valueOf(4));
+        item.setCategory(savedCategory);
+
+        // Act
+        ExpenseItem savedItem = expenseItemRepository.save(item);
+
+        // Assert
+        assertNotNull(savedItem.getCategory());
+        assertEquals("Dairy", savedItem.getCategory().getName());
+    }
+
+    @Test
+    @DisplayName("Should have default quantity as 1 when not specified")
+    void shouldHaveDefaultQuantity() {
+        // Arrange
+        ExpenseItem item = new ExpenseItem();
+        item.setItemName("Test Item");
+        item.setAmount(BigDecimal.TEN);
+
+        // Act
+        ExpenseItem savedItem = expenseItemRepository.save(item);
+
+        // Assert
+        assertEquals(0, BigDecimal.ONE.compareTo(savedItem.getQuantity()));
+    }
+
+    @Test
+    @DisplayName("Constraint: Should correctly save decimal quantities")
+    void shouldSaveDecimalQuantity() {
+        Expense expense = new Expense();
+        expense.setAmount(BigDecimal.valueOf(20));
+        Expense savedExpense = expenseRepository.save(expense);
+
+        ExpenseItem item = new ExpenseItem();
+        item.setItemName("Mere");
+        item.setAmount(BigDecimal.valueOf(15.5));
+        item.setQuantity(BigDecimal.valueOf(2.50)); // 2.5 kg
+        item.setExpense(savedExpense);
+
+        ExpenseItem savedItem = expenseItemRepository.save(item);
+
+        assertEquals(0, BigDecimal.valueOf(2.50).compareTo(savedItem.getQuantity()));
     }
 }
