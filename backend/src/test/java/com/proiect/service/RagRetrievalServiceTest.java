@@ -1,7 +1,8 @@
 package com.proiect.service;
 
-import com.proiect.config.LlmConfig;
 import com.proiect.dto.EmbeddedExpense;
+import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.scoring.ScoringModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,19 +25,22 @@ class RagRetrievalServiceTest {
     private QdrantVectorService qdrantVectorService;
 
     @Mock
-    private LlmConfig.RagAssistant ragAssistant;
+    private LlmRouterService llmRouterService;
+
+    @Mock
+    private ScoringModel scoringModel;
 
     @InjectMocks
     private RagRetrievalService ragRetrievalService;
 
     @Test
     void testAskWithContext() {
-        when(ragAssistant.chat("Cât am cheltuit?")).thenReturn("Ai cheltuit 100 RON.");
+        when(llmRouterService.routeAndChat("Cât am cheltuit?")).thenReturn("Ai cheltuit 100 RON.");
 
         String result = ragRetrievalService.askWithContext("Cât am cheltuit?");
 
         assertEquals("Ai cheltuit 100 RON.", result);
-        verify(ragAssistant, times(1)).chat("Cât am cheltuit?");
+        verify(llmRouterService, times(1)).routeAndChat("Cât am cheltuit?");
     }
 
     @Test
@@ -48,10 +53,10 @@ class RagRetrievalServiceTest {
                 .date(LocalDate.of(2024, 3, 15))
                 .person("Familie")
                 .rawInput("Am platit 150 lei la Kaufland")
-                .score(0.95)
                 .build();
 
-        when(qdrantVectorService.searchSimilar("mancare", 3)).thenReturn(List.of(expense));
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+        when(scoringModel.scoreAll(anyList(), anyString())).thenReturn(Response.from(List.of(0.95)));
 
         String context = ragRetrievalService.retrieveContext("mancare", 3);
 
@@ -64,7 +69,7 @@ class RagRetrievalServiceTest {
 
     @Test
     void testRetrieveContextWithNoResults() {
-        when(qdrantVectorService.searchSimilar("vacanta", 3)).thenReturn(Collections.emptyList());
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(Collections.emptyList());
 
         String context = ragRetrievalService.retrieveContext("vacanta", 3);
 
