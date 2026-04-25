@@ -74,7 +74,7 @@ class ExpenseItemRepositoryTest {
 
         List<String> itemNames = items.stream()
                 .map(ExpenseItem::getItemName)
-                .collect(Collectors.toList());
+                .toList();
 
         assertTrue(itemNames.contains("Milk"));
         assertTrue(itemNames.contains("Eggs"));
