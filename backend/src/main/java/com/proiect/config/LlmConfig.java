@@ -210,4 +210,24 @@ public class LlmConfig {
                 .tools(expenseTools)
                 .build();
     }
+
+    public interface ReportAssistant {
+        @SystemMessage("""
+            Ești un asistent financiar care generează rapoarte lunare narative pentru o familie.
+            Misiunea ta este să transformi datele brute în analize ușor de înțeles:
+            1. Rezumă activitatea financiară a lunii.
+            2. Identifică variațiile mari (de exemplu: "ai cheltuit cu 15% mai mult pe divertisment").
+            3. Oferă un sfat scurt și util pentru optimizarea cheltuielilor pe viitor.
+            4. Tonul trebuie să fie prietenos, încurajator, dar profesionist.
+            5. Răspunde EXCLUSIV în limba română.
+            """)
+        String generateReport(@UserMessage String aggregatedData);
+    }
+
+    @Bean
+    public ReportAssistant reportAssistant(ChatLanguageModel deepseekModel) {
+        return AiServices.builder(ReportAssistant.class)
+                .chatLanguageModel(deepseekModel)
+                .build();
+    }
 }

@@ -88,4 +88,24 @@ public class ExpenseTools {
         log.info("Tool called: describeTrend for {} from {} to {}", category, from, to);
         return analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to));
     }
+
+    @Tool("Get a short visual description of the trend for frontend charts")
+    public String getVisualDescription(String category, String from, String to) {
+        log.info("Tool called: getVisualDescription for {} from {} to {}", category, from, to);
+        String trend = analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to));
+        
+        if (trend.contains("increased")) {
+            String percent = extractPercentage(trend);
+            return "Trendul arată o creștere de " + percent + "% pentru " + category;
+        } else if (trend.contains("decreased")) {
+            String percent = extractPercentage(trend);
+            return "Trendul arată o scădere de " + percent + "% pentru " + category;
+        }
+        return "Trend stabil pentru " + category;
+    }
+
+    private String extractPercentage(String trend) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+(\\.\\d+)?)%").matcher(trend);
+        return m.find() ? m.group(1) : "0";
+    }
 }

@@ -4,7 +4,6 @@ import com.proiect.event.ExpenseSyncEvent;
 import com.proiect.model.ExpenseEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -18,7 +17,7 @@ public class ExpenseSyncListener {
     private final QdrantVectorService qdrantVectorService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Async // Optional: can be async to not block the main flow if needed
+    @Async
     public void handleExpenseSync(ExpenseSyncEvent event) {
         ExpenseEntity expense = event.getExpense();
         log.info("Received sync event for expense ID: {}", expense.getId());

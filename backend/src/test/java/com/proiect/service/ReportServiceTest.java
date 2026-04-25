@@ -1,6 +1,5 @@
 package com.proiect.service;
 
-import com.proiect.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

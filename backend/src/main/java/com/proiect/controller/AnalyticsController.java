@@ -1,6 +1,7 @@
 package com.proiect.controller;
 
 import com.proiect.service.AnalyticsAssistant;
+import com.proiect.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +16,19 @@ import java.time.LocalDate;
 public class AnalyticsController {
 
     private final AnalyticsAssistant analyticsAssistant;
+    private final ReportService reportService;
 
     @PostMapping("/query")
     public ResponseEntity<String> query(@RequestBody String userMessage) {
         log.info("Received analytics query: {}", userMessage);
-        // We pass the current date for context in the prompt
         String response = analyticsAssistant.chat(userMessage + " (Today's date is " + LocalDate.now() + ")");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/report/{year}/{month}")
+    public ResponseEntity<String> getNarrativeReport(@PathVariable int year, @PathVariable int month) {
+        log.info("Requesting narrative report for {}/{}", month, year);
+        String report = reportService.generateNarrativeReport(year, month);
+        return ResponseEntity.ok(report);
     }
 }

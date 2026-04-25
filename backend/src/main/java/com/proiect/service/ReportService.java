@@ -1,5 +1,6 @@
 package com.proiect.service;
 
+import com.proiect.config.LlmConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -9,7 +10,6 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private final ExpenseAnalyticsService analyticsService;
+    private final LlmConfig.ReportAssistant reportAssistant;
 
     public String generateMonthlySummary(int year, int month) {
         log.info("Generating monthly summary for {}/{}", month, year);
@@ -35,7 +36,6 @@ public class ReportService {
             summary.append(String.format("  * %s: %s RON\n", cat, amount))
         );
 
-        // Simple trend analysis for top category
         if (!byCategory.isEmpty()) {
             String topCategory = byCategory.entrySet().stream()
                     .max(Map.Entry.comparingByValue())
@@ -45,5 +45,11 @@ public class ReportService {
         }
 
         return summary.toString();
+    }
+
+    public String generateNarrativeReport(int year, int month) {
+        log.info("Generating narrative report for {}/{}", month, year);
+        String rawSummary = generateMonthlySummary(year, month);
+        return reportAssistant.generateReport(rawSummary);
     }
 }
