@@ -272,7 +272,7 @@ class ExpenseRepositoryTest {
         expense.getItems().add(item);
 
         Expense savedExpense = expenseRepository.save(expense);
-        Long itemId = savedExpense.getItems().get(0).getId();
+        Long itemId = savedExpense.getItems().getFirst().getId();
 
         // Act
         expenseRepository.delete(savedExpense);
