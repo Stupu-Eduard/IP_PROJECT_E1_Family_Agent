@@ -61,8 +61,8 @@ class ExpenseTest {
     void testSetExpenseDate() {
         Expense expense = new Expense();
         LocalDateTime now = LocalDateTime.now();
-        expense.setExpense_date(now);
-        assertEquals(now, expense.getExpense_date());
+        expense.setExpenseDate(now);
+        assertEquals(now, expense.getExpenseDate());
     }
 
     @Test

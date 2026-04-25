@@ -35,7 +35,7 @@ class ExpenseItemRepositoryTest {
     void shouldGenerateIdWhenExpenseItemIsSaved() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(100));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
@@ -54,7 +54,7 @@ class ExpenseItemRepositoryTest {
     void shouldFindAllExpenseItems() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(50));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item1 = new ExpenseItem();
@@ -86,7 +86,7 @@ class ExpenseItemRepositoryTest {
     void shouldUpdateExpenseItemAmount() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(70));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
@@ -107,7 +107,7 @@ class ExpenseItemRepositoryTest {
     void shouldDeleteExpenseItem() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(90));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
@@ -129,7 +129,7 @@ class ExpenseItemRepositoryTest {
         // Arrange
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.TEN);
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();
@@ -151,7 +151,7 @@ class ExpenseItemRepositoryTest {
     void shouldSaveExpenseItemWithExpenseAssociation() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(120));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         Expense savedExpense = expenseRepository.save(expense);
 
         ExpenseItem item = new ExpenseItem();

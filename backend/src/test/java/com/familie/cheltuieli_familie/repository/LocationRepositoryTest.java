@@ -142,7 +142,7 @@ class LocationRepositoryTest {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(50));
         expense.setCurrency("RON");
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         expense.setFamily(savedFamily);
         expense.setLocation(savedLoc);
 

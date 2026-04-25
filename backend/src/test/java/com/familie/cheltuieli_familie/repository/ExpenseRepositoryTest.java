@@ -33,7 +33,7 @@ class ExpenseRepositoryTest {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(100));
         expense.setCurrency("RON");
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
 
         // Act
         Expense saved = expenseRepository.save(expense);
@@ -48,7 +48,7 @@ class ExpenseRepositoryTest {
         // Arrange
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(50));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         expense.setItems(new ArrayList<>());
 
         ExpenseItem item = new ExpenseItem();
@@ -80,7 +80,7 @@ class ExpenseRepositoryTest {
         User user = new User();
         user.setName("Alexandra");
         user.setEmail("alex@test.com");
-        user.setPassword_h("pass");
+        user.setPasswordH("pass");
         User savedUser = userRepository.save(user);
 
         Expense expense = new Expense();
@@ -179,7 +179,7 @@ class ExpenseRepositoryTest {
     void shouldSaveExpenseWithoutLocation() {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(20));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
         expense.setLocation(null); // Explicit null
 
         Expense saved = expenseRepository.save(expense);
@@ -249,7 +249,7 @@ class ExpenseRepositoryTest {
         // Arrange
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(10));
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
 
         // Act
         Expense saved = expenseRepository.save(expense);
@@ -283,7 +283,7 @@ class ExpenseRepositoryTest {
         User user = new User();
         user.setName(name);
         user.setEmail(name.toLowerCase() + "@test.com");
-        user.setPassword_h("parola_hash_random");
+        user.setPasswordH("parola_hash_random");
         user.setCreatedAt(java.time.LocalDate.now());
         return userRepository.save(user);
     }
@@ -294,7 +294,7 @@ class ExpenseRepositoryTest {
         Expense expense = new Expense();
         BigDecimal largeAmount = new BigDecimal("9999999.99");
         expense.setAmount(largeAmount);
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
 
         Expense saved = expenseRepository.save(expense);
         assertEquals(0, largeAmount.compareTo(saved.getAmount()));
@@ -306,7 +306,7 @@ class ExpenseRepositoryTest {
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.TEN);
         expense.setSourceType("OCR"); // Testăm câmpul sourceType
-        expense.setExpense_date(LocalDateTime.now());
+        expense.setExpenseDate(LocalDateTime.now());
 
         Expense saved = expenseRepository.save(expense);
         assertEquals("OCR", saved.getSourceType());
