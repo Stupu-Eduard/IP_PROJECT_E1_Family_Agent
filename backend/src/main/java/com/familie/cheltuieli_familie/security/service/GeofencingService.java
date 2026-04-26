@@ -14,7 +14,7 @@ public class GeofencingService {
         this.firebaseNotificationService = firebaseNotificationService;
     }
 
-    // 1. Metoda principală, intactă, exact așa cum o aveai
+    // 1. Metoda principală
     public boolean isUserInsideZone(Point userLocation, GeofenceZone zone) {
         if (userLocation == null || zone == null || zone.getArea() == null) {
             return false;
@@ -22,9 +22,12 @@ public class GeofencingService {
 
         boolean isInside = zone.getArea().contains(userLocation);
 
+        // TODO: (Sprintul viitor) De extras token-ul real al parintelui din baza de date folosind un UserService.
+        // Evitam erorile de Firebase cu acest token de fallback temporar.
+        String tokenTelefon = "token_parinte_default";
+
         // Dacă utilizatorul NU este înăuntru, declanșăm alerta pe telefon
         if (!isInside) {
-            String tokenTelefon = "token_parinte_default"; // Aici pe viitor vei pune token-ul real
             String titlu = "Alertă Geofence";
             String mesaj = "Atenție! S-a părăsit zona: " + zone.getName();
 
@@ -34,8 +37,10 @@ public class GeofencingService {
         return isInside;
     }
 
-    // 2. Metoda secundară, forțată să ceară Point (nu Object, nu DTO)
+    // 2. Metoda secundară, care procesează un singur Point primit din Controller
     public void isUserInsideZone(Point locationData) {
-        System.out.println("Metoda a fost apelata cu punctul exact: " + locationData);
+        System.out.println("Metoda a fost apelata cu punctul exact: " + locationData.toString());
+        // TODO: De implementat logica reala de geofencing.
+        // Trebuie sa comparam 'locationData' cu zonele (poligoanele) salvate in baza de date.
     }
 }
