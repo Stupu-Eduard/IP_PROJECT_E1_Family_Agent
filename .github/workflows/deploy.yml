@@ -27,8 +27,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Instaleaza Tesseract OCR
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+      - name: Install Tesseract OCR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev
       
       - name: Ruleaza Testele JUnit
         run: mvn test
