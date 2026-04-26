@@ -5,9 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="369cf640-f479-4c0f-b9c7-19490d2c8fbf" name="Changes" comment="configured h2 tests and the migration scripts to work">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/controller/GeofenceControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/controller/GeofenceControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/controller/AlertControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/controller/AlertControllerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/service/GeofencingServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/service/GeofencingServiceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -80,8 +77,9 @@
     "JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems.executor": "Run",
     "JUnit.ExpenseRepositoryTest.executor": "Run",
     "JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved.executor": "Run",
+    "JUnit.FirebaseNotificationServiceTest.executor": "Coverage",
     "JUnit.GeofenceControllerTest.executor": "Coverage",
-    "JUnit.GeofencingServiceTest.executor": "Coverage",
+    "JUnit.GeofencingServiceTest.executor": "Run",
     "JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor": "Run",
     "JUnit.repository in cheltuieli-familie.executor": "Coverage",
     "Maven.cheltuieli-familie [clean].executor": "Run",
@@ -136,7 +134,7 @@
       <recent name="com.familie.cheltuieli_familie.repository" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.FirebaseNotificationServiceTest">
+  <component name="RunManager" selected="JUnit.GeofencingServiceTest">
     <configuration name="AlertServiceTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
@@ -214,10 +212,10 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.GeofencingServiceTest" />
         <item itemvalue="JUnit.FirebaseNotificationServiceTest" />
         <item itemvalue="JUnit.AlertServiceTest" />
         <item itemvalue="JUnit.GeofenceControllerTest" />
-        <item itemvalue="JUnit.GeofencingServiceTest" />
         <item itemvalue="JUnit.repository in cheltuieli-familie" />
       </list>
     </recent_temporary>
@@ -343,6 +341,9 @@
     <SUITE FILE_PATH="coverage/family_agent_api$FirebaseNotificationServiceTest.ic" NAME="FirebaseNotificationServiceTest Coverage Results" MODIFIED="1776944136188" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
       <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
     </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$FirebaseNotificationServiceTest.ic" NAME="FirebaseNotificationServiceTest Coverage Results" MODIFIED="1777222048596" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
     <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$GeofencingServiceTest.ic" NAME="GeofencingServiceTest Coverage Results" MODIFIED="1777221717583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
       <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
     </SUITE>
@@ -353,6 +354,9 @@
       <FILTER>com.familie.cheltuieli_familie.controller.*</FILTER>
     </SUITE>
     <SUITE FILE_PATH="coverage/family_agent_api$NotficationServiceTest.ic" NAME="NotficationServiceTest Coverage Results" MODIFIED="1776943857817" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$AlertServiceTest.ic" NAME="AlertServiceTest Coverage Results" MODIFIED="1777222028995" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
       <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
     </SUITE>
   </component>
