@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { GoogleMap, InfoWindow, Marker, useJsApiLoader } from '@react-google-maps/api'
 import { updateLocationCoordinates } from '../services/locations'
+import { useAuthStore } from '../store/authStore'
 
 type MapState = {
   lat?: number
@@ -16,8 +17,14 @@ type LatLng = { lat: number; lng: number }
 
 export default function ExpenseMap() {
   const navigate = useNavigate()
+  const logout = useAuthStore((state) => state.logout)
   const location = useLocation()
   const state = (location.state ?? {}) as MapState
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
   const geocodingApiKey = (import.meta.env.VITE_GOOGLE_GEOCODING_API_KEY as string | undefined) ?? mapsApiKey
@@ -262,6 +269,13 @@ export default function ExpenseMap() {
             </div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-[12px] font-medium text-[#8C7E6E] px-3.5 py-1.5 border border-[#E2DDD7] rounded-[20px] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926] transition-colors"
+        >
+          Logout
+        </button>
       </nav>
 
       <div className="px-6 lg:px-10 pt-6 pb-10 max-w-[1200px] mx-auto w-full flex-1">
