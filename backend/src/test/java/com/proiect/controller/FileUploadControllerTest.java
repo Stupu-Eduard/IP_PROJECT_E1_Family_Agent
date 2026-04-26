@@ -20,6 +20,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.proiect.service.VoiceService;
+import java.util.List;
+
 @WebMvcTest(FileUploadController.class)
 @ActiveProfiles("test")
 class FileUploadControllerTest {
@@ -32,6 +35,9 @@ class FileUploadControllerTest {
 
     @MockBean
     private ExtractionService extractionService;
+
+    @MockBean
+    private VoiceService voiceService;
 
     @Test
     void testUploadPdf() throws Exception {
@@ -47,11 +53,33 @@ class FileUploadControllerTest {
                 .transactionDate(LocalDate.now())
                 .rawInput("Extracted text from PDF")
                 .build();
-        when(extractionService.process(any())).thenReturn(response);
+        when(extractionService.process(any())).thenReturn(List.of(response));
 
         mockMvc.perform(multipart("/v1/upload/pdf").file(file))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.amount").value(100.00));
+                .andExpect(jsonPath("$[0].amount").value(100.00));
+    }
+
+    @Test
+    void testUploadAudio() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "test.wav", "audio/wav", "audio content".getBytes());
+
+        when(voiceService.transcribe(any())).thenReturn("Transcript text");
+
+        ExtractionResponse response = ExtractionResponse.builder()
+                .amount(new BigDecimal("50.00"))
+                .category("Alimente")
+                .location("Lidl")
+                .person("Eu")
+                .transactionDate(LocalDate.now())
+                .rawInput("Transcript text")
+                .build();
+        when(extractionService.process(any())).thenReturn(List.of(response));
+
+        mockMvc.perform(multipart("/v1/upload/audio").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].amount").value(50.00))
+                .andExpect(jsonPath("$[0].person").value("Eu"));
     }
 
     @Test

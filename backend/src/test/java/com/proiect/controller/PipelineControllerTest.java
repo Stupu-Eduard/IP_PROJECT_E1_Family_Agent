@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.util.List;
+
 @WebMvcTest(PipelineController.class)
 @ActiveProfiles("test")
 class PipelineControllerTest {
@@ -25,13 +27,13 @@ class PipelineControllerTest {
 
     @Test
     void testProcess() throws Exception {
-        when(pipelineService.processRawInput("Am platit 100 lei")).thenReturn(1L);
+        when(pipelineService.processRawInput("Am platit 100 lei")).thenReturn(List.of(1L));
 
         mockMvc.perform(post("/v1/pipeline/process")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"Am platit 100 lei\"}"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Entity created with ID: 1 and replicated in Qdrant."));
+                .andExpect(jsonPath("$[0]").value(1));
     }
 
     @Test

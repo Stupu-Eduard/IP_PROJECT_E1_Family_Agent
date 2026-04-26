@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,18 +35,37 @@ public class ExtractionService {
 
     interface ExtractionAssistant {
         @SystemMessage("""
-            Ești un expert în extragerea datelor financiare din texte în limba română.
-            Extrage suma, categoria, locația, persoana și data tranzacției din textul furnizat.
-            Răspunde DOAR cu un obiect JSON valid, fără text suplimentar, fără explicații, fără markdown.
+            Ești un expert în extragerea și analizarea datelor financiare din documente și texte în limba română (bonuri fiscale, facturi, chitanțe, mesaje tip text, transcrieri audio).
+            
+            Sarcina ta este să extragi o LISTĂ de cheltuieli din textul furnizat. 
+            Dacă textul pare a fi o transcriere audio a unei conversații între mai multe persoane (ex: Eu și Maria), realizează o diarizare semantică:
+            - Folosește contextul, pronumele și conjugarea verbelor pentru a identifica cine a făcut cheltuiala.
+            - "Eu" se referă la vorbitorul principal (utilizatorul).
+            - "Maria" se referă la soția/partenera menționată.
+            - Atribuie corect câmpul "person" fiecărei cheltuieli identified ("Eu", "Maria" sau "Familie").
+
+            Pentru fiecare cheltuială, extrage:
+            1. Suma totală (amount).
+            2. Categoria cheltuielii (category).
+            3. Locația/Comerciantul (location).
+            4. Persoana (person) - OBLIGATORIU: "Eu", "Maria" sau "Familie".
+            5. Data tranzacției (transactionDate).
+            6. O listă cu articolele individuale identificate (items).
+
+            Răspunde DOAR cu un obiect JSON care conține un array "expenses", fără text suplimentar.
             Format JSON obligatoriu:
             {
-              "amount": "număr zecimal (ex: 150.00)",
-              "category": "string",
-              "location": "string",
-              "person": "string",
-              "transactionDate": "YYYY-MM-DD"
+              "expenses": [
+                {
+                  "amount": "număr zecimal",
+                  "category": "string",
+                  "location": "string",
+                  "person": "string (Eu/Maria/Familie)",
+                  "transactionDate": "YYYY-MM-DD",
+                  "items": [ { "name": "string", "price": "zecimal" } ]
+                }
+              ]
             }
-            Dacă nu poți extrage un câmp, folosește valori implicite: category="Altele", location="Necunoscut", person="Familie".
             """)
         @UserMessage("Text de procesat: {{rawText}}")
         String extract(@dev.langchain4j.service.V("rawText") String rawText);
@@ -103,49 +124,32 @@ public class ExtractionService {
     }
 
     @Transactional
-    public ExtractionResponse process(ExtractionRequest request) {
+    public List<ExtractionResponse> process(ExtractionRequest request) {
         String jsonResult = callExtractionWithRetry(request.getRawText());
 
         try {
             JsonNode root = objectMapper.readTree(jsonResult);
+            JsonNode expensesNode = root.path("expenses");
+            List<ExtractionResponse> responses = new ArrayList<>();
 
-            // Extract amount with normalization
-            String amountStr = root.path("amount").asText();
-            BigDecimal amount = NormalizerUtil.normalizeAmount(amountStr);
-
-            if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
-                // Try normalizing from the original text if AI failed to give a clean number
-                amount = NormalizerUtil.normalizeAmount(request.getRawText());
+            if (expensesNode.isArray()) {
+                for (JsonNode node : expensesNode) {
+                    responses.add(mapToResponse(node, request.getRawText()));
+                }
+            } else {
+                // Fallback if AI returns a single object instead of array or unexpected format
+                if (root.has("amount")) {
+                    responses.add(mapToResponse(root, request.getRawText()));
+                } else if (root.has("expenses") && root.get("expenses").isObject()) {
+                     responses.add(mapToResponse(root.get("expenses"), request.getRawText()));
+                }
             }
 
-            if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
-                throw new AmountNotFoundException("Nu s-a putut identifica suma tranzacției în textul: " + request.getRawText());
+            if (responses.isEmpty()) {
+                throw new AmountNotFoundException("Nu s-au identificat cheltuieli în textul furnizat.");
             }
 
-            LocalDate transactionDate = NormalizerUtil.normalizeDate(request.getRawText());
-            String category = root.path("category").asText("Altele");
-            String location = root.path("location").asText("Necunoscut");
-            String person = root.path("person").asText("Familie");
-
-            ExpenseEntity entity = ExpenseEntity.builder()
-                    .amount(amount)
-                    .category(category)
-                    .location(location)
-                    .person(person)
-                    .date(transactionDate)
-                    .rawInput(request.getRawText())
-                    .build();
-
-            syncService.syncExpense(entity);
-
-            return ExtractionResponse.builder()
-                    .amount(amount)
-                    .category(category)
-                    .location(location)
-                    .person(person)
-                    .transactionDate(transactionDate)
-                    .rawInput(request.getRawText())
-                    .build();
+            return responses;
 
         } catch (AmountNotFoundException e) {
             throw e;
@@ -153,6 +157,78 @@ public class ExtractionService {
             log.error("Error processing extraction JSON", e);
             throw new RuntimeException("Eroare internă la procesarea AI", e);
         }
+    }
+
+    private ExtractionResponse mapToResponse(JsonNode node, String rawText) {
+        // Extract amount with normalization
+        String amountStr = node.path("amount").asText();
+        BigDecimal amount = NormalizerUtil.normalizeAmount(amountStr);
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            // Only attempt global normalization if this is the only node or if it's really missing
+            amount = NormalizerUtil.normalizeAmount(node.toString());
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            log.warn("Could not find amount in expense node: {}", node);
+            throw new AmountNotFoundException("Nu s-a putut identifica suma unei tranzacții.");
+        }
+
+        LocalDate transactionDate = NormalizerUtil.normalizeDate(rawText);
+        String category = node.path("category").asText("Altele");
+        String location = node.path("location").asText("Necunoscut");
+        String person = node.path("person").asText("Familie");
+
+        // Consistency Validation
+        JsonNode itemsNode = node.path("items");
+        BigDecimal itemsTotal = BigDecimal.ZERO;
+        int itemsCount = 0;
+        if (itemsNode.isArray()) {
+            for (JsonNode item : itemsNode) {
+                BigDecimal price = NormalizerUtil.normalizeAmount(item.path("price").asText("0"));
+                if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                    itemsTotal = itemsTotal.add(price);
+                    itemsCount++;
+                }
+            }
+        }
+
+        String validationNote = null;
+        if (itemsCount > 0) {
+            BigDecimal diff = amount.subtract(itemsTotal).abs();
+            if (diff.compareTo(new BigDecimal("0.10")) > 0) {
+                validationNote = String.format("[AVERTISMENT: Suma celor %d articole (%s) nu corespunde cu totalul (%s)]", 
+                        itemsCount, itemsTotal, amount);
+            } else {
+                validationNote = String.format("[VALIDARE REUȘITĂ: Suma celor %d articole corespunde cu totalul]", itemsCount);
+            }
+        }
+
+        String finalRawInput = rawText;
+        if (validationNote != null) {
+            finalRawInput = validationNote + "\n" + finalRawInput;
+        }
+
+        ExpenseEntity entity = ExpenseEntity.builder()
+                .amount(amount)
+                .category(category)
+                .location(location)
+                .person(person)
+                .date(transactionDate)
+                .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
+                .build();
+
+        syncService.syncExpense(entity);
+
+        return ExtractionResponse.builder()
+                .amount(amount)
+                .category(category)
+                .location(location)
+                .person(person)
+                .transactionDate(transactionDate)
+                .rawInput(rawText)
+                .validationNote(validationNote)
+                .build();
     }
 
     public String validateOcrContent(String rawOcrText) {

@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -19,32 +22,33 @@ public class ExpensePipelineService {
     private final PipelineValidationService validationService;
 
     @Transactional
-    public Long processRawInput(String rawText) {
+    public List<Long> processRawInput(String rawText) {
         log.info("Starting pipeline for raw text: {}", rawText);
 
-        // extraction (Dumitrita's API locally)
+        // extraction (OpenAI/DeepSeek)
         ExtractionRequest req = new ExtractionRequest();
         req.setRawText(rawText);
-        ExtractionResponse extracted = extractionService.process(req);
-        log.info("Extraction result: {}", extracted);
+        List<ExtractionResponse> extractedList = extractionService.process(req);
+        log.info("Extraction result: {} entities found", extractedList.size());
 
-        // save and sync (PostgreSQL + Qdrant)
-        ExpenseEntity entity = ExpenseEntity.builder()
-                .amount(extracted.getAmount())
-                .category(extracted.getCategory())
-                .location(extracted.getLocation())
-                .person(extracted.getPerson())
-                .date(extracted.getTransactionDate())
-                .rawInput(extracted.getRawInput())
-                .build();
-        
-        entity = syncService.syncExpense(entity);
-        log.info("Saved and synced entity: {}", entity.getId());
+        return extractedList.stream().map(extracted -> {
+            // save and sync (PostgreSQL + Qdrant)
+            ExpenseEntity entity = ExpenseEntity.builder()
+                    .amount(extracted.getAmount())
+                    .category(extracted.getCategory())
+                    .location(extracted.getLocation())
+                    .person(extracted.getPerson())
+                    .date(extracted.getTransactionDate())
+                    .rawInput(extracted.getRawInput())
+                    .build();
+            
+            entity = syncService.syncExpense(entity);
+            log.info("Saved and synced entity: {}", entity.getId());
 
-        // validate Persistence
-        validationService.validatePersistence(entity.getId());
-        
-        log.info("Pipeline completed successfully for ID: {}", entity.getId());
-        return entity.getId();
+            // validate Persistence
+            validationService.validatePersistence(entity.getId());
+            
+            return entity.getId();
+        }).collect(Collectors.toList());
     }
 }

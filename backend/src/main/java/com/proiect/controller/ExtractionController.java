@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/extract")
 @RequiredArgsConstructor
@@ -16,8 +18,8 @@ public class ExtractionController {
     private final ExtractionService extractionService;
 
     @PostMapping
-    public ResponseEntity<ExtractionResponse> extractDetails(@Valid @RequestBody ExtractionRequest request) {
-        ExtractionResponse response = extractionService.process(request);
+    public ResponseEntity<List<ExtractionResponse>> extractDetails(@Valid @RequestBody ExtractionRequest request) {
+        List<ExtractionResponse> response = extractionService.process(request);
         return ResponseEntity.ok(response);
     }
 

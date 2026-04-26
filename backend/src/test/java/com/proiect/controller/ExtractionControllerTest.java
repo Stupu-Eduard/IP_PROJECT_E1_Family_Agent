@@ -19,6 +19,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.util.List;
+
 @WebMvcTest(ExtractionController.class)
 @ActiveProfiles("test")
 class ExtractionControllerTest {
@@ -40,14 +42,14 @@ class ExtractionControllerTest {
                 .rawInput("Am platit 150 lei")
                 .build();
 
-        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(response);
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(response));
 
         mockMvc.perform(post("/v1/extract")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"Am platit 150 lei\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.amount").value(150.00))
-                .andExpect(jsonPath("$.category").value("Mâncare"));
+                .andExpect(jsonPath("$[0].amount").value(150.00))
+                .andExpect(jsonPath("$[0].category").value("Mâncare"));
     }
 
     @Test

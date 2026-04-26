@@ -16,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+import com.proiect.service.VoiceService;
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/upload")
 @Slf4j
@@ -24,13 +27,23 @@ public class FileUploadController {
 
     private final PdfExtractionService pdfExtractionService;
     private final ExtractionService extractionService;
+    private final VoiceService voiceService;
 
     @PostMapping("/pdf")
-    public ResponseEntity<ExtractionResponse> uploadPdf(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<List<ExtractionResponse>> uploadPdf(@RequestParam("file") MultipartFile file) throws IOException {
         log.info("Received PDF upload: {}", file.getOriginalFilename());
         String extractedText = pdfExtractionService.extractText(file);
         ExtractionRequest request = new ExtractionRequest();
         request.setRawText(extractedText);
+        return ResponseEntity.ok(extractionService.process(request));
+    }
+
+    @PostMapping("/audio")
+    public ResponseEntity<List<ExtractionResponse>> uploadAudio(@RequestParam("file") MultipartFile file) throws IOException {
+        log.info("Received Audio upload: {}", file.getOriginalFilename());
+        String transcript = voiceService.transcribe(file);
+        ExtractionRequest request = new ExtractionRequest();
+        request.setRawText(transcript);
         return ResponseEntity.ok(extractionService.process(request));
     }
 

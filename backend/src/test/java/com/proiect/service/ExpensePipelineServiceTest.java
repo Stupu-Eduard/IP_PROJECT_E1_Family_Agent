@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
+
 @ExtendWith(MockitoExtension.class)
 class ExpensePipelineServiceTest {
 
@@ -42,7 +44,7 @@ class ExpensePipelineServiceTest {
                 .rawInput("Am platit 89 lei la Mega Image")
                 .build();
 
-        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(extractionResponse);
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
         ExpenseEntity savedEntity = ExpenseEntity.builder()
                 .id(1L)
@@ -52,9 +54,10 @@ class ExpensePipelineServiceTest {
 
         doNothing().when(validationService).validatePersistence(1L);
 
-        Long result = pipelineService.processRawInput("Am platit 89 lei la Mega Image");
+        List<Long> result = pipelineService.processRawInput("Am platit 89 lei la Mega Image");
 
-        assertEquals(1L, result);
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0));
         verify(extractionService, times(1)).process(any(ExtractionRequest.class));
         verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
         verify(validationService, times(1)).validatePersistence(1L);

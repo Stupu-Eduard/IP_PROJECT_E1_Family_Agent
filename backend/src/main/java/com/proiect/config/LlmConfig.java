@@ -30,6 +30,9 @@ import java.util.Map;
 @Slf4j
 public class LlmConfig {
 
+    @Value("${OPENAI_API_KEY:}")
+    private String openaiApiKey;
+
     @Value("${DEEPSEEK_API_KEY:}")
     private String deepseekApiKey;
 
@@ -228,6 +231,18 @@ public class LlmConfig {
     public ReportAssistant reportAssistant(ChatLanguageModel deepseekModel) {
         return AiServices.builder(ReportAssistant.class)
                 .chatLanguageModel(deepseekModel)
+                .build();
+    }
+
+    @Bean
+    public dev.langchain4j.model.openai.OpenAiAudioModel whisperModel() {
+        String key = resolveKey(openaiApiKey, "OPENAI_API_KEY");
+        if (key.isEmpty()) {
+            log.warn("OPENAI_API_KEY is missing. Whisper transcription will not work.");
+        }
+        return dev.langchain4j.model.openai.OpenAiAudioModel.builder()
+                .apiKey(key)
+                .modelName("whisper-1")
                 .build();
     }
 }

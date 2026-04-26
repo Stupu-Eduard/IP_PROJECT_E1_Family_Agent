@@ -14,4 +14,5 @@ public class ExtractionResponse {
     private String person;
     private LocalDate transactionDate;
     private String rawInput;
+    private String validationNote;
 }
