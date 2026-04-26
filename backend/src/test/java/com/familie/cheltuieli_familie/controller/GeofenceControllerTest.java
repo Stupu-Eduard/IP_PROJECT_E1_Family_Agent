@@ -3,68 +3,54 @@ package com.familie.cheltuieli_familie.controller;
 import com.familie.cheltuieli_familie.security.service.GeofencingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class GeofenceControllerTest {
 
-    private GeofencingService geofencingService;
+    private GeofencingService mockGeofencingService;
     private GeofenceController geofenceController;
+    private final GeometryFactory geometryFactory = new GeometryFactory();
 
     @BeforeEach
     void setUp() {
-        // Mock-uim serviciul pentru a nu rula logica reală de geofencing la fiecare test
-        geofencingService = mock(GeofencingService.class);
-        geofenceController = new GeofenceController(geofencingService);
+        mockGeofencingService = mock(GeofencingService.class);
+        geofenceController = new GeofenceController(mockGeofencingService);
     }
 
     @Test
-    void testCheckUserLocation_NullData_ReturnsBadRequest() {
-        // SCENARIUL 1: Trimitem null pentru a forța intrarea pe primul IF
+    void testCheckUserLocation_Success() {
+        Point validPoint = geometryFactory.createPoint(new Coordinate(26.1025, 44.4268));
+        ResponseEntity<String> response = geofenceController.checkUserLocation(validPoint);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Locația a fost recepționată și procesată.", response.getBody());
+        verify(mockGeofencingService, times(1)).isUserInsideZone(validPoint);
+    }
+
+    @Test
+    void testCheckUserLocation_NullData() {
         ResponseEntity<String> response = geofenceController.checkUserLocation(null);
 
-        // Verificăm dacă primim eroarea corectă
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Date invalide: Locatia nu poate fi nula.", response.getBody());
-
-        // Verificăm că motorul de geofencing NU a fost apelat dacă datele au fost nule
-        verifyNoInteractions(geofencingService);
+        verify(mockGeofencingService, never()).isUserInsideZone(any());
     }
 
     @Test
-    void testCheckUserLocation_ValidData_ReturnsOk() {
-        // SCENARIUL 2: Trimitem date valide (simulăm un obiect)
-        Object mockLocation = new Object();
+    void testCheckUserLocation_InternalServerError() {
+        Point validPoint = geometryFactory.createPoint(new Coordinate(26.1025, 44.4268));
+        doThrow(new RuntimeException("Eroare simulata")).when(mockGeofencingService).isUserInsideZone(any(Point.class));
 
-        ResponseEntity<String> response = geofenceController.checkUserLocation(mockLocation);
+        ResponseEntity<String> response = geofenceController.checkUserLocation(validPoint);
 
-        // Verificăm dacă a trecut cu succes prin "try"
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Locatie receptionata si procesata.", response.getBody());
-
-        // Ne asigurăm că a apelat o singură dată metoda din service
-        verify(geofencingService, times(1)).isUserInsideZone(mockLocation);
-    }
-
-    @Test
-    void testCheckUserLocation_ServiceThrowsException_ReturnsInternalServerError() {
-        // SCENARIUL 3: Simulăm că serverul/baza de date pică ca să forțăm intrarea pe CATCH
-        Object mockLocation = new Object();
-
-        // Învățăm mock-ul să arunce o eroare intenționat
-        doThrow(new RuntimeException("Simulare eroare sistem"))
-                .when(geofencingService).isUserInsideZone(mockLocation);
-
-        ResponseEntity<String> response = geofenceController.checkUserLocation(mockLocation);
-
-        // Verificăm că a prins eroarea corect și a returnat codul 500
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("A apărut o eroare internă la procesare.", response.getBody());
-
-        // Verificăm că a încercat să o apeleze înainte să pice
-        verify(geofencingService, times(1)).isUserInsideZone(mockLocation);
+        assertEquals("A apărut o eroare internă la procesarea coordonatelor.", response.getBody());
     }
 }

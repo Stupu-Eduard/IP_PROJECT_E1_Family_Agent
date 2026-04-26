@@ -79,8 +79,10 @@ class GeofencingServiceTest {
         assertFalse(service.isUserInsideZone(point, zone), "Ar trebui să returneze false dacă aria zonei e null");
     }
 
-    @Test
+   @Test
     void testDummyMethod() {
-        service.isUserInsideZone(new Object());
+        GeometryFactory factory = new GeometryFactory();
+        Point dummyPoint = factory.createPoint(new Coordinate(0, 0));
+        service.isUserInsideZone(dummyPoint);
     }
 }
