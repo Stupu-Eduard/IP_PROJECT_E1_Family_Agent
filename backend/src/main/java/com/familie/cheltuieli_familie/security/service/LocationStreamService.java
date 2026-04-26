@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Serviciul care tine conexiunile SSE deschise.
  * Cand copilul trimite o locatie noua, acest serviciu o impinge
  * catre browserul parintelui fara refresh.
- *
+ * <p>
  * Acum foloseste LocationAdapterService pentru a transforma
  * coordonatele brute intr-un LocationMapDto structurat,
  * gata de folosit de Google Maps SDK pe frontend.
@@ -56,7 +56,7 @@ public class LocationStreamService {
     /**
      * Cand copilul trimite o locatie noua, o transformam prin adaptor
      * si o trimitem ca LocationMapDto catre parintele conectat.
-     *
+     * <p>
      * Inainte: trimitea un String JSON manual formatat
      * Acum: foloseste LocationAdapterService care produce un obiect
      *       structurat cu lat, lng, isRestricted, timestamp
@@ -86,14 +86,13 @@ public class LocationStreamService {
 
             // Serializam DTO-ul in JSON si il trimitem prin SSE
             // Rezultat JSON pentru frontend:
-            // {
             //   "childId": 2,
             //   "parentId": 1,
             //   "lat": 47.1585,
             //   "lng": 27.6014,
             //   "isRestricted": true,
             //   "timestamp": "2026-04-26T10:30:00"
-            // }
+
             String payload = objectMapper.writeValueAsString(dto);
 
             emitter.send(SseEmitter.event()
