@@ -63,7 +63,7 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
         await waitFor(() => {
             const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
             const categorySelect = screen.getByRole('combobox') as HTMLSelectElement;
-            
+
             const dateInput = container.querySelector('input[type="date"]') as HTMLInputElement;
 
             expect(amountInput.value).toBe('125.5')
@@ -107,5 +107,46 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
 
         expect(amountInput.disabled).toBe(true)
         expect(submitButton).toBeDisabled()
+    })
+
+    it('ar trebui sa blocheze submit-ul si sa afiseze eroare daca suma este 0 sau negativa', () => {
+        renderComponent()
+        const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
+        const categorySelect = screen.getByRole('combobox') as HTMLSelectElement;
+        const submitButton = screen.getByRole('button', { name: /Salvează Cheltuiala/i });
+
+        // Completăm categoria ca să trecem de validarea HTML5 (required)
+        fireEvent.change(categorySelect, { target: { value: 'mancare' } });
+
+        // Acum setăm suma pe 0 și trimitem
+        fireEvent.change(amountInput, { target: { value: '0' } });
+        fireEvent.click(submitButton);
+
+        // Funcția de submit se va rula și va afișa mesajul nostru
+        expect(screen.getByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument();
+    })
+
+    it('ar trebui sa arate starea de loading, sa efectueze salvarea si sa reseteze formularul', async () => {
+        // Am eliminat complet fakeTimers. Lăsăm testul să ruleze în timp real.
+        renderComponent();
+
+        const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
+        const categorySelect = screen.getByRole('combobox') as HTMLSelectElement;
+        const submitButton = screen.getByRole('button', { name: /Salvează Cheltuiala/i });
+
+        fireEvent.change(amountInput, { target: { value: '150' } });
+        fireEvent.change(categorySelect, { target: { value: 'mancare' } });
+
+        fireEvent.click(submitButton);
+
+        // Verificăm imediat starea de loading
+        expect(screen.getByText(/Se salvează.../i)).toBeInTheDocument();
+
+        // Așteptăm în mod natural trecerea secundei și apariția mesajului de succes
+        await waitFor(() => {
+            expect(screen.getByText(/Cheltuială adăugată cu succes!/i)).toBeInTheDocument();
+            expect(amountInput.value).toBe('');
+            expect(categorySelect.value).toBe('');
+        }, { timeout: 2500 }); // Am extins puțin timeout-ul pentru siguranță
     })
 })

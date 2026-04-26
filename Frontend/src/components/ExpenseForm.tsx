@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
-import type { ExpenseDTO } from '../types/ExpenseDTO';
 import { processReceiptOCR } from '../services/expenses';
 import { ImageUploader } from './ImageUploader';
 
@@ -12,16 +11,15 @@ const ExpenseForm: React.FC = () => {
 
   // Stări Formular
   const [amount, setAmount] = useState<number | ''>('');
-  const [category, setCategory] = useState<string>('');
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [category, setCategory] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Stări Procesare (Salvare și OCR)
-  const [loading, setLoading] = useState<boolean>(false);
-  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState('');
   const [ocrError, setOcrError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
+  const [success, setSuccess] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -45,8 +43,7 @@ const ExpenseForm: React.FC = () => {
         const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         setDate(formattedDate);
       }
-    } catch (err) {
-      console.error("Eroare OCR:", err);
+    } catch {
       setOcrError("Nu am putut citi automat toate datele. Te rugăm să le completezi manual.");
     } finally {
       setIsAnalyzing(false);
@@ -65,11 +62,6 @@ const ExpenseForm: React.FC = () => {
 
     setLoading(true);
 
-    const payload: ExpenseDTO = {
-      amount: Number(amount),
-      category,
-      date,
-    };
 
     // Simulare API Call pentru salvarea cheltuielii
     setTimeout(() => {
@@ -80,7 +72,6 @@ const ExpenseForm: React.FC = () => {
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
-      setReceiptFile(null);
       setOcrError(null);
 
       setTimeout(() => setSuccess(false), 3000);
@@ -228,7 +219,6 @@ const ExpenseForm: React.FC = () => {
                 </label>
                 <ImageUploader
                     onImageSelect={(file) => {
-                      setReceiptFile(file);
                       if (file) {
                         handleOcrProcess(file);
                       } else {
