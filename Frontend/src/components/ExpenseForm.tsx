@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
 import { ArrowLeft } from 'lucide-react';
 import type { ExpenseDTO } from '../types/ExpenseDTO';
 import { ImageUploader } from './ImageUploader';
 
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
-  const logout = useAuthStore((state) => state.logout);
 
 
   const [amount, setAmount] = useState<number | ''>('');
@@ -17,11 +15,6 @@ const ExpenseForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<boolean>(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,25 +58,7 @@ const ExpenseForm: React.FC = () => {
   const inputClasses = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-3 text-[14px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors";
 
   return (
-      <div className="flex-1 w-full bg-[#FAF8F5] font-sans flex flex-col">
-
-        {/* Topbar Navigation */}
-        <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <div className="w-8 h-8 rounded-[8px] bg-[#2D2926] flex items-center justify-center text-[13px] font-medium text-[#FAF8F5] tracking-tight">FA</div>
-            <span className="text-[15px] font-medium text-[#2D2926] tracking-tight">FamilyAgent</span>
-          </div>
-          <button
-              type="button"
-              onClick={handleLogout}
-              className="text-[12px] font-medium text-[#8C7E6E] px-3.5 py-1.5 border border-[#E2DDD7] rounded-[20px] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926] transition-colors"
-          >
-            Logout
-          </button>
-        </nav>
-
-        {/* Form Container */}
-        <div className="flex-1 flex justify-center py-12 px-6">
+      <div className="flex-1 flex justify-center py-12 px-6">
           <div className="w-full max-w-md bg-white border border-[#EDE9E3] rounded-[14px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up h-fit">
 
             {/* Header Section */}
@@ -200,7 +175,6 @@ const ExpenseForm: React.FC = () => {
               </button>
             </form>
           </div>
-        </div>
       </div>
   );
 };

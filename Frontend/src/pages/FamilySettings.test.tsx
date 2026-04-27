@@ -1,8 +1,17 @@
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import Reports from './Reports' // <--- VERIFICĂ ACEST IMPORT!
+
+type MockAuthState = {
+    logout: () => void
+}
+
+type ResponsiveContainerMockProps = {
+    children?: ReactNode
+}
 
 // Mock pentru navigare
 const mockNavigate = vi.fn()
@@ -13,12 +22,12 @@ vi.mock('react-router-dom', async () => {
 
 const mockLogout = vi.fn()
 vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
+    useAuthStore: <T,>(selector: (state: MockAuthState) => T) => selector({ logout: mockLogout }),
 }))
 
 vi.mock('recharts', async () => {
     const actual = await vi.importActual('recharts')
-    return { ...actual, ResponsiveContainer: ({ children }: any) => <div>{children}</div> }
+    return { ...actual, ResponsiveContainer: ({ children }: ResponsiveContainerMockProps) => <div>{children}</div> }
 })
 
 describe('Reports Component - Final Corrected Version', () => {
@@ -83,7 +92,8 @@ describe('Reports Component - Final Corrected Version', () => {
 
     it('5. Navigare înapoi la Dashboard', () => {
         renderComponent()
-        fireEvent.click(screen.getByText('FamilyAgent'))
+        const backButton = screen.getByRole('button', { name: '' })
+        fireEvent.click(backButton)
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
 })

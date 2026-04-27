@@ -11,7 +11,6 @@ import {
 export default function FamilySettings() {
     const token = useAuthStore((state) => state.token);
     const navigate = useNavigate();
-    const logout = useAuthStore((state) => state.logout);
 
     const payload = token ? decodeJwtPayload(token) : null;
 
@@ -30,11 +29,6 @@ export default function FamilySettings() {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteRole, setInviteRole] = useState<'Co-Parent' | 'Child'>('Child');
     const [isInviting, setIsInviting] = useState(false);
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login', { replace: true });
-    };
 
     const handleInvite = (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,18 +70,7 @@ export default function FamilySettings() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-            <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                    <div className="w-8 h-8 rounded-[8px] bg-[#2D2926] flex items-center justify-center text-[13px] font-medium text-[#FAF8F5] tracking-tight">FA</div>
-                    <span className="text-[15px] font-medium text-[#2D2926] tracking-tight">FamilyAgent</span>
-                </div>
-                <button onClick={handleLogout} className="text-[12px] font-medium text-[#8C7E6E] px-3.5 py-1.5 border border-[#E2DDD7] rounded-[20px] bg-white hover:border-[#C4B9AC] transition-colors">
-                    Logout
-                </button>
-            </nav>
-
-            <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[800px] mx-auto w-full flex-1">
+        <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[800px] mx-auto w-full flex-1">
                 <div className="flex items-center gap-4 mb-8 fade-in-up">
                     <button onClick={() => navigate('/dashboard')} className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] shadow-sm shrink-0">
                         <ArrowLeft size={18} />
@@ -174,7 +157,6 @@ export default function FamilySettings() {
                         ))}
                     </div>
                 </div>
-            </div>
         </div>
     );
 }
