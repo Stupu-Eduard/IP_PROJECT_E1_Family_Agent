@@ -13,7 +13,8 @@ import java.util.regex.Pattern;
 @Slf4j
 public class HallucinationGuard {
 
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+[.,]\\d+)");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d{1,10}[.,]\\d{1,10})");
+    private static final int MAX_INPUT_LENGTH = 10000;
 
     /**
      * Enhanced Validation: Verifică cifrele și trendul semantic (Fail-Safe).
@@ -26,6 +27,15 @@ public class HallucinationGuard {
     }
 
     private String validateNumbers(String aiResponse, String toolOutput) {
+        if (aiResponse != null && aiResponse.length() > MAX_INPUT_LENGTH) {
+            log.warn("AI response exceeds max length, skipping number validation");
+            return aiResponse;
+        }
+        if (toolOutput != null && toolOutput.length() > MAX_INPUT_LENGTH) {
+            log.warn("Tool output exceeds max length, skipping number validation");
+            return aiResponse;
+        }
+
         List<BigDecimal> toolNumbers = new ArrayList<>();
         Matcher toolMatcher = NUMBER_PATTERN.matcher(toolOutput);
         while (toolMatcher.find()) {
