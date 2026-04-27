@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import PrivateRoute from './components/PrivateRoute'
+import ProtectedLayout from './components/ProtectedLayout'
 import Dashboard from './pages/Dashboard'
 import KidDashboard from './pages/KidDashboard'
 import LoginForm from './pages/LoginForm'
@@ -27,14 +28,16 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 {/* Rute Protejate */}
-                <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                <Route path="/kid-dashboard" element={<PrivateRoute><KidDashboard /></PrivateRoute>} />
-                <Route path="/add-expense" element={<PrivateRoute><ExpenseForm /></PrivateRoute>} />
-                <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
-                <Route path="/expenses/map" element={<PrivateRoute><ExpenseMap /></PrivateRoute>} />
-                <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
-                <Route path="/expenses/all-map" element={<PrivateRoute><ExpensesMapAll /></PrivateRoute>} />
-                <Route path="/family" element={<PrivateRoute><FamilySettings /></PrivateRoute>} />
+                <Route element={<PrivateRoute><ProtectedLayout /></PrivateRoute>}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/kid-dashboard" element={<KidDashboard />} />
+                    <Route path="/add-expense" element={<ExpenseForm />} />
+                    <Route path="/expenses" element={<Expenses />} />
+                    <Route path="/expenses/map" element={<ExpenseMap />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
+                    <Route path="/family" element={<FamilySettings />} />
+                </Route>
 
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

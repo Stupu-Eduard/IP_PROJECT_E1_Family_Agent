@@ -14,12 +14,6 @@ vi.mock('react-router-dom', async () => {
     }
 })
 
-// 2. Mocking pentru starea de autentificare (Zustand)
-const mockLogout = vi.fn()
-vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
-}))
-
 describe('KidDashboard Component (Interfață Adaptivă Copii)', () => {
     // Resetăm funcțiile mock înainte de fiecare test
     beforeEach(() => {
@@ -67,15 +61,4 @@ describe('KidDashboard Component (Interfață Adaptivă Copii)', () => {
         expect(mockNavigate).toHaveBeenCalledWith('/family')
     })
 
-    it('ar trebui să apeleze funcția de logout și să redirecționeze la login', () => {
-        renderComponent()
-
-        // Căutăm butonul de ieșire
-        const logoutButton = screen.getByText(/Ieși/i)
-        fireEvent.click(logoutButton)
-
-        // Validăm logica de deconectare
-        expect(mockLogout).toHaveBeenCalledTimes(1)
-        expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
-    })
 })
