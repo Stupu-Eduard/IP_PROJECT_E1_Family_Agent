@@ -20,13 +20,18 @@ class GeofencingServiceTest {
     private GeofencingService service;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         // Creăm o clonă falsă (mock) a Firebase-ului ca să nu trimitem notificări reale în teste
         mockFirebaseService = mock(FirebaseNotificationService.class);
 
         // Inițializăm serviciul tău folosind clona de Firebase!
         // Acum se potrivește perfect cu noul constructor.
         service = new GeofencingService(mockFirebaseService);
+
+        // Setăm token-ul prin reflexie pentru a evita hardcoded values în producție
+        java.lang.reflect.Field tokenField = GeofencingService.class.getDeclaredField("parentDeviceToken");
+        tokenField.setAccessible(true);
+        tokenField.set(service, "test-token");
     }
 
     @Test
