@@ -38,12 +38,12 @@
     &quot;assignee&quot;: &quot;EnachescuAlexandra&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Stupu-Eduard/IP_PROJECT_E1_Family_Agent.git&quot;,
-    &quot;accountId&quot;: &quot;d016bf2f-2242-4849-a6b5-899f34781118&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/Stupu-Eduard/IP_PROJECT_E1_Family_Agent.git",
+    "accountId": "b4a77aac-80cb-476e-a351-826efaaa6b70"
   }
-}</component>
+}]]></component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -110,6 +110,13 @@
     ]
   }
 }]]></component>
+  <component name="RecapSpentCounter">
+    <option name="endsOfQuotaMs" value="1779127230992" />
+    <option name="spentUsd" value="0.00473325" />
+  </component>
+  <component name="RecapUselessUpdatesCounter">
+    <option name="suspendCountdown" value="9" />
+  </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\crist\IdeaProjects\Copiere cheltuieli_familie_db\cheltuieli-familie\src\test\resources\db\migration" />
@@ -128,7 +135,7 @@
       <recent name="com.familie.cheltuieli_familie.repository" />
     </key>
   </component>
-  <component name="RunManager" selected="JUnit.repository in cheltuieli-familie">
+  <component name="RunManager" selected="Spring Boot.CheltuieliFamilieApplication">
     <configuration name="ExpenseItemRepositoryTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
@@ -184,8 +191,9 @@
       </method>
     </configuration>
     <configuration name="CheltuieliFamilieApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
-      <module name="cheltuieli-familie" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="com.familie.cheltuieli_familie.CheltuieliFamilieApplication" />
+      <option name="ALTERNATIVE_JRE_PATH" value="openjdk-26" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.familie.cheltuieli_familie.CheltuieliFamilieApplication.java" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.familie.cheltuieli_familie.*" />
@@ -205,8 +213,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="JUnit.repository in cheltuieli-familie" />
         <item itemvalue="Spring Boot.CheltuieliFamilieApplication" />
+        <item itemvalue="JUnit.repository in cheltuieli-familie" />
         <item itemvalue="JUnit.ExpenseItemRepositoryTest" />
         <item itemvalue="JUnit.ExpenseRepositoryTest" />
         <item itemvalue="JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved" />
