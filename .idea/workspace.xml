@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="369cf640-f479-4c0f-b9c7-19490d2c8fbf" name="Changes" comment="configured h2 tests and the migration scripts to work" />
+    <list default="true" id="369cf640-f479-4c0f-b9c7-19490d2c8fbf" name="Changes" comment="configured h2 tests and the migration scripts to work">
+      <change afterPath="$PROJECT_DIR$/Frontend/src/api/api.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/com/familie/cheltuieli_familie/security/service/LocationValidationService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/service/LocationValidationServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Frontend/src/pages/ExpenseMap.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Frontend/src/pages/ExpenseMap.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/familie/cheltuieli_familie/security/controller/ChildLocationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/familie/cheltuieli_familie/security/controller/ChildLocationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/controller/ChildLocationControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/test/java/com/familie/cheltuieli_familie/security/controller/ChildLocationControllerTest.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -23,13 +33,19 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Class" />
         <option value="Interface" />
         <option value="JUnit5 Test Class" />
+        <option value="TypeScript File" />
+        <option value="Class" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="feature/miron-andrei" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -38,12 +54,12 @@
     &quot;assignee&quot;: &quot;EnachescuAlexandra&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Stupu-Eduard/IP_PROJECT_E1_Family_Agent.git",
-    "accountId": "b4a77aac-80cb-476e-a351-826efaaa6b70"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Stupu-Eduard/IP_PROJECT_E1_Family_Agent.git&quot;,
+    &quot;accountId&quot;: &quot;b4a77aac-80cb-476e-a351-826efaaa6b70&quot;
   }
-}]]></component>
+}</component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -69,11 +85,13 @@
   "keyToString": {
     "Application.CheltuieliFamilieApplication.executor": "Run",
     "JUnit.CheltuieliFamilieApplicationTests.executor": "Run",
+    "JUnit.ChildLocationControllerTest.executor": "Coverage",
     "JUnit.ExpenseItemRepositoryTest.executor": "Run",
     "JUnit.ExpenseItemRepositoryTest.shouldDeleteExpenseItem.executor": "Run",
     "JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems.executor": "Run",
     "JUnit.ExpenseRepositoryTest.executor": "Run",
     "JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved.executor": "Run",
+    "JUnit.LocationValidationServiceTest.executor": "Coverage",
     "JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor": "Run",
     "JUnit.repository in cheltuieli-familie.executor": "Coverage",
     "Maven.cheltuieli-familie [clean].executor": "Run",
@@ -90,7 +108,7 @@
     "Spring Boot.CheltuieliFamilieApplication.executor": "Run",
     "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
     "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "",
-    "git-widget-placeholder": "development",
+    "git-widget-placeholder": "feature/miron-andrei-fix",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/home/adela/Desktop/IP_PROJECT_E1_Family_Agent/backend/pom.xml",
@@ -135,57 +153,63 @@
       <recent name="com.familie.cheltuieli_familie.repository" />
     </key>
   </component>
-  <component name="RunManager" selected="Spring Boot.CheltuieliFamilieApplication">
-    <configuration name="ExpenseItemRepositoryTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="JUnit.AlertServiceTest">
+    <configuration name="AlertServiceTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.security.service.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
-      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseItemRepositoryTest" />
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.security.service" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.security.service.AlertServiceTest" />
       <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ExpenseRepositoryTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+    <configuration name="ChildLocationControllerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.security.controller.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
-      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseRepositoryTest" />
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.security.controller" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.security.controller.ChildLocationControllerTest" />
       <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+    <configuration name="LocationValidationServiceTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.familie.cheltuieli_familie.repository.*" />
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.security.service.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
-      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.repository" />
-      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.repository.ExpenseRepositoryTest" />
-      <option name="METHOD_NAME" value="shouldPersistItemsWhenExpenseIsSaved" />
-      <option name="TEST_OBJECT" value="method" />
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.security.service" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.security.service.LocationValidationServiceTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="repository in cheltuieli-familie" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+    <configuration name="MinorSafetyFilterServiceTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="cheltuieli-familie" />
-      <option name="TEST_OBJECT" value="directory" />
-      <dir value="$PROJECT_DIR$/cheltuieli-familie/src/test/java/com/familie/cheltuieli_familie/repository" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.familie.cheltuieli_familie.security.service.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.security.service" />
+      <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.security.service.MinorSafetyFilterServiceTest" />
+      <option name="TEST_OBJECT" value="class" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -213,11 +237,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="JUnit.AlertServiceTest" />
+        <item itemvalue="JUnit.MinorSafetyFilterServiceTest" />
+        <item itemvalue="JUnit.ChildLocationControllerTest" />
+        <item itemvalue="JUnit.LocationValidationServiceTest" />
         <item itemvalue="Spring Boot.CheltuieliFamilieApplication" />
-        <item itemvalue="JUnit.repository in cheltuieli-familie" />
-        <item itemvalue="JUnit.ExpenseItemRepositoryTest" />
-        <item itemvalue="JUnit.ExpenseRepositoryTest" />
-        <item itemvalue="JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved" />
       </list>
     </recent_temporary>
   </component>
@@ -329,7 +353,43 @@
     <option name="LAST_COMMIT_MESSAGE" value="configured h2 tests and the migration scripts to work" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/family_agent_api$GeofenceControllerTest.ic" NAME="GeofenceControllerTest Coverage Results" MODIFIED="1776943675980" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.controller.*</FILTER>
+    </SUITE>
     <SUITE FILE_PATH="coverage/Copiere_cheltuieli_familie_db$repository_in_cheltuieli_familie.ic" NAME="repository in cheltuieli-familie Coverage Results" MODIFIED="1776929002925" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true" />
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$FirebaseNotificationServiceTest.ic" NAME="FirebaseNotificationServiceTest Coverage Results" MODIFIED="1777222048596" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$GeofencingServiceTest.ic" NAME="GeofencingServiceTest Coverage Results" MODIFIED="1777275744378" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/family_agent_api$SecurityAlertDtoTest.ic" NAME="SecurityAlertDtoTest Coverage Results" MODIFIED="1776944259781" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.model.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/family_agent_api$NotficationServiceTest.ic" NAME="NotficationServiceTest Coverage Results" MODIFIED="1776943857817" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$ChildLocationControllerTest.ic" NAME="ChildLocationControllerTest Coverage Results" MODIFIED="1777309225966" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.controller.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/family_agent_api$GeofencingServiceTest.ic" NAME="GeofencingServiceTest Coverage Results" MODIFIED="1776943893566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/family_agent_api$AlertServiceTest.ic" NAME="AlertServiceTest Coverage Results" MODIFIED="1776943911273" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/family_agent_api$FirebaseNotificationServiceTest.ic" NAME="FirebaseNotificationServiceTest Coverage Results" MODIFIED="1776944136188" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$LocationValidationServiceTest.ic" NAME="LocationValidationServiceTest Coverage Results" MODIFIED="1777308409303" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$GeofenceControllerTest.ic" NAME="GeofenceControllerTest Coverage Results" MODIFIED="1777221752543" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.controller.*</FILTER>
+    </SUITE>
+    <SUITE FILE_PATH="coverage/IP_PROJECT_E1_Family_Agent$AlertServiceTest.ic" NAME="AlertServiceTest Coverage Results" MODIFIED="1777222028995" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>com.familie.cheltuieli_familie.security.service.*</FILTER>
+    </SUITE>
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

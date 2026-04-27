@@ -14,6 +14,25 @@ type MapState = {
 
 type LatLng = { lat: number; lng: number }
 
+//  Geofencing Engine (Client-Side)
+// Algoritm matematic Ray-Casting pentru a verifica daca un punct este in poligon
+function isInsideGeofence(point: LatLng, polygon: LatLng[]) {
+  let isInside = false;
+  const x = point.lng, y = point.lat;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lng, yi = polygon[i].lat;
+    const xj = polygon[j].lng, yj = polygon[j].lat;
+
+    const intersect = ((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) isInside = !isInside;
+  }
+
+  return isInside;
+}
+// -----------------------------------------------------
+
 export default function ExpenseMap() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -35,6 +54,18 @@ export default function ExpenseMap() {
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null)
   const [placeId, setPlaceId] = useState<string | null>(null)
   const [googleMapsUri, setGoogleMapsUri] = useState<string | null>(null)
+
+  //  Adaugat pentru Geofencing
+  const [isOutsideZone, setIsOutsideZone] = useState(false);
+
+  // Vom folosi acest patrat (centrul Bucurestiului) ca zona sigura de test
+  const safeZone = [
+    { lat: 44.4300, lng: 26.0900 },
+    { lat: 44.4300, lng: 26.1100 },
+    { lat: 44.4200, lng: 26.1100 },
+    { lat: 44.4200, lng: 26.0900 },
+  ];
+  // -----------------------------------------------------
 
   const [place, setPlace] = useState<{
     name?: string
@@ -112,7 +143,7 @@ export default function ExpenseMap() {
       headers: {
         'X-Goog-Api-Key': mapsApiKey,
         'X-Goog-FieldMask':
-          'displayName,formattedAddress,rating,userRatingCount,websiteUri,regularOpeningHours.openNow,regularOpeningHours.weekdayDescriptions,nationalPhoneNumber,internationalPhoneNumber,photos,googleMapsUri',
+            'displayName,formattedAddress,rating,userRatingCount,websiteUri,regularOpeningHours.openNow,regularOpeningHours.weekdayDescriptions,nationalPhoneNumber,internationalPhoneNumber,photos,googleMapsUri',
       },
     })
 
@@ -140,6 +171,7 @@ export default function ExpenseMap() {
     setGoogleMapsUri(null)
     setPlace(null)
     setInfoOpen(false)
+    setIsOutsideZone(false) // Resetam alerta la schimbarea locatiei
 
     if (!mapsApiKey || !isLoaded || loadError) return
 
@@ -193,6 +225,13 @@ export default function ExpenseMap() {
       setMarker(coords)
       setResolvedAddress(addressFromGeocode)
 
+      // Verificam matematic INSTANT daca punctul e in afara zonei
+      if (coords) {
+        const isSafe = isInsideGeofence(coords, safeZone);
+        setIsOutsideZone(!isSafe);
+      }
+      // ------------------------------------------------
+
       // 2) Save coords to DB if they were missing
       if (!hadDbCoords && state.locationId) {
         try {
@@ -243,161 +282,173 @@ export default function ExpenseMap() {
   })()
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-      <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
-            aria-label="Înapoi"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex flex-col">
-            <h2 className="text-[18px] sm:text-[20px] font-medium text-[#2D2926] tracking-tight leading-tight">Hartă</h2>
-            <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-0.5">
-              <MapPin size={12} />
-              <span>{label || 'Locație'}</span>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="px-6 lg:px-10 pt-6 pb-10 max-w-[1200px] mx-auto w-full flex-1">
-        {state.description && <div className="mb-3 text-[14px] text-[#2D2926] font-medium">{state.description}</div>}
-
-        {!mapsApiKey && (
-          <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
-            Lipsește cheia Google Maps. Setează <span className="font-medium text-[#2D2926]">VITE_GOOGLE_MAPS_API_KEY</span> în <span className="font-medium text-[#2D2926]">Frontend/.env.local</span>.
-          </div>
-        )}
-
-        {mapsApiKey && loadError && (
-          <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
-            Nu s-a putut încărca Google Maps. Verifică cheia și restricțiile ei în Google Cloud Console.
-          </div>
-        )}
-
-        {mapsApiKey && !loadError && !isLoaded && (
-          <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">Se încarcă harta…</div>
-        )}
-
-        {mapsApiKey && !loadError && isLoaded && (
-          <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-            <div className="flex flex-col md:flex-row">
-              <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
-                {placePhotoSrc && (
-                  <div className="mb-4 overflow-hidden rounded-[12px] border border-[#EDE9E3] bg-[#FAF8F5]">
-                    <img
-                      src={placePhotoSrc}
-                      alt={place?.name || label}
-                      className="w-full h-[160px] object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-
-                <div className="text-[12px] text-[#9A8A7C]">Locație</div>
-                <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug">{place?.name || label || 'Locație'}</div>
-
-                {(place?.formattedAddress || resolvedAddress) && (
-                  <div className="mt-1 text-[13px] text-[#9A8A7C]">{place?.formattedAddress || resolvedAddress}</div>
-                )}
-
-                {(typeof place?.rating === 'number' || typeof place?.userRatingCount === 'number') && (
-                  <div className="mt-2 text-[13px] text-[#2D2926]">
-                    {typeof place?.rating === 'number' ? `Rating: ${place.rating}` : null}
-                    {typeof place?.userRatingCount === 'number' ? ` (${place.userRatingCount})` : null}
-                  </div>
-                )}
-
-                {typeof place?.openNow === 'boolean' && (
-                  <div className="mt-2 text-[13px]">
-                    <span className="font-medium text-[#2D2926]">{place.openNow ? 'Deschis' : 'Închis'}</span>
-                  </div>
-                )}
-
-                {place?.weekdayDescriptions?.length ? (
-                  <div className="mt-1 text-[12px] text-[#9A8A7C]">
-                    {place.weekdayDescriptions.slice(0, 3).map((line) => (
-                      <div key={line}>{line}</div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {place?.phone && <div className="mt-3 text-[13px] text-[#2D2926]">{place.phone}</div>}
-
-                {place?.websiteUri && (
-                  <a
-                    href={place.websiteUri}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex items-center justify-center h-10 px-3 rounded-[10px] bg-white border border-[#EDE9E3] text-[13px] text-[#2D2926] hover:border-[#C4B9AC] transition-colors"
-                  >
-                    Website
-                  </a>
-                )}
-
-                {googleMapsLink && (
-                  <a
-                    href={googleMapsLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex items-center justify-center h-10 px-3 rounded-[10px] bg-[#2D2926] text-white text-[13px] hover:opacity-90 transition-opacity"
-                  >
-                    Deschide în Google Maps
-                  </a>
-                )}
-
-                {message && <div className="mt-4 text-[12px] text-[#9A8A7C]">{message}</div>}
-              </aside>
-
-              <div className="flex-1">
-                <GoogleMap
-                  mapContainerStyle={{ width: '100%', height: '520px' }}
-                  center={center}
-                  zoom={marker ? 17 : 12}
-                  options={{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
-                >
-                  {marker && <Marker position={marker} onClick={() => setInfoOpen(true)} />}
-
-                  {marker && infoOpen && (
-                    <InfoWindow position={marker} onCloseClick={() => setInfoOpen(false)}>
-                      <div style={{ maxWidth: 220 }}>
-                        {placePhotoSrc && (
-                          <div style={{ marginBottom: 8 }}>
-                            <img
-                              src={placePhotoSrc}
-                              alt={place?.name || label}
-                              style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8 }}
-                              loading="lazy"
-                            />
-                          </div>
-                        )}
-
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>{place?.name || label}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{place?.formattedAddress || resolvedAddress || ''}</div>
-
-                        {googleMapsLink && (
-                          <a
-                            href={googleMapsLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: '#111827' }}
-                          >
-                            Deschide în Google Maps
-                          </a>
-                        )}
-                      </div>
-                    </InfoWindow>
-                  )}
-                </GoogleMap>
+      <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
+        <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
+                aria-label="Înapoi"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="flex flex-col">
+              <h2 className="text-[18px] sm:text-[20px] font-medium text-[#2D2926] tracking-tight leading-tight">Hartă</h2>
+              <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-0.5">
+                <MapPin size={12} />
+                <span>{label || 'Locație'}</span>
               </div>
             </div>
           </div>
-        )}
+        </nav>
+
+        <div className="px-6 lg:px-10 pt-6 pb-10 max-w-[1200px] mx-auto w-full flex-1">
+
+          {/* --- BANNER DE ALERTA GEOFENCING (Task Miron Andrei) --- */}
+          {isOutsideZone && marker && (
+              <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm animate-pulse">
+                <div className="flex items-center">
+                  <span className="font-bold text-lg mr-2">⚠️ ALERTĂ DE SECURITATE:</span>
+                  <span>Locația este în afara perimetrului de siguranță!</span>
+                </div>
+              </div>
+          )}
+          {/* ------------------------------------------------------- */}
+
+          {state.description && <div className="mb-3 text-[14px] text-[#2D2926] font-medium">{state.description}</div>}
+
+          {!mapsApiKey && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
+                Lipsește cheia Google Maps. Setează <span className="font-medium text-[#2D2926]">VITE_GOOGLE_MAPS_API_KEY</span> în <span className="font-medium text-[#2D2926]">Frontend/.env.local</span>.
+              </div>
+          )}
+
+          {mapsApiKey && loadError && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
+                Nu s-a putut încărca Google Maps. Verifică cheia și restricțiile ei în Google Cloud Console.
+              </div>
+          )}
+
+          {mapsApiKey && !loadError && !isLoaded && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">Se încarcă harta…</div>
+          )}
+
+          {mapsApiKey && !loadError && isLoaded && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                <div className="flex flex-col md:flex-row">
+                  <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
+                    {placePhotoSrc && (
+                        <div className="mb-4 overflow-hidden rounded-[12px] border border-[#EDE9E3] bg-[#FAF8F5]">
+                          <img
+                              src={placePhotoSrc}
+                              alt={place?.name || label}
+                              className="w-full h-[160px] object-cover"
+                              loading="lazy"
+                          />
+                        </div>
+                    )}
+
+                    <div className="text-[12px] text-[#9A8A7C]">Locație</div>
+                    <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug">{place?.name || label || 'Locație'}</div>
+
+                    {(place?.formattedAddress || resolvedAddress) && (
+                        <div className="mt-1 text-[13px] text-[#9A8A7C]">{place?.formattedAddress || resolvedAddress}</div>
+                    )}
+
+                    {(typeof place?.rating === 'number' || typeof place?.userRatingCount === 'number') && (
+                        <div className="mt-2 text-[13px] text-[#2D2926]">
+                          {typeof place?.rating === 'number' ? `Rating: ${place.rating}` : null}
+                          {typeof place?.userRatingCount === 'number' ? ` (${place.userRatingCount})` : null}
+                        </div>
+                    )}
+
+                    {typeof place?.openNow === 'boolean' && (
+                        <div className="mt-2 text-[13px]">
+                          <span className="font-medium text-[#2D2926]">{place.openNow ? 'Deschis' : 'Închis'}</span>
+                        </div>
+                    )}
+
+                    {place?.weekdayDescriptions?.length ? (
+                        <div className="mt-1 text-[12px] text-[#9A8A7C]">
+                          {place.weekdayDescriptions.slice(0, 3).map((line) => (
+                              <div key={line}>{line}</div>
+                          ))}
+                        </div>
+                    ) : null}
+
+                    {place?.phone && <div className="mt-3 text-[13px] text-[#2D2926]">{place.phone}</div>}
+
+                    {place?.websiteUri && (
+                        <a
+                            href={place.websiteUri}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center justify-center h-10 px-3 rounded-[10px] bg-white border border-[#EDE9E3] text-[13px] text-[#2D2926] hover:border-[#C4B9AC] transition-colors"
+                        >
+                          Website
+                        </a>
+                    )}
+
+                    {googleMapsLink && (
+                        <a
+                            href={googleMapsLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-4 inline-flex items-center justify-center h-10 px-3 rounded-[10px] bg-[#2D2926] text-white text-[13px] hover:opacity-90 transition-opacity"
+                        >
+                          Deschide în Google Maps
+                        </a>
+                    )}
+
+                    {message && <div className="mt-4 text-[12px] text-[#9A8A7C]">{message}</div>}
+                  </aside>
+
+                  <div className="flex-1">
+                    <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '520px' }}
+                        center={center}
+                        zoom={marker ? 17 : 12}
+                        options={{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
+                    >
+                      {marker && <Marker position={marker} onClick={() => setInfoOpen(true)} />}
+
+                      {marker && infoOpen && (
+                          <InfoWindow position={marker} onCloseClick={() => setInfoOpen(false)}>
+                            <div style={{ maxWidth: 220 }}>
+                              {placePhotoSrc && (
+                                  <div style={{ marginBottom: 8 }}>
+                                    <img
+                                        src={placePhotoSrc}
+                                        alt={place?.name || label}
+                                        style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8 }}
+                                        loading="lazy"
+                                    />
+                                  </div>
+                              )}
+
+                              <div style={{ fontWeight: 600, marginBottom: 4 }}>{place?.name || label}</div>
+                              <div style={{ fontSize: 12, color: '#6b7280' }}>{place?.formattedAddress || resolvedAddress || ''}</div>
+
+                              {googleMapsLink && (
+                                  <a
+                                      href={googleMapsLink}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: '#111827' }}
+                                  >
+                                    Deschide în Google Maps
+                                  </a>
+                              )}
+                            </div>
+                          </InfoWindow>
+                      )}
+                    </GoogleMap>
+                  </div>
+                </div>
+              </div>
+          )}
+        </div>
       </div>
-    </div>
   )
 }
