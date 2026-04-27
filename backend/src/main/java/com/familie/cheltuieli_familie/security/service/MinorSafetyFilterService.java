@@ -40,7 +40,15 @@ public class MinorSafetyFilterService {
                     "Atentie! Minorul a inregistrat o locatie intr-o zona restrictionata de tip '%s'.",
                     triggeredCategory
             );
-            SecurityAlertDto alert = new SecurityAlertDto(childId, parentId, message, triggeredCategory);
+
+            // REPARATIE AICI: Folosim constructorul gol si setteri pentru a evita eroarea de "Cannot resolve constructor"
+            SecurityAlertDto alert = new SecurityAlertDto();
+            alert.setChildId(childId);
+            alert.setParentId(parentId);
+            alert.setAlertMessage(message);
+            alert.setRestrictedCategory(triggeredCategory);
+            alert.setTimestamp(System.currentTimeMillis()); // Adaugam si timpul curent
+
             alertService.sendPushNotificationToParent(alert);
         } else {
             logger.info("Locatie sigura. Nicio alerta declansata.");
