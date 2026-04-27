@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExpenseTools {
 
-    private static final Pattern PERCENTAGE_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)%");
+    private static final Pattern PERCENTAGE_PATTERN = Pattern.compile("(\\d{1,10}(\\.\\d{1,10})?)%");
     private static final int MAX_TREND_LENGTH = 1000;
 
     private final ExpenseAnalyticsService analyticsService;
