@@ -30,6 +30,10 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 		<dependency>
@@ -65,12 +69,17 @@
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
 			<artifactId>langchain4j</artifactId>
-			<version>0.31.0</version>
+			<version>0.34.0</version>
 		</dependency>
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
 			<artifactId>langchain4j-open-ai</artifactId>
-			<version>0.31.0</version>
+			<version>0.34.0</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-qdrant</artifactId>
+			<version>0.34.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -85,11 +94,6 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.locationtech.jts</groupId>
-			<artifactId>jts-core</artifactId>
-			<version>1.19.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.locationtech.jts</groupId>

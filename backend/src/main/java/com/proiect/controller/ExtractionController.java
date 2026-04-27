@@ -4,19 +4,22 @@ import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;
 import com.proiect.service.ExtractionService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/v1/extract")
+@RequestMapping("/v1/extract")
 @RequiredArgsConstructor
 public class ExtractionController {
 
     private final ExtractionService extractionService;
 
     @PostMapping
-    public ResponseEntity<ExtractionResponse> extractDetails(@RequestBody ExtractionRequest request) {
-        ExtractionResponse response = extractionService.process(request);
+    public ResponseEntity<List<ExtractionResponse>> extractDetails(@Valid @RequestBody ExtractionRequest request) {
+        List<ExtractionResponse> response = extractionService.process(request);
         return ResponseEntity.ok(response);
     }
 

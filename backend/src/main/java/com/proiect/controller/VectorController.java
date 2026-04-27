@@ -1,23 +1,23 @@
 package com.proiect.controller;
 
-import com.proiect.repository.ExpenseVectorRepositoryImpl;
+import com.proiect.service.QdrantVectorService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/vectors")
+@RequestMapping("/v1/vectors")
 public class VectorController {
 
-    private final ExpenseVectorRepositoryImpl repository;
+    private final QdrantVectorService service;
 
-    public VectorController(ExpenseVectorRepositoryImpl repository) {
-        this.repository = repository;
+    public VectorController(QdrantVectorService service) {
+        this.service = service;
     }
 
     @GetMapping("/check/{id}")
     public boolean checkVectorExists(@PathVariable Long id) {
-        return repository.existsInVectorStore(id);
+        return service.existsInVectorStore(id);
     }
 }

@@ -1,3 +1,6 @@
 package com.proiect.dto;
 
-public record RawInputDTO(String rawText) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record RawInputDTO(@NotBlank(message = "Raw text is required and cannot be empty") String rawText) {
+}
