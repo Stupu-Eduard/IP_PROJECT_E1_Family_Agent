@@ -57,9 +57,6 @@ export default function Expenses() {
         return () => controller.abort();
     }, []);
 
-    // ==========================================
-    // STĂRILE FILTRELOR
-    // ==========================================
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson, setSelectedPerson] = useState('');

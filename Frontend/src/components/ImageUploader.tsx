@@ -5,6 +5,8 @@ interface ImageUploaderProps {
     onImageSelect: (file: File | null) => void;
 }
 
+const MAX_SIZE = 5 * 1024 * 1024;
+
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) => {
    
     const [preview, setPreview] = useState<string | null>(null);
@@ -20,26 +22,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
             return;
         }
 
-        // Validare criteriu 1: Tip fișier (doar imagini)
         if (!file.type.startsWith('image/')) {
             setError('Format invalid. Vă rugăm să selectați o imagine (.jpg, .png).');
             clearSelection();
             return;
         }
 
-        // Validare criteriu 2: Dimensiune maximă (5MB)
-        const MAX_SIZE = 5 * 1024 * 1024;
         if (file.size > MAX_SIZE) {
             setError('Fișierul depășește limita maximă de 5MB.');
             clearSelection();
             return;
         }
 
-        // Generare preview imagine
         const objectUrl = URL.createObjectURL(file);
         setPreview(objectUrl);
 
-        // Transmitere obiect File către componenta părinte
         onImageSelect(file);
     };
 

@@ -18,7 +18,6 @@ export default function FamilySettings() {
 
     const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
 
-    // REZOLVARE CRITICĂ: Am adăugat [] după GroupMemberDTO pentru a-i spune că e o LISTĂ
     const [members, setMembers] = useState<GroupMemberDTO[]>( [
         { id: '1', name: 'Edi (Tu)', email: 'eduard@parent.com', role: 'Parent', status: 'Accepted' },
         { id: '2', name: 'Mihaela ', email: 'mihaela@partner.com', role: 'Co-Parent', status: 'Accepted' },
@@ -36,7 +35,7 @@ export default function FamilySettings() {
 
         setIsInviting(true);
         setTimeout(() => {
-            // Am asigurat tipul obiectului nou
+
             const newMember = {
                 id: Date.now().toString(),
                 name: '-',
