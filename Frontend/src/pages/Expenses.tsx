@@ -64,7 +64,8 @@ export default function Expenses() {
         return () => controller.abort();
     }, []);
 
-    const [selectedDate, setSelectedDate] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson, setSelectedPerson] = useState('');
 
@@ -79,7 +80,7 @@ export default function Expenses() {
             try {
                 const data = await fetchExpenses(
                     {
-                        date: selectedDate || undefined,
+                        date: undefined, // not used anymore
                         category: selectedCategory || undefined,
                         person: selectedPerson || undefined,
                     },
@@ -114,6 +115,7 @@ export default function Expenses() {
                         lat: expense.location?.lat ?? undefined,
                         lng: expense.location?.lng ?? undefined,
                         person: expense.person ?? 'N/A',
+                        rawDate: datePart,
                     };
                 });
 
@@ -134,7 +136,7 @@ export default function Expenses() {
             isCancelled = true;
             controller.abort();
         };
-    }, [selectedCategory, selectedDate, selectedPerson]);
+    }, [selectedCategory, selectedPerson]);
 
     const openMap = (expense: ExpenseListDTO) => {
         navigate('/expenses/map', {
@@ -150,7 +152,12 @@ export default function Expenses() {
         });
     };
 
-    const filteredExpenses = expenses;
+    // Filter by date range in frontend
+    const filteredExpenses = expenses.filter((e) => {
+        if (startDate && e.rawDate && e.rawDate < startDate) return false;
+        if (endDate && e.rawDate && e.rawDate > endDate) return false;
+        return true;
+    });
 
 
     // ==========================================
@@ -190,24 +197,43 @@ export default function Expenses() {
                         </button>
                         <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">Istoric Cheltuieli</h2>
                     </div>
-                    <button
-                        onClick={() => navigate('/add-expense')}
-                        className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[14px] font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-[0_4px_12px_rgba(45,41,38,0.15)]"
-                    >
-                        <Plus size={18} /><span>Adaugă</span>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => navigate('/expenses/all-map', { state: { expenses: filteredExpenses, filters: { startDate, endDate, selectedCategory, selectedPerson } } })}
+                            className="bg-[#FAF8F5] border border-[#EDE9E3] text-[#2D2926] px-5 py-2.5 rounded-[10px] text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#F0ECE7] transition-colors shadow-sm"
+                        >
+                            <MapPin size={18} />
+                            <span>Vezi pe Hartă</span>
+                        </button>
+                        <button
+                            onClick={() => navigate('/add-expense')}
+                            className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[14px] font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-[0_4px_12px_rgba(45,41,38,0.15)]"
+                        >
+                            <Plus size={18} /><span>Adaugă</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filtre Funcționale */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
                     <div className="relative">
                         <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                         <input
                             type="date"
                             className={`${inputStyle} pl-10`}
-                            title="Perioadă"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            title="Data de început"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="relative">
+                        <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
+                        <input
+                            type="date"
+                            className={`${inputStyle} pl-10`}
+                            title="Data de final"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
                         />
                     </div>
                     <div className="relative">

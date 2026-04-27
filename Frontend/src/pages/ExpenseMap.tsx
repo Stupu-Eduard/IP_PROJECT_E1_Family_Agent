@@ -25,6 +25,7 @@ export default function ExpenseMap() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'family-agent-google-maps',
     googleMapsApiKey: mapsApiKey ?? '',
+    libraries: ['drawing', 'geometry'],
   })
 
   const [center, setCenter] = useState<LatLng>({ lat: 44.4268, lng: 26.1025 })
@@ -225,8 +226,10 @@ export default function ExpenseMap() {
       }
     }
 
-    void run()
-    return () => controller.abort()
+    void run().catch((err) => {
+      if (err?.name !== 'AbortError') throw err;
+    });
+    return () => controller.abort();
   }, [geocodingApiKey, isLoaded, label, loadError, mapsApiKey, state.lat, state.lng, state.locationId])
 
   const googleMapsLink = (() => {
@@ -299,7 +302,7 @@ export default function ExpenseMap() {
                 )}
 
                 <div className="text-[12px] text-[#9A8A7C]">Locație</div>
-                <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug">{place?.name || label || 'Locație'}</div>
+                <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug" data-testid="sidebar-location-label">{place?.name || (label ? undefined : 'Locație')}</div>
 
                 {(place?.formattedAddress || resolvedAddress) && (
                   <div className="mt-1 text-[13px] text-[#9A8A7C]">{place?.formattedAddress || resolvedAddress}</div>
