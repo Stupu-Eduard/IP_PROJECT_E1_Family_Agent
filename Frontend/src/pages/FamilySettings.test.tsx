@@ -37,6 +37,9 @@ describe('Reports Component - Final Corrected Version', () => {
     })
 
     afterEach(() => {
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
         vi.useRealTimers()
     })
 

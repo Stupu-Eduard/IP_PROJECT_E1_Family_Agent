@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
 
@@ -11,6 +11,17 @@ vi.mock('../store/authStore', () => ({
 }))
 
 describe('ExpenseForm Component (Task 2.2)', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
+        vi.useRealTimers()
+    })
+
     it('ar trebui să randeze toate elementele formularului', () => {
         render(
             <BrowserRouter>
@@ -46,7 +57,7 @@ describe('ExpenseForm Component (Task 2.2)', () => {
         expect(screen.getByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument()
     })
 
-    it('ar trebui să simuleze adăugarea cu succes a unei cheltuieli', async () => {
+    it('ar trebui să simuleze adăugarea cu succes a unei cheltuieli', () => {
         render(
             <BrowserRouter>
                 <ExpenseForm />
@@ -63,8 +74,10 @@ describe('ExpenseForm Component (Task 2.2)', () => {
         // Așteptăm să apară starea de încărcare, apoi mesajul de succes
         expect(screen.getByText('Se salvează...')).toBeInTheDocument()
 
-        await waitFor(() => {
-            expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
-        }, { timeout: 1500 }) // Așteptăm să treacă setTimeout-ul de 1 secundă din componentă
+        act(() => {
+            vi.advanceTimersByTime(1000)
+        })
+
+        expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
     })
 })
