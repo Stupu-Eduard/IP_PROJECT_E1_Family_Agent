@@ -8,12 +8,17 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class ExpenseTools {
+
+    private static final Pattern PERCENTAGE_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)%");
+    private static final int MAX_TREND_LENGTH = 1000;
 
     private final ExpenseAnalyticsService analyticsService;
 
@@ -105,7 +110,10 @@ public class ExpenseTools {
     }
 
     private String extractPercentage(String trend) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+(\\.\\d+)?)%").matcher(trend);
+        if (trend == null || trend.length() > MAX_TREND_LENGTH) {
+            return "0";
+        }
+        Matcher m = PERCENTAGE_PATTERN.matcher(trend);
         return m.find() ? m.group(1) : "0";
     }
 }

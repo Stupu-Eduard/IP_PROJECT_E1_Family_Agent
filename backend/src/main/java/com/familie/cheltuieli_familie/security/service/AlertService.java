@@ -6,6 +6,7 @@ import com.familie.cheltuieli_familie.security.model.SecurityAlertDto;
 import com.familie.cheltuieli_familie.service.FirebaseNotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 // Am adăugat aceste 3 importuri pentru conversia timpului
@@ -20,6 +21,9 @@ public class AlertService {
     private static final Logger logger = LoggerFactory.getLogger(AlertService.class);
     private final AlertRepository alertRepository;
     private final FirebaseNotificationService firebaseNotificationService;
+
+    @Value("${firebase.parent.device.token:}")
+    private String parentDeviceToken;
 
     // Aici sunt cele 2 argumente pe care le cauta testul
     public AlertService(AlertRepository alertRepository, FirebaseNotificationService firebaseNotificationService) {
@@ -49,12 +53,15 @@ public class AlertService {
         logger.warn("!!! ALERTA SALVATA - Parinte ID: {}, Copil ID: {}, Categorie: {}",
                 alertDto.getParentId(), alertDto.getChildId(), alertDto.getRestrictedCategory());
 
-        String parentDeviceToken = "token_dispozitiv_parinte";
-        firebaseNotificationService.sendPushNotification(
-                parentDeviceToken,
-                "Alertă " + alertDto.getRestrictedCategory(),
-                alertDto.getAlertMessage()
-        );
+        if (parentDeviceToken != null && !parentDeviceToken.isEmpty()) {
+            firebaseNotificationService.sendPushNotification(
+                    parentDeviceToken,
+                    "Alertă " + alertDto.getRestrictedCategory(),
+                    alertDto.getAlertMessage()
+            );
+        } else {
+            logger.warn("Skip sending push notification: firebase.parent.device.token is not configured");
+        }
     }
 
     public List<Alert> getAlertsForParent(Long parentId) {
