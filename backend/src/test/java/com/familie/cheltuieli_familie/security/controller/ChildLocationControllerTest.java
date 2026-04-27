@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean; // Folosim MockitoBean pentru Spring Boot 3.4+
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -31,8 +31,6 @@ class ChildLocationControllerTest {
 
     @Test
     void testSyncLocation() throws Exception {
-        // Trebuie sa folosim URL-ul EXACT din @RequestMapping + @PostMapping
-        // Si cheile JSON identice cu campurile din record-ul LocationSyncRequest
         String json = """
                 {
                   "childId": 2,
@@ -48,8 +46,14 @@ class ChildLocationControllerTest {
                         .content(json))
                 .andExpect(status().isOk());
 
-        // Verificam ca serviciile au fost apelate cu datele din JSON
-        verify(locationStreamService).sendLocationToParent(1L, 47.1585, 27.6014);
-        verify(minorSafetyFilterService).evaluateChildLocation(2L, 1L, List.of("bar", "restaurant"));
+        // sendLocationToParent primeste acum 5 parametri dupa actualizare:
+        // childId, parentId, latitude, longitude, placeTypes
+        verify(locationStreamService).sendLocationToParent(
+                2L, 1L, 47.1585, 27.6014, List.of("bar", "restaurant")
+        );
+
+        verify(minorSafetyFilterService).evaluateChildLocation(
+                2L, 1L, List.of("bar", "restaurant")
+        );
     }
 }

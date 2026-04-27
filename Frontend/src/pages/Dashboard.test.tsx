@@ -59,20 +59,12 @@ describe('Dashboard Component - Coverage Optimization', () => {
         consoleSpy.mockRestore()
     })
 
-    it('4. Execută logout corect', () => {
+    it('4. Nu mai afișează buton local de logout (este în layout global)', () => {
         renderComponent()
-        const logoutButton = screen.getByTitle('Logout')
-        fireEvent.click(logoutButton)
-        expect(mockLogout).toHaveBeenCalled()
-        expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
+        expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument()
     })
 
     describe('5. Validare Navigare Completă', () => {
-        it('navighează la Home când se apasă pe Logo', () => {
-            renderComponent()
-            fireEvent.click(screen.getByText('FamilyAgent'))
-            expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-        })
 
         it('navighează la Expenses din cardul de Sumar', () => {
             renderComponent()

@@ -1,11 +1,22 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import ChatAI from './ChatAi'
 
 window.HTMLElement.prototype.scrollIntoView = vi.fn()
 
 describe('ChatAI Component (Task 3.1)', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+        act(() => {
+            vi.runOnlyPendingTimers()
+        })
+        vi.useRealTimers()
+    })
+
     it('ar trebui să se deschidă fereastra de chat la click pe butonul FAB', () => {
         render(<ChatAI />)
 
@@ -18,7 +29,7 @@ describe('ChatAI Component (Task 3.1)', () => {
         expect(screen.getByText('Salut! Sunt asistentul tău FamilyAgent. Cum te pot ajuta cu bugetul astăzi?')).toBeInTheDocument()
     })
 
-    it('ar trebui să afișeze mesajul utilizatorului și starea de typing după trimitere', async () => {
+    it('ar trebui să afișeze mesajul utilizatorului și starea de typing după trimitere', () => {
         render(<ChatAI />)
 
         // Deschidem chat-ul
@@ -40,10 +51,11 @@ describe('ChatAI Component (Task 3.1)', () => {
         // Verificăm dacă inputul este dezactivat și textul s-a schimbat în 'Agentul scrie...'
         expect(screen.getByPlaceholderText('Agentul scrie...')).toBeDisabled()
 
-        // Așteptăm să primim răspunsul simulat (durează 1.5 secunde conform logicii din ChatAi.tsx)
-        await waitFor(() => {
-            expect(screen.getByText('Analizez datele tale financiare... (Simulare)')).toBeInTheDocument()
-        }, { timeout: 2000 })
+        act(() => {
+            vi.advanceTimersByTime(1500)
+        })
+
+        expect(screen.getByText('Analizez datele tale financiare... (Simulare)')).toBeInTheDocument()
     })
 
     it('nu ar trebui să permită trimiterea unui mesaj gol', () => {

@@ -1,6 +1,11 @@
 package com.familie.cheltuieli_familie.controller;
+
 import com.familie.cheltuieli_familie.model.Alert;
 import com.familie.cheltuieli_familie.security.service.AlertService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -8,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/alerts")
+@Tag(name = "Alerts", description = "Gestionarea alertelor de securitate - accesibile doar de PARENT")
 public class AlertController {
 
     private final AlertService alertService;
@@ -16,30 +22,48 @@ public class AlertController {
         this.alertService = alertService;
     }
 
-    /**
-     * Toate alertele unui parinte, cele mai noi primele.
-     * GET /api/v1/alerts?parentId=1
-     */
+    @Operation(
+            summary = "Toate alertele unui parinte",
+            description = "Returneaza lista completa de alerte, sortate de la cea mai noua la cea mai veche.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Lista de alerte returnata cu succes"),
+                    @ApiResponse(responseCode = "403", description = "Acces interzis - doar PARENT")
+            }
+    )
     @GetMapping
-    public List<Alert> getAlerts(@RequestParam Long parentId) {
+    public List<Alert> getAlerts(
+            @Parameter(description = "ID-ul parintelui", example = "1")
+            @RequestParam Long parentId) {
         return alertService.getAlertsForParent(parentId);
     }
 
-    /**
-     * Doar alertele necitite.
-     * GET /api/v1/alerts/unread?parentId=1
-     */
+    @Operation(
+            summary = "Alertele necitite ale unui parinte",
+            description = "Returneaza doar alertele pe care parintele nu le-a citit inca.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Lista de alerte necitite returnata cu succes"),
+                    @ApiResponse(responseCode = "403", description = "Acces interzis - doar PARENT")
+            }
+    )
     @GetMapping("/unread")
-    public List<Alert> getUnreadAlerts(@RequestParam Long parentId) {
+    public List<Alert> getUnreadAlerts(
+            @Parameter(description = "ID-ul parintelui", example = "1")
+            @RequestParam Long parentId) {
         return alertService.getUnreadAlertsForParent(parentId);
     }
 
-    /**
-     * Marcheaza o alerta ca citita.
-     * PATCH /api/v1/alerts/1/read
-     */
+    @Operation(
+            summary = "Marcheaza o alerta ca citita",
+            description = "Seteaza campul 'read' pe true pentru alerta specificata.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Alerta marcata ca citita"),
+                    @ApiResponse(responseCode = "403", description = "Acces interzis - doar PARENT")
+            }
+    )
     @PatchMapping("/{alertId}/read")
-    public ResponseEntity<String> markAsRead(@PathVariable Long alertId) {
+    public ResponseEntity<String> markAsRead(
+            @Parameter(description = "ID-ul alertei de marcat ca citita", example = "5")
+            @PathVariable Long alertId) {
         alertService.markAsRead(alertId);
         return ResponseEntity.ok("Alerta marcata ca citita.");
     }
