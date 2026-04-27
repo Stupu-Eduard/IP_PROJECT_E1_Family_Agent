@@ -36,7 +36,7 @@ class FamilyMemberRepositoryTest {
         u.setName("User_" + nameSuffix);
         // UUID previne coliziunile de email între teste
         u.setEmail("fm_" + UUID.randomUUID() + "@test.com");
-        u.setPassword_h("pass");
+        u.setPasswordH("pass");
         u.setCreatedAt(LocalDate.now());
         return userRepository.save(u);
     }
