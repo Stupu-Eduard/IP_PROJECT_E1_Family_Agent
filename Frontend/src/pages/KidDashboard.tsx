@@ -1,15 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { Camera, LogOut, Wallet } from 'lucide-react';
+import { Camera, Wallet } from 'lucide-react';
 
 export default function KidDashboard() {
     const navigate = useNavigate();
-    const logout = useAuthStore((state) => state.logout);
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login', { replace: true });
-    };
 
     return (
         <div className="min-h-screen bg-[#FFFBF7] font-sans flex flex-col relative overflow-hidden">
@@ -17,18 +10,6 @@ export default function KidDashboard() {
             <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-[#FDEFE6] rounded-full blur-3xl opacity-60 pointer-events-none"></div>
             <div className="absolute bottom-[-50px] left-[-50px] w-60 h-60 bg-[#F4F0EB] rounded-full blur-3xl opacity-60 pointer-events-none"></div>
 
-            {/* Topbar */}
-            <nav className="relative z-10 px-6 pt-6 pb-2 flex items-center justify-between">
-                <div className="w-10 h-10 rounded-full bg-[#C97B4B] flex items-center justify-center text-white font-bold text-[18px] shadow-sm">
-                    A
-                </div>
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 text-[13px] font-bold text-[#9A8A7C] hover:text-[#C97B4B] transition-colors bg-white px-4 py-2 rounded-[20px] shadow-sm"
-                >
-                    <LogOut size={16} /> Ieși
-                </button>
-            </nav>
 
             <div className="relative z-10 px-6 pt-6 pb-20 max-w-[500px] mx-auto w-full flex-1 flex flex-col">
 
