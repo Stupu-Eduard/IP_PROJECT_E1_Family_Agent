@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
 import * as expenseService from '../services/expenses'
@@ -29,6 +29,12 @@ vi.mock('./ImageUploader', () => ({
 describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // AM ELIMINAT FAKE TIMERS DE AICI PENTRU A NU BLOCA FUNCȚIA waitFor()
+    })
+
+    afterEach(() => {
+        // Ne asigurăm că timpul revine la normal după fiecare test
+        vi.useRealTimers()
     })
 
     const renderComponent = () => render(
@@ -63,7 +69,6 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
         await waitFor(() => {
             const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
             const categorySelect = screen.getByRole('combobox') as HTMLSelectElement;
-
             const dateInput = container.querySelector('input[type="date"]') as HTMLInputElement;
 
             expect(amountInput.value).toBe('125.5')
@@ -115,19 +120,16 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
         const categorySelect = screen.getByRole('combobox') as HTMLSelectElement;
         const submitButton = screen.getByRole('button', { name: /Salvează Cheltuiala/i });
 
-        // Completăm categoria ca să trecem de validarea HTML5 (required)
         fireEvent.change(categorySelect, { target: { value: 'mancare' } });
-
-        // Acum setăm suma pe 0 și trimitem
         fireEvent.change(amountInput, { target: { value: '0' } });
         fireEvent.click(submitButton);
 
-        // Funcția de submit se va rula și va afișa mesajul nostru
         expect(screen.getByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument();
     })
 
-    it('ar trebui sa arate starea de loading, sa efectueze salvarea si sa reseteze formularul', async () => {
-        // Am eliminat complet fakeTimers. Lăsăm testul să ruleze în timp real.
+    it('ar trebui sa arate starea de loading, sa efectueze salvarea si sa reseteze formularul', () => {
+        vi.useFakeTimers();
+
         renderComponent();
 
         const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
@@ -139,14 +141,20 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
 
         fireEvent.click(submitButton);
 
-        // Verificăm imediat starea de loading
         expect(screen.getByText(/Se salvează.../i)).toBeInTheDocument();
 
-        // Așteptăm în mod natural trecerea secundei și apariția mesajului de succes
-        await waitFor(() => {
-            expect(screen.getByText(/Cheltuială adăugată cu succes!/i)).toBeInTheDocument();
-            expect(amountInput.value).toBe('');
-            expect(categorySelect.value).toBe('');
-        }, { timeout: 2500 }); // Am extins puțin timeout-ul pentru siguranță
+        act(() => {
+            vi.advanceTimersByTime(1000)
+        })
+
+        expect(screen.getByText(/Cheltuială adăugată cu succes!/i)).toBeInTheDocument()
+        expect(amountInput.value).toBe('');
+        expect(categorySelect.value).toBe('');
+
+        act(() => {
+            vi.advanceTimersByTime(3000)
+        })
+
+        vi.useRealTimers();
     })
 })

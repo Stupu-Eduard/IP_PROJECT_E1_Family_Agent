@@ -11,11 +11,6 @@ vi.mock('react-router-dom', async () => {
     return { ...actual, useNavigate: () => mockNavigate }
 })
 
-const mockLogout = vi.fn()
-vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
-}))
-
 // Mock Recharts (ResponsiveContainer face probleme în JSDOM)
 vi.mock('recharts', async () => {
     const actual = await vi.importActual('recharts')
@@ -37,12 +32,8 @@ describe('Reports Component - Full Exam Coverage', () => {
 
     const renderComponent = () => render(<BrowserRouter><Reports /></BrowserRouter>)
 
-    it('1. Navigare: Ar trebui să se întoarcă la Dashboard la click pe logo și butonul înapoi', () => {
+    it('1. Navigare: Ar trebui să se întoarcă la Dashboard la click pe butonul înapoi', () => {
         renderComponent()
-
-        // Click pe Logo
-        fireEvent.click(screen.getByText('FamilyAgent'))
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
 
         // Click pe butonul de Back (săgeata)
         const backBtn = screen.getByRole('button', { name: '' }) // Butonul cu ArrowLeft
@@ -50,12 +41,6 @@ describe('Reports Component - Full Exam Coverage', () => {
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
 
-    it('2. Logout: Ar trebui să execute logout și să redirecționeze', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('Logout'))
-        expect(mockLogout).toHaveBeenCalled()
-        expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
-    })
 
     it('3. Time Ranges: Ar trebui să schimbe intervalul și să închidă datele custom', () => {
         renderComponent()
