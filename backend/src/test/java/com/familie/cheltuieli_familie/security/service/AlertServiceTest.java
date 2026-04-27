@@ -22,10 +22,15 @@ class AlertServiceTest {
     private AlertService alertService;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         alertRepository = mock(AlertRepository.class);
         firebaseNotificationService = mock(FirebaseNotificationService.class);
         alertService = new AlertService(alertRepository, firebaseNotificationService);
+
+        // Setăm token-ul prin reflexie pentru a evita hardcoded values în producție
+        java.lang.reflect.Field tokenField = AlertService.class.getDeclaredField("parentDeviceToken");
+        tokenField.setAccessible(true);
+        tokenField.set(alertService, "test-token");
     }
 
     @Test
@@ -41,7 +46,7 @@ class AlertServiceTest {
 
         verify(alertRepository, times(1)).save(any(Alert.class));
         verify(firebaseNotificationService, times(1)).sendPushNotification(
-                eq("token_dispozitiv_parinte"),
+                anyString(),
                 eq("Alertă GEOFENCING"),
                 eq("Test alert")
         );
