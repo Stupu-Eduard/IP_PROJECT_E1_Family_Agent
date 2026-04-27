@@ -29,13 +29,11 @@ vi.mock('./ImageUploader', () => ({
 describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        vi.useFakeTimers()
+        // AM ELIMINAT FAKE TIMERS DE AICI PENTRU A NU BLOCA FUNCȚIA waitFor()
     })
 
     afterEach(() => {
-        act(() => {
-            vi.runOnlyPendingTimers()
-        })
+        // Ne asigurăm că timpul revine la normal după fiecare test
         vi.useRealTimers()
     })
 
@@ -130,6 +128,8 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
     })
 
     it('ar trebui sa arate starea de loading, sa efectueze salvarea si sa reseteze formularul', () => {
+        vi.useFakeTimers();
+
         renderComponent();
 
         const amountInput = screen.getByPlaceholderText('Ex: 50.50') as HTMLInputElement;
@@ -154,5 +154,7 @@ describe('ExpenseForm Component - OCR & Validation (US 2.3)', () => {
         act(() => {
             vi.advanceTimersByTime(3000)
         })
+
+        vi.useRealTimers();
     })
 })
