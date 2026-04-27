@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.security.controller;
 
-import com.familie.cheltuieli_familie.security.controller.LocationSseController;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
