@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.security.controller;
 
+import com.familie.cheltuieli_familie.security.service.LocationValidationService;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,49 +21,32 @@ public class ChildLocationController {
 
     private final LocationStreamService locationStreamService;
     private final MinorSafetyFilterService minorSafetyFilterService;
+    private final LocationValidationService locationValidationService; // <-- Paznicul nostru adaugat
 
     public ChildLocationController(LocationStreamService locationStreamService,
-                                   MinorSafetyFilterService minorSafetyFilterService) {
+                                   MinorSafetyFilterService minorSafetyFilterService,
+                                   LocationValidationService locationValidationService) {
         this.locationStreamService = locationStreamService;
         this.minorSafetyFilterService = minorSafetyFilterService;
+        this.locationValidationService = locationValidationService; // <-- Injectat aici
     }
 
     @Operation(
             summary = "Sincronizeaza locatia copilului",
-            description = """
-                    Primeste locatia curenta a copilului si:
-                    1. O transforma prin LocationAdapterService intr-un LocationMapDto
-                    2. O trimite in timp real catre parintele conectat prin SSE
-                    3. Verifica daca locatia e intr-o zona restrictionata si trimite alerta
-                    
-                    **Categorii restrictionate:** bar, liquor_store, night_club, casino, vape_shop
-                    """,
-            requestBody = @RequestBody(
-                    content = @Content(
-                            examples = @ExampleObject(
-                                    value = """
-                                            {
-                                              "childId": 2,
-                                              "parentId": 1,
-                                              "latitude": 47.1585,
-                                              "longitude": 27.6014,
-                                              "placeTypes": ["bar", "restaurant"]
-                                            }
-                                            """
-                            )
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Locatie sincronizata cu succes"),
-                    @ApiResponse(responseCode = "403", description = "Acces interzis")
-            }
+            description = "Primeste locatia curenta a copilului si o valideaza inainte de sincronizare."
     )
     @PostMapping("/location/sync")
     public ResponseEntity<String> syncLocation(
             @org.springframework.web.bind.annotation.RequestBody LocationSyncRequest request) {
 
+        // --- PAZNICUL INTERVINE AICI ---
+        // Verificam daca datele GPS sunt valide inainte sa facem orice altceva
+        if (!locationValidationService.isLocationValid(request.latitude(), request.longitude())) {
+            return ResponseEntity.badRequest().body("Eroare: Locatie GPS invalida (ex: 0,0). Sincronizare oprita.");
+        }
+        // -------------------------------
+
         // PASUL 1: Trimitem locatia catre parinte prin SSE ca LocationMapDto
-        // (acum trimite obiect structurat in loc de JSON string manual)
         locationStreamService.sendLocationToParent(
                 request.childId(),
                 request.parentId(),
