@@ -28,4 +28,17 @@ class ExpenseSyncListenerTest {
 
         verify(qdrantVectorService, times(1)).storeExpense(expense);
     }
+
+    @Test
+    void testHandleExpenseSyncWithException() {
+        ExpenseEntity expense = ExpenseEntity.builder().id(2L).build();
+        ExpenseSyncEvent event = new ExpenseSyncEvent(this, expense);
+
+        doThrow(new RuntimeException("Qdrant down")).when(qdrantVectorService).storeExpense(expense);
+
+        // Should not throw — exception is caught and logged
+        expenseSyncListener.handleExpenseSync(event);
+
+        verify(qdrantVectorService, times(1)).storeExpense(expense);
+    }
 }

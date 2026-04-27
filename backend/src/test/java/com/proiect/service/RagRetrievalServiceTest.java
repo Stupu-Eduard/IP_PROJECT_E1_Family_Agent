@@ -70,4 +70,27 @@ class RagRetrievalServiceTest {
 
         assertEquals("Nu s-au găsit cheltuieli relevante în baza de date.", context);
     }
+
+    @Test
+    void testRetrieveContextWithNullFields() {
+        EmbeddedExpense expense = EmbeddedExpense.builder()
+                .id(2L)
+                .amount(new BigDecimal("75.00"))
+                .category("Utilități")
+                .location(null)
+                .date(null)
+                .person(null)
+                .rawInput(null)
+                .score(0.88)
+                .build();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+
+        String context = ragRetrievalService.retrieveContext("utilitati", 3);
+
+        assertNotNull(context);
+        assertTrue(context.contains("Utilități"));
+        assertTrue(context.contains("Necunoscut"));
+        assertTrue(context.contains("Familie"));
+    }
 }

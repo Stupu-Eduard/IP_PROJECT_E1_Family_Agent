@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -45,6 +46,29 @@ class QdrantContentRetrieverTest {
     }
 
     @Test
+    void testRetrieveWithNullRawInput() {
+        EmbeddedExpense expense = EmbeddedExpense.builder()
+                .id(2L)
+                .amount(new BigDecimal("50.00"))
+                .category("Food")
+                .location("Lidl")
+                .date(LocalDate.of(2024, 1, 15))
+                .rawInput(null)
+                .score(0.85)
+                .build();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("food"));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        String text = results.get(0).textSegment().text();
+        assertTrue(text.contains("Lidl"));
+        assertTrue(text.contains("Food"));
+    }
+
+    @Test
     void testRetrieveWithNoResults() {
         when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(Collections.emptyList());
 
@@ -52,5 +76,23 @@ class QdrantContentRetrieverTest {
 
         assertNotNull(results);
         assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void testRetrieveLimitsToTop5() {
+        List<EmbeddedExpense> expenses = java.util.stream.IntStream.range(0, 10)
+                .mapToObj(i -> EmbeddedExpense.builder()
+                        .id((long) i)
+                        .rawInput("Expense " + i)
+                        .score(0.5 + i * 0.05)
+                        .build())
+                .toList();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(expenses);
+
+        List<Content> results = contentRetriever.retrieve(Query.from("query"));
+
+        assertNotNull(results);
+        assertEquals(5, results.size());
     }
 }

@@ -137,4 +137,34 @@ class ExpenseToolsTest {
 
         assertEquals("Spending on Food increased by 10%", result);
     }
+
+    @Test
+    void testGetVisualDescription_Increased() {
+        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn("Spending increased by 15.5%");
+
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Trendul arată o creștere de 15.5% pentru Food", result);
+    }
+
+    @Test
+    void testGetVisualDescription_Decreased() {
+        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn("Spending decreased by 8.2%");
+
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Trendul arată o scădere de 8.2% pentru Food", result);
+    }
+
+    @Test
+    void testGetVisualDescription_Stable() {
+        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn("Spending remained stable");
+
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Trend stabil pentru Food", result);
+    }
 }
