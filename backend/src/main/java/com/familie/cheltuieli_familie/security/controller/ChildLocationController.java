@@ -4,10 +4,6 @@ import com.familie.cheltuieli_familie.security.service.LocationValidationService
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
