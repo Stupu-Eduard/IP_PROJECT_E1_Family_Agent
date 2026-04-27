@@ -4,7 +4,13 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "family_members")
+@Table(
+        name = "family_members",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_family_member_user_family",
+                columnNames = {"family_id", "user_id"}
+        )
+)
 @Data
 public class FamilyMember {
 

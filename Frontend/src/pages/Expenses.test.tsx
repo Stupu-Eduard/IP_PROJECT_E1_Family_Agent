@@ -12,11 +12,6 @@ vi.mock('react-router-dom', async () => {
     return { ...actual, useNavigate: () => mockNavigate, MemoryRouter: actual.MemoryRouter }
 })
 
-const mockLogout = vi.fn()
-vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
-}))
-
 vi.mock('../services/expenses', () => ({
     fetchExpenses: vi.fn(),
 }))
@@ -147,7 +142,7 @@ describe('Expenses Component - 100% Coverage Final', () => {
         expect(screen.getByText((_, el) => el?.textContent === 'Pagina 1 din 2')).toBeInTheDocument()
     })
 
-    it('ar trebui să execute navigarea și funcția de logout', async () => {
+    it('ar trebui să execute navigarea pe acțiunile paginii', async () => {
         renderComponent()
         await screen.findAllByText('Cumpărături Kaufland')
 
@@ -155,15 +150,8 @@ describe('Expenses Component - 100% Coverage Final', () => {
         fireEvent.click(backBtn)
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
 
-        fireEvent.click(screen.getByText('FamilyAgent'))
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-
         fireEvent.click(screen.getByText('Adaugă'))
         expect(mockNavigate).toHaveBeenCalledWith('/add-expense')
-
-        fireEvent.click(screen.getByText('Logout'))
-        expect(mockLogout).toHaveBeenCalled()
-        expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
     })
 
     it('ar trebui să navigheze la hartă la apăsarea locației (openMap)', async () => {

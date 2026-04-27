@@ -39,6 +39,7 @@ describe('AuthStore - Zustand & Persistență', () => {
         useAuthStore.getState().logout()
 
         expect(useAuthStore.getState().token).toBe(null)
+        expect(useAuthStore.getState().isAuthenticated).toBe(false)
         expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
     })
 

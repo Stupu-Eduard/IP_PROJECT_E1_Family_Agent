@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
 import {
@@ -26,15 +25,9 @@ interface ExpenseListDTO {
 
 export default function Expenses() {
     const navigate = useNavigate();
-    const logout = useAuthStore((state) => state.logout);
 
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = 2;
-
-    const handleLogout = () => {
-        logout();
-        navigate('/login', { replace: true });
-    };
 
     const [expenses, setExpenses] = useState<ExpenseListDTO[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -64,9 +57,6 @@ export default function Expenses() {
         return () => controller.abort();
     }, []);
 
-    // ==========================================
-    // STĂRILE FILTRELOR
-    // ==========================================
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson, setSelectedPerson] = useState('');
@@ -162,25 +152,7 @@ export default function Expenses() {
     const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
     return (
-        <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-
-            {/* Topbar consistent cu Dashboard */}
-            <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                    <div className="w-8 h-8 rounded-[8px] bg-[#2D2926] flex items-center justify-center text-[13px] font-medium text-[#FAF8F5] tracking-tight">FA</div>
-                    <span className="text-[15px] font-medium text-[#2D2926] tracking-tight">FamilyAgent</span>
-                </div>
-                <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="text-[12px] font-medium text-[#8C7E6E] px-3.5 py-1.5 border border-[#E2DDD7] rounded-[20px] bg-white hover:border-[#C4B9AC] hover:text-[#2D2926] transition-colors"
-                >
-                    Logout
-                </button>
-            </nav>
-
-            {/* Container Principal */}
-            <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[960px] mx-auto w-full flex-1">
+        <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[960px] mx-auto w-full flex-1">
 
                 {/* Header: Titlu și Butoane */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 fade-in-up">
@@ -407,7 +379,6 @@ export default function Expenses() {
                     </div>
                 )}
 
-            </div>
         </div>
     );
 }

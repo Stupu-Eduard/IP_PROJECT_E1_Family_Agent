@@ -3,14 +3,8 @@ import { useAuthStore } from '../store/authStore'
 import KidDashboard from './KidDashboard'
 
 export default function Dashboard() {
-  const logout = useAuthStore((state) => state.logout)
   const token = useAuthStore((state) => state.token) // 2. Extragerea token-ului din starea globală
   const navigate = useNavigate()
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
-  }
 
   // 3. Decodarea Token-ului și evaluarea permisiunilor (RBAC)
   let userRole = 'Parent';
@@ -29,29 +23,7 @@ export default function Dashboard() {
   }
 
   return (
-      <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-        {/* Topbar */}
-        <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/dashboard')}>
-            <div className="w-8 h-8 rounded-[8px] bg-[#2D2926] flex items-center justify-center text-[13px] font-medium text-[#FAF8F5] tracking-tight">FA</div>
-            <span className="text-[15px] font-medium text-[#2D2926] tracking-tight">FamilyAgent</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="text-[12px] text-[#8C7E6E] px-3.5 py-1.5 border border-[#E2DDD7] rounded-[20px] bg-white hover:border-[#C4B9AC] transition-colors cursor-pointer hidden sm:block">
-              Aprilie 2026
-            </div>
-            <button
-                onClick={handleLogout}
-                title="Logout"
-                className="w-8 h-8 rounded-full bg-[#E8D5C4] flex items-center justify-center text-[12px] font-medium text-[#7A5C44] cursor-pointer hover:opacity-80 transition-opacity"
-            >
-              MC
-            </button>
-          </div>
-        </nav>
-
-        {/* Body Content */}
-        <div className="px-6 lg:px-10 pt-12 pb-20 max-w-[960px] mx-auto w-full flex-1">
+      <div className="px-6 lg:px-10 pt-12 pb-20 max-w-[960px] mx-auto w-full flex-1">
 
           {/* Hero */}
           <div className="mb-12 fade-in-up">
@@ -151,7 +123,6 @@ export default function Dashboard() {
               <div className="text-[12px] text-[#B8A99A] leading-[1.6]">Cheltuielile tale sunt accesibile doar după autentificare.</div>
             </div>
           </div>
-        </div>
       </div>
   )
 }
