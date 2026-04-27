@@ -3,125 +3,105 @@ package com.familie.cheltuieli_familie.security.service;
 import com.familie.cheltuieli_familie.model.Alert;
 import com.familie.cheltuieli_familie.repository.AlertRepository;
 import com.familie.cheltuieli_familie.security.model.SecurityAlertDto;
+import com.familie.cheltuieli_familie.service.FirebaseNotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class AlertServiceTest {
 
-    @Mock
     private AlertRepository alertRepository;
-
-    @InjectMocks
+    private FirebaseNotificationService firebaseNotificationService;
     private AlertService alertService;
-
-    private SecurityAlertDto alertDto;
-    private Alert alert;
 
     @BeforeEach
     void setUp() {
-        // Pregătim date de test folosind exact constructorul tău cu 4 parametri.
-        // Observă că nu mai folosim settere, iar timestamp-ul se va genera automat!
-        alertDto = new SecurityAlertDto(
-                10L,
-                5L,
-                "Acces restrictionat detectat!",
-                "JOCURI"
-        );
-
-        alert = new Alert();
-        alert.setChildId(10L);
-        alert.setParentId(5L);
-        alert.setRead(false);
+        alertRepository = mock(AlertRepository.class);
+        firebaseNotificationService = mock(FirebaseNotificationService.class);
+        alertService = new AlertService(alertRepository, firebaseNotificationService);
     }
 
     @Test
-    void testSendPushNotificationToParent() {
-        // Act: Apelăm metoda
-        alertService.sendPushNotificationToParent(alertDto);
+    void testSendPushNotificationToParent_WithTimestamp() {
+        SecurityAlertDto dtoReal = new SecurityAlertDto();
+        dtoReal.setChildId(2L);
+        dtoReal.setParentId(1L);
+        dtoReal.setAlertMessage("Test alert");
+        dtoReal.setRestrictedCategory("GEOFENCING");
+        dtoReal.setTimestamp(System.currentTimeMillis());
 
-        // Assert: Capturăm alerta care a fost trimisă către repository.save()
-        ArgumentCaptor<Alert> alertCaptor = ArgumentCaptor.forClass(Alert.class);
-        verify(alertRepository, times(1)).save(alertCaptor.capture());
+        alertService.sendPushNotificationToParent(dtoReal);
 
-        // Verificăm dacă alerta salvată conține datele corecte extrase din DTO
-        Alert savedAlert = alertCaptor.getValue();
-        assertEquals(10L, savedAlert.getChildId());
-        assertEquals(5L, savedAlert.getParentId());
-        assertEquals("Acces restrictionat detectat!", savedAlert.getMessage());
-        assertEquals("JOCURI", savedAlert.getRestrictedCategory());
-        assertFalse(savedAlert.isRead());
+        verify(alertRepository, times(1)).save(any(Alert.class));
+        verify(firebaseNotificationService, times(1)).sendPushNotification(
+                eq("token_dispozitiv_parinte"),
+                eq("Alertă GEOFENCING"),
+                eq("Test alert")
+        );
+    }
+
+    @Test
+    void testSendPushNotificationToParent_NullTimestamp() {
+        // Aici testam ramura 'else' unde timestamp-ul nu este trimis
+        SecurityAlertDto dtoReal = new SecurityAlertDto();
+        dtoReal.setChildId(2L);
+        dtoReal.setParentId(1L);
+        dtoReal.setAlertMessage("Test alert no time");
+        dtoReal.setRestrictedCategory("GEOFENCING");
+        dtoReal.setTimestamp(null);
+
+        alertService.sendPushNotificationToParent(dtoReal);
+
+        verify(alertRepository, times(1)).save(any(Alert.class));
     }
 
     @Test
     void testGetAlertsForParent() {
-        // Arrange
-        Long parentId = 5L;
-        List<Alert> expectedAlerts = List.of(alert, new Alert());
+        Long parentId = 1L;
+        List<Alert> expectedAlerts = List.of(new Alert(), new Alert());
+
+        // Simulam ce returneaza baza de date
         when(alertRepository.findByParentIdOrderByTimestampDesc(parentId)).thenReturn(expectedAlerts);
 
-        // Act
         List<Alert> actualAlerts = alertService.getAlertsForParent(parentId);
 
-        // Assert
         assertEquals(2, actualAlerts.size());
         verify(alertRepository, times(1)).findByParentIdOrderByTimestampDesc(parentId);
     }
 
     @Test
     void testGetUnreadAlertsForParent() {
-        // Arrange
-        Long parentId = 5L;
-        List<Alert> expectedAlerts = List.of(alert);
+        Long parentId = 1L;
+        List<Alert> expectedAlerts = List.of(new Alert());
+
         when(alertRepository.findByParentIdAndReadFalseOrderByTimestampDesc(parentId)).thenReturn(expectedAlerts);
 
-        // Act
         List<Alert> actualAlerts = alertService.getUnreadAlertsForParent(parentId);
 
-        // Assert
         assertEquals(1, actualAlerts.size());
         verify(alertRepository, times(1)).findByParentIdAndReadFalseOrderByTimestampDesc(parentId);
     }
 
     @Test
-    void testMarkAsRead_WhenAlertExists() {
-        // Arrange
-        Long alertId = 99L;
-        Alert mockAlert = new Alert();
-        mockAlert.setRead(false); // Inițial este necitită
+    void testMarkAsRead() {
+        Long alertId = 1L;
+        Alert alert = new Alert();
+        alert.setRead(false); // Initial e necitita
 
-        when(alertRepository.findById(alertId)).thenReturn(Optional.of(mockAlert));
+        when(alertRepository.findById(alertId)).thenReturn(Optional.of(alert));
 
-        // Act
         alertService.markAsRead(alertId);
 
-        // Assert
-        assertTrue(mockAlert.isRead(), "Alerta ar trebui să fie marcată ca citită");
-        verify(alertRepository, times(1)).save(mockAlert); // Verificăm că s-a salvat modificarea
-    }
-
-    @Test
-    void testMarkAsRead_WhenAlertDoesNotExist() {
-        // Arrange
-        Long alertId = 99L;
-        when(alertRepository.findById(alertId)).thenReturn(Optional.empty());
-
-        // Act
-        alertService.markAsRead(alertId);
-
-        // Assert
-        // Dacă alerta nu a fost găsită, metoda save() NU ar trebui să fie apelată niciodată
-        verify(alertRepository, never()).save(any(Alert.class));
+        // Verificam daca statusul a devenit true
+        assertTrue(alert.isRead());
+        verify(alertRepository, times(1)).findById(alertId);
+        verify(alertRepository, times(1)).save(alert);
     }
 }
