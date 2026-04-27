@@ -1,18 +1,40 @@
+import { useEffect } from 'react' // Importăm useEffect pentru lifecycle
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useMapStore } from '../store/mapStore' // Importăm store-ul pentru locație
 import KidDashboard from './KidDashboard'
 
 export default function Dashboard() {
   const logout = useAuthStore((state) => state.logout)
-  const token = useAuthStore((state) => state.token) // 2. Extragerea token-ului din starea globală
+  const token = useAuthStore((state) => state.token)
   const navigate = useNavigate()
+
+  // --- LOGICA PENTRU DATE LIVE ȘI GEOFENCING ---
+  const {
+    startLiveTracking,
+    stopLiveTracking,
+    currentChildLocation,
+    isOptimisticallyDanger
+  } = useMapStore()
+
+  useEffect(() => {
+    // Deschidem "țeava" de date (SSE) imediat ce părintele intră pe Dashboard
+    if (token) {
+      // Notă: ID-ul 1 este generic; în mod ideal îl poți extrage din payload-ul JWT
+      startLiveTracking(1, token);
+    }
+
+    // Funcție de cleanup: Închidem conexiunea când utilizatorul pleacă de pe Dashboard
+    return () => stopLiveTracking();
+  }, [token, startLiveTracking, stopLiveTracking]);
+  // ---------------------------------------------
 
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
   }
 
-  // 3. Decodarea Token-ului și evaluarea permisiunilor (RBAC)
+  // Decodarea Token-ului și evaluarea permisiunilor (RBAC)
   let userRole = 'Parent';
   if (token) {
     try {
@@ -23,7 +45,7 @@ export default function Dashboard() {
     }
   }
 
-  // 4. Interceptarea fluxului pentru minori
+  // Interceptarea fluxului pentru minori
   if (userRole === 'Child') {
     return <KidDashboard />;
   }
@@ -49,6 +71,27 @@ export default function Dashboard() {
             </button>
           </div>
         </nav>
+
+        {/* --- BANNER DE ALERTĂ LIVE --- */}
+        {/* Banner-ul apare dacă distanța calculată local e prea mare SAU dacă backend-ul (PostGIS) trimite isRestricted */}
+        {(isOptimisticallyDanger || currentChildLocation?.isRestricted) && (
+            <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between shadow-lg animate-pulse z-20">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-[14px]">ALERTĂ DE SIGURANȚĂ</p>
+                  <p className="text-[12px] opacity-90">Copilul a părăsit perimetrul de siguranță sau este într-o zonă interzisă!</p>
+                </div>
+              </div>
+              <button
+                  onClick={() => navigate('/expenses/map')}
+                  className="bg-white text-red-600 px-4 py-1.5 rounded-full text-[12px] font-bold hover:bg-gray-100 transition-colors"
+              >
+                VEZI PE HARTĂ
+              </button>
+            </div>
+        )}
+        {/* ----------------------------- */}
 
         {/* Body Content */}
         <div className="px-6 lg:px-10 pt-12 pb-20 max-w-[960px] mx-auto w-full flex-1">
