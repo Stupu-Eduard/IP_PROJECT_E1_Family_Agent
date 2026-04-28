@@ -154,7 +154,6 @@ export default function Dashboard() {
               <div className="text-[18px] text-[#D4C9BC] mt-auto self-end group-hover:text-[#2D2926] transition-colors">→</div>
             </div>
           </div>
-        </div>
       </div>
   )
 }
