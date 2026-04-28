@@ -177,7 +177,7 @@ class ExpenseRepositoryTest {
         Location loc1 = new Location(); loc1.setStore("Lidl");
         Location loc2 = new Location(); loc2.setStore("Kaufland");
         locationRepository.save(loc1);
-        locationRepository.save(loc2);
+        locationRepository.save(loc2); //test
 
         Expense expense = new Expense();
         expense.setAmount(BigDecimal.valueOf(30));
