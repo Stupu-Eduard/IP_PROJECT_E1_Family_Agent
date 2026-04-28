@@ -72,7 +72,9 @@ class ThePipeHandlerTest {
         // GIVEN
         TextMessage message = new TextMessage("Salut de la client");
         
-        // WHEN & THEN (verificam doar ca nu arunca exceptie, metoda face doar logging)
-        assertDoesNotThrow(() -> thePipeHandler.handleTextMessage(session1, message));
+        // WHEN & THEN 
+        // Folosim assertDoesNotThrow pentru a asigura ca metoda (care doar logheaza) nu esueaza
+        assertDoesNotThrow(() -> thePipeHandler.handleTextMessage(session1, message), 
+                "Metoda handleTextMessage nu ar trebui sa arunce exceptie la logging");
     }
 }

@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,6 +38,25 @@ class ExpensePipelineServiceTest {
 
     @InjectMocks
     private ExpensePipelineService pipelineService;
+
+    @Test
+    void testProcessRawInput_Success() throws Exception {
+        ExtractionResponse extractionResponse = ExtractionResponse.builder()
+                .amount(new BigDecimal("100.00"))
+                .build();
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
+
+        ExpenseEntity savedEntity = ExpenseEntity.builder().id(1L).build();
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+
+        List<Long> result = pipelineService.processRawInput("text");
+
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0));
+        verify(thePipeHandler, times(1)).broadcast(anyString());
+        verify(validationService, times(1)).validatePersistence(1L);
+    }
 
     @Test
     void testProcessRawInput_whenBroadcastFails_continuesProcessing() throws Exception {
