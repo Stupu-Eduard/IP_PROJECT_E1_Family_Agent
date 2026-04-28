@@ -1,17 +1,54 @@
+import { useEffect } from 'react' // Importăm useEffect pentru lifecycle
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-// IMPORTUL KidDashboard ELIMINAT TEMPORAR
+import { useMapStore } from '../store/mapStore' // Importăm store-ul pentru locație
+import KidDashboard from './KidDashboard'
 
 export default function Dashboard() {
   const logout = useAuthStore((state) => state.logout)
+  const token = useAuthStore((state) => state.token)
   const navigate = useNavigate()
+
+  // --- LOGICA PENTRU DATE LIVE ȘI GEOFENCING ---
+  const {
+    startLiveTracking,
+    stopLiveTracking,
+    currentChildLocation,
+    isOptimisticallyDanger
+  } = useMapStore()
+
+  useEffect(() => {
+    // Deschidem "țeava" de date (SSE) imediat ce părintele intră pe Dashboard
+    if (token) {
+      // Notă: ID-ul 1 este generic; în mod ideal îl poți extrage din payload-ul JWT
+      startLiveTracking(1, token);
+    }
+
+    // Funcție de cleanup: Închidem conexiunea când utilizatorul pleacă de pe Dashboard
+    return () => stopLiveTracking();
+  }, [token, startLiveTracking, stopLiveTracking]);
+  // ---------------------------------------------
 
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
   }
 
-  // LOGICA PENTRU COPIL ELIMINATĂ TEMPORAR. Randăm direct interfața principală.
+  // Decodarea Token-ului și evaluarea permisiunilor (RBAC)
+  let userRole = 'Parent';
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userRole = payload.role || 'Parent';
+    } catch (error) {
+      console.error("Eroare la parsarea JWT-ului:", error);
+    }
+  }
+
+  // Interceptarea fluxului pentru minori
+  if (userRole === 'Child') {
+    return <KidDashboard />;
+  }
 
   return (
       <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
@@ -35,14 +72,32 @@ export default function Dashboard() {
           </div>
         </nav>
 
+        {/* --- BANNER DE ALERTĂ LIVE --- */}
+        {(isOptimisticallyDanger || currentChildLocation?.isRestricted) && (
+            <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between shadow-lg animate-pulse z-20">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <p className="font-bold text-[14px]">ALERTĂ DE SIGURANȚĂ</p>
+                  <p className="text-[12px] opacity-90">Copilul a părăsit perimetrul de siguranță sau este într-o zonă interzisă!</p>
+                </div>
+              </div>
+              <button
+                  onClick={() => navigate('/expenses/map')}
+                  className="bg-white text-red-600 px-4 py-1.5 rounded-full text-[12px] font-bold hover:bg-gray-100 transition-colors"
+              >
+                VEZI PE HARTĂ
+              </button>
+            </div>
+        )}
+
         {/* Body Content */}
         <div className="px-6 lg:px-10 pt-12 pb-20 max-w-[960px] mx-auto w-full flex-1">
-
           {/* Hero */}
           <div className="mb-12 fade-in-up">
             <div className="text-[11px] tracking-[1.2px] text-[#B8A99A] font-medium mb-2.5">DASHBOARD · SESIUNE ACTIVĂ</div>
             <div className="text-[36px] font-medium text-[#2D2926] tracking-[-1.2px] leading-[1.15]">
-              Bine ai revenit,<br/><span className="text-[#C97B4B]">Maria!</span>
+              Bine ai revenit,<br/><span className="text-[#C97B4B]">Edi!</span>
             </div>
             <div className="text-[14px] text-[#9A8A7C] mt-2.5 leading-[1.6]">
               Poți gestiona cheltuielile familiei tale ușor și eficient.
@@ -79,9 +134,8 @@ export default function Dashboard() {
           </div>
 
           {/* Actions */}
-          <div className="text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-4 fade-in-up" style={{ animationDelay: '0.1s' }}>ACȚIUNI RAPIDE</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10 fade-in-up" style={{ animationDelay: '0.1s' }}>
-
+          <div className="text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-4 fade-in-up">ACȚIUNI RAPIDE</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10 fade-in-up">
             <div onClick={() => navigate('/add-expense')} className="bg-[#2D2926] border border-[#2D2926] rounded-[14px] p-6 flex flex-col gap-3.5 cursor-pointer transition-all hover:border-[#C4B9AC] hover:-translate-y-[2px] group">
               <div className="w-[38px] h-[38px] rounded-[10px] bg-white/10 flex items-center justify-center text-[16px] text-white">＋</div>
               <div>
@@ -98,42 +152,6 @@ export default function Dashboard() {
                 <div className="text-[12px] text-[#9A8A7C] leading-[1.5] mt-1">Vizualizează și gestionează înregistrările</div>
               </div>
               <div className="text-[18px] text-[#D4C9BC] mt-auto self-end group-hover:text-[#2D2926] transition-colors">→</div>
-            </div>
-
-            <div onClick={() => navigate('/reports')} className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 flex flex-col gap-3.5 cursor-pointer transition-all hover:border-[#C4B9AC] hover:-translate-y-[2px] group">
-              <div className="w-[38px] h-[38px] rounded-[10px] bg-[#F4F0EB] flex items-center justify-center text-[16px]">📊</div>
-              <div>
-                <div className="text-[15px] font-medium text-[#2D2926] tracking-[-0.3px]">Evoluție cheltuieli</div>
-                <div className="text-[12px] text-[#9A8A7C] leading-[1.5] mt-1">Grafice și statistici lunare</div>
-              </div>
-              <div className="text-[18px] text-[#D4C9BC] mt-auto self-end group-hover:text-[#2D2926] transition-colors">→</div>
-            </div>
-
-            <div onClick={() => navigate('/family')} className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 flex flex-col gap-3.5 cursor-pointer transition-all hover:border-[#C4B9AC] hover:-translate-y-[2px] group">
-              <div className="w-[38px] h-[38px] rounded-[10px] bg-[#F4F0EB] flex items-center justify-center text-[16px]">👥</div>
-              <div>
-                <div className="text-[15px] font-medium text-[#2D2926] tracking-[-0.3px]">Membri familie</div>
-                <div className="text-[12px] text-[#9A8A7C] leading-[1.5] mt-1">Conturi și permisiuni</div>
-              </div>
-              <div className="text-[18px] text-[#D4C9BC] mt-auto self-end group-hover:text-[#2D2926] transition-colors">→</div>
-            </div>
-
-          </div>
-
-          {/* Bottom Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <div className="md:col-span-2 bg-white border border-[#EDE9E3] rounded-[14px] p-6">
-              <div className="text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-5">ACTIVITATE RECENTĂ</div>
-              <div className="flex flex-col items-center justify-center min-h-[100px] gap-2">
-                <div className="w-9 h-9 rounded-full border-[1.5px] border-dashed border-[#D4C9BC] flex items-center justify-center text-[16px] text-[#D4C9BC]">○</div>
-                <div className="text-[12px] text-[#C4B9AC]">Nicio cheltuială înregistrată încă</div>
-              </div>
-            </div>
-
-            <div className="col-span-1 bg-[#FFF8F2] border border-[#F0DFD0] rounded-[14px] p-5 flex flex-col gap-2.5">
-              <div className="w-[32px] h-[32px] rounded-[8px] bg-[#F0DFD0] flex items-center justify-center text-[15px]">🔐</div>
-              <div className="text-[13px] font-medium text-[#7A5C44]">Securizat cu JWT</div>
-              <div className="text-[12px] text-[#B8A99A] leading-[1.6]">Cheltuielile tale sunt accesibile doar după autentificare.</div>
             </div>
           </div>
         </div>
