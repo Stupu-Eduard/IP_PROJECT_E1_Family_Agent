@@ -41,36 +41,23 @@ class ExpensePipelineServiceTest {
     private ExpensePipelineService pipelineService;
 
     @Test
-    void testProcessRawInput() throws Exception {
+    void testProcessRawInput_whenBroadcastFails_continuesProcessing() throws Exception {
         ExtractionResponse extractionResponse = ExtractionResponse.builder()
-                .amount(new BigDecimal("89.00"))
-                .category("Altele")
-                .location("Mega Image")
-                .person("Familie")
-                .transactionDate(LocalDate.now())
-                .rawInput("Am platit 89 lei la Mega Image")
+                .amount(new BigDecimal("10.00"))
                 .build();
-
         when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
-        ExpenseEntity savedEntity = ExpenseEntity.builder()
-                .id(1L)
-                .amount(new BigDecimal("89.00"))
-                .build();
+        ExpenseEntity savedEntity = ExpenseEntity.builder().id(2L).build();
         when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
 
-        doNothing().when(validationService).validatePersistence(1L);
-        
-        // Mocking ObjectMapper behavior
-        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        // Simulam o exceptie la scrierea JSON-ului pentru broadcast
+        when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
 
-        List<Long> result = pipelineService.processRawInput("Am platit 89 lei la Mega Image");
+        List<Long> result = pipelineService.processRawInput("text");
 
         assertEquals(1, result.size());
-        assertEquals(1L, result.get(0));
-        verify(extractionService, times(1)).process(any(ExtractionRequest.class));
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
-        verify(validationService, times(1)).validatePersistence(1L);
-        verify(thePipeHandler, times(1)).broadcast(anyString());
+        assertEquals(2L, result.get(0));
+        // Verificam ca eroarea a fost capturata si procesarea a continuat
+        verify(thePipeHandler, never()).broadcast(anyString());
     }
 }

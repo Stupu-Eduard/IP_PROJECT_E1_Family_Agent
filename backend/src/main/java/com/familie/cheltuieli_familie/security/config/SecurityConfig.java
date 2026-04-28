@@ -28,6 +28,7 @@ public class SecurityConfig {
         http
                 // 1. ACTIVARE CORS GLOBAL (Rezolvă eroarea roșie din consolă)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // Dezactivăm CSRF deoarece folosim JWT (stateless), nu sesiuni bazate pe cookie-uri.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -75,8 +76,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Permite conexiuni de pe orice port (ex: React pe 3000, Vite pe 5173, etc.)
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // REPARATIE SECURITY HOTSPOT: Inlocuim wildcard-ul "*" cu originile specifice frontend-ului
+        // In productie, acestea ar trebui sa vina din fisierele de configurare (.yml)
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173", // Vite (Frontend implicit)
+                "http://localhost:3000", // React standard
+                "http://localhost:8080"  // Swagger / Altele
+        ));
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

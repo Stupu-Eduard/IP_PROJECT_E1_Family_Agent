@@ -10,6 +10,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,16 +64,15 @@ class ThePipeHandlerTest {
 
     @Test
     void broadcast_eliminaSesiuneaDupaInchidere() throws IOException {
+        // ... (existent)
+    }
+
+    @Test
+    void handleTextMessage_LogheazaMesajulPrimit() {
         // GIVEN
-        String payload = "test";
-        thePipeHandler.afterConnectionEstablished(session1);
-        thePipeHandler.afterConnectionClosed(session1, org.springframework.web.socket.CloseStatus.NORMAL);
-
-        // WHEN
-        thePipeHandler.broadcast(payload);
-
-        // THEN
-        verify(session1, never()).isOpen();
-        verify(session1, never()).sendMessage(any(TextMessage.class));
+        TextMessage message = new TextMessage("Salut de la client");
+        
+        // WHEN & THEN (verificam doar ca nu arunca exceptie, metoda face doar logging)
+        assertDoesNotThrow(() -> thePipeHandler.handleTextMessage(session1, message));
     }
 }

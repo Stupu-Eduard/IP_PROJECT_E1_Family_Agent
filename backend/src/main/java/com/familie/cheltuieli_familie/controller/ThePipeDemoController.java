@@ -41,7 +41,7 @@ public class ThePipeDemoController {
                 "\"timestamp\": \"" + LocalDateTime.now() + "\"" +
                 "}";
         thePipeHandler.broadcast(json);
-        return "OK - Locație sigură trimisă (Piața Universității)";
+        return "OK - Locatie sigura trimisa (Piata Universitatii)";
     }
 
     @Operation(summary = "Simulează intrarea copilului într-o zonă restricționată (ALERTĂ)")
@@ -56,6 +56,6 @@ public class ThePipeDemoController {
                 "\"timestamp\": \"" + LocalDateTime.now() + "\"" +
                 "}";
         thePipeHandler.broadcast(json);
-        return "OK - ALERTĂ trimisă: Copil în zonă restricționată!";
+        return "OK - ALERTA trimisa: Copil in zona restrictionata!";
     }
 }
