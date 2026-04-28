@@ -20,7 +20,7 @@ public class User {
     private String email;
 
     @Column(name = "password_h", nullable = false)
-    private String password_h;
+    private String passwordH;
 
     @Column(name = "created_at")
     private LocalDate createdAt;
