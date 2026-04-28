@@ -52,7 +52,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "backend/target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
+          source: "backend/target/cheltuieli-familie-0.0.1-SNAPSHOT.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
           target: "/root/FamilyAgent/target/" # Il punem unde Dockerfile-ul de pe server îl asteapta
           strip_components: 2
 
