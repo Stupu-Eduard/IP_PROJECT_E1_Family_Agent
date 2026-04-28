@@ -1,138 +1,198 @@
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Expenses from './Expenses'
+import { fetchExpenses } from '../services/expenses'
+import { fetchCategoryNames, fetchUserNames } from '../services/lookups'
 
-// Mocking the auth store
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return { ...actual, useNavigate: () => mockNavigate, MemoryRouter: actual.MemoryRouter }
+})
+
+const mockLogout = vi.fn()
 vi.mock('../store/authStore', () => ({
-    useAuthStore: () => ({
-        logout: vi.fn(),
-    }),
+    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
 }))
 
-describe('Expenses Component - Funcționalitate și Randare', () => {
-    // Resetăm mock-urile înainte de fiecare test pentru a evita interferențele
+vi.mock('../services/expenses', () => ({
+    fetchExpenses: vi.fn(),
+}))
+
+vi.mock('../services/lookups', () => ({
+    fetchCategoryNames: vi.fn(),
+    fetchUserNames: vi.fn(),
+}))
+
+describe('Expenses Component - 100% Coverage Final', () => {
+    const mockAllExpenses = [
+        {
+            id: 1,
+            amount: 120,
+            currency: 'RON',
+            description: 'Cumpărături Kaufland',
+            expenseDate: '2026-04-19T10:00:00',
+            category: '🍕 Mâncare & Alimente',
+            person: 'Maria',
+            location: { id: 99, store: 'Kaufland', city: 'Bucuresti', lat: 44.4, lng: 26.1 },
+        },
+        {
+            id: 2,
+            amount: 55,
+            currency: 'RON',
+            description: 'Abonament Netflix',
+            expenseDate: '2026-04-18T10:00:00',
+            category: '🎮 Divertisment',
+            person: 'Ion',
+            location: null,
+        },
+    ]
+
+    const fetchExpensesMock = fetchExpenses as unknown as ReturnType<typeof vi.fn>
+    const fetchCategoryNamesMock = fetchCategoryNames as unknown as ReturnType<typeof vi.fn>
+    const fetchUserNamesMock = fetchUserNames as unknown as ReturnType<typeof vi.fn>
+
     beforeEach(() => {
         vi.clearAllMocks()
+
+        fetchCategoryNamesMock.mockResolvedValue(['🍕 Mâncare & Alimente', '🎮 Divertisment'])
+        fetchUserNamesMock.mockResolvedValue(['Ion', 'Maria'])
+
+        fetchExpensesMock.mockImplementation(async (filters?: any) => {
+            let data = [...mockAllExpenses]
+            if (filters?.date) data = data.filter((e) => String(e.expenseDate ?? '').slice(0, 10) === filters.date)
+            if (filters?.category) data = data.filter((e) => e.category === filters.category)
+            if (filters?.person) data = data.filter((e) => e.person === filters.person)
+            return data
+        })
     })
 
     const renderComponent = () => {
         return render(
-            <BrowserRouter>
+            <MemoryRouter>
                 <Expenses />
-            </BrowserRouter>
+            </MemoryRouter>
         )
     }
 
-    // ==========================================
-    // 1. TESTE DE RANDARE (Din baza ta inițială)
-    // ==========================================
-
-    it('ar trebui să afișeze titlul paginii și butonul de adăugare', () => {
+    it('ar trebui să afișeze starea de încărcare și apoi datele mock', async () => {
         renderComponent()
+        expect(screen.getByText('Se încarcă cheltuielile…')).toBeInTheDocument()
 
+        await screen.findAllByText('Cumpărături Kaufland')
+        expect(screen.queryByText('Se încarcă cheltuielile…')).not.toBeInTheDocument()
         expect(screen.getByText('Istoric Cheltuieli')).toBeInTheDocument()
-        expect(screen.getByText('Adaugă')).toBeInTheDocument()
     })
 
-    it('ar trebui să randeze elementele de filtrare (Select-uri)', () => {
+    it('ar trebui să filtreze lista și să apeleze backend-ul cu parametrii corecți', async () => {
         renderComponent()
+        await screen.findAllByText('Cumpărături Kaufland')
 
-        expect(screen.getByText('Toate Categoriile')).toBeInTheDocument()
-        expect(screen.getByText('Orice Persoană')).toBeInTheDocument()
-        // Text actualizat conform noii logici de "stare derivată"
-        expect(screen.getByText('Resetează Filtre')).toBeInTheDocument()
-    })
-
-    it('ar trebui să afișeze cheltuielile din lista dummy', () => {
-        renderComponent()
-
-        // Folosim getAllByText deoarece textul apare de două ori (Mobile & Desktop view)
-        expect(screen.getAllByText('Cumpărături Kaufland')[0]).toBeInTheDocument()
-        expect(screen.getAllByText('Abonament Netflix')[0]).toBeInTheDocument()
-    })
-
-    it('ar trebui să afișeze elementele de paginare', () => {
-        renderComponent()
-
-        // Verificăm textul de bază al paginării
-        const pageTexts = screen.getAllByText(/Pagina/i)
-        expect(pageTexts.length).toBeGreaterThan(0)
-
-        // Căutăm specific butoanele de paginare după rolul lor în DOM
-        expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument()
-    })
-
-    // ==========================================
-    // 2. TESTE DE LOGICĂ & FILTRARE (Funcționalitățile noi)
-    // ==========================================
-
-    it('ar trebui să filtreze corect lista după Persoană', () => {
-        renderComponent()
-
-        // Obținem toate elementele de tip <select>. Cel de persoană este al doilea (index 1).
         const selects = screen.getAllByRole('combobox')
+        const categorySelect = selects[0]
         const personSelect = selects[1]
+        const dateInput = screen.getByTitle('Perioadă')
 
-        // Aplicăm filtrul pentru "Ion"
         fireEvent.change(personSelect, { target: { value: 'Ion' } })
+        await waitFor(() => {
+            expect(fetchExpensesMock).toHaveBeenCalledWith(
+                expect.objectContaining({ person: 'Ion' }),
+                expect.any(AbortSignal)
+            )
+        })
 
-        // Validăm că tranzacțiile lui Ion sunt vizibile
-        expect(screen.getAllByText('Factură Energie').length).toBeGreaterThan(0)
-        expect(screen.getAllByText('Abonament Netflix').length).toBeGreaterThan(0)
-
-        // Validăm că tranzacția Mariei a dispărut din DOM
-        expect(screen.queryByText('Cumpărături Kaufland')).not.toBeInTheDocument()
-    })
-
-    it('ar trebui să filtreze corect lista după Categorie', () => {
-        renderComponent()
-
-        // Obținem select-ul de categorie (index 0)
-        const selects = screen.getAllByRole('combobox')
-        const categorySelect = selects[0]
-
-        // Aplicăm filtrul
-        fireEvent.change(categorySelect, { target: { value: '🚗 Transport' } })
-
-        // Doar transportul trebuie să fie vizibil
-        expect(screen.getAllByText('Plin Benzină').length).toBeGreaterThan(0)
-        expect(screen.queryByText('Abonament Netflix')).not.toBeInTheDocument()
-    })
-
-    it('ar trebui să afișeze Empty State atunci când niciun element nu corespunde filtrelor', () => {
-        renderComponent()
-
-        const selects = screen.getAllByRole('combobox')
-        const categorySelect = selects[0]
-        const personSelect = selects[1]
-
-        // Setăm filtre contradictorii (Maria nu a cumpărat Divertisment în mock data)
         fireEvent.change(categorySelect, { target: { value: '🎮 Divertisment' } })
-        fireEvent.change(personSelect, { target: { value: 'Maria' } })
+        await waitFor(() => {
+            expect(fetchExpensesMock).toHaveBeenCalledWith(
+                expect.objectContaining({ category: '🎮 Divertisment', person: 'Ion' }),
+                expect.any(AbortSignal)
+            )
+        })
 
-        // Validăm afișarea mesajului de Empty State
-        expect(screen.getByText('Nu s-au găsit cheltuieli')).toBeInTheDocument()
-        expect(screen.getByText('Nu există nicio înregistrare care să corespundă filtrelor selectate.')).toBeInTheDocument()
+        fireEvent.change(dateInput, { target: { value: '2026-04-18' } })
+        await waitFor(() => {
+            expect(fetchExpensesMock).toHaveBeenCalledWith(
+                expect.objectContaining({ date: '2026-04-18' }),
+                expect.any(AbortSignal)
+            )
+        })
+
+        fireEvent.click(screen.getByText('Resetează Filtre'))
+        await waitFor(() => {
+            expect(fetchExpensesMock).toHaveBeenCalledWith(
+                { date: undefined, category: undefined, person: undefined },
+                expect.any(AbortSignal)
+            )
+        })
     })
 
-    it('ar trebui să restabilească lista la apăsarea butonului de Resetare Filtre', () => {
+    it('ar trebui să gestioneze corect butoanele de paginare', async () => {
+        renderComponent()
+        await screen.findAllByText('Cumpărături Kaufland')
+
+        const unnamedButtons = screen.getAllByRole('button', { name: '' })
+        const prevBtn = unnamedButtons[1]
+        const nextBtn = unnamedButtons[2]
+
+        fireEvent.click(screen.getByRole('button', { name: '2' }))
+        expect(screen.getByText((_, el) => el?.textContent === 'Pagina 2 din 2')).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: '1' }))
+        expect(screen.getByText((_, el) => el?.textContent === 'Pagina 1 din 2')).toBeInTheDocument()
+
+        fireEvent.click(nextBtn)
+        fireEvent.click(prevBtn)
+        expect(screen.getByText((_, el) => el?.textContent === 'Pagina 1 din 2')).toBeInTheDocument()
+    })
+
+    it('ar trebui să execute navigarea și funcția de logout', async () => {
+        renderComponent()
+        await screen.findAllByText('Cumpărături Kaufland')
+
+        const backBtn = screen.getAllByRole('button', { name: '' })[0]
+        fireEvent.click(backBtn)
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+
+        fireEvent.click(screen.getByText('FamilyAgent'))
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+
+        fireEvent.click(screen.getByText('Adaugă'))
+        expect(mockNavigate).toHaveBeenCalledWith('/add-expense')
+
+        fireEvent.click(screen.getByText('Logout'))
+        expect(mockLogout).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
+    })
+
+    it('ar trebui să navigheze la hartă la apăsarea locației (openMap)', async () => {
+        renderComponent()
+        await screen.findAllByText('Cumpărături Kaufland')
+
+        const locationBtn = screen.getAllByText('Kaufland, Bucuresti')[0]
+        fireEvent.click(locationBtn)
+
+        expect(mockNavigate).toHaveBeenCalledWith('/expenses/map', {
+            state: expect.objectContaining({
+                lat: 44.4,
+                lng: 26.1,
+                locationId: 99,
+            }),
+        })
+    })
+
+    it('ar trebui să afișeze Empty State atunci când serverul returnează o listă goală', async () => {
+        fetchExpensesMock.mockResolvedValueOnce([])
         renderComponent()
 
-        const selects = screen.getAllByRole('combobox')
-        const personSelect = selects[1]
+        expect(await screen.findByText('Nu s-au găsit cheltuieli')).toBeInTheDocument()
+    })
 
-        // 1. Filtrăm lista (ascundem elemente)
-        fireEvent.change(personSelect, { target: { value: 'Ion' } })
-        expect(screen.queryByText('Cumpărături Kaufland')).not.toBeInTheDocument()
+    it('ar trebui să afișeze mesaj de eroare dacă fetch-ul eșuează', async () => {
+        fetchExpensesMock.mockRejectedValueOnce(new Error('Network Error'))
+        renderComponent()
 
-        // 2. Apăsăm butonul de reset
-        const resetButton = screen.getByText('Resetează Filtre')
-        fireEvent.click(resetButton)
-
-        // 3. Validăm că filtrele au fost golite și lista a revenit la normal
-        expect(screen.getAllByText('Cumpărături Kaufland').length).toBeGreaterThan(0)
+        expect(await screen.findByText(/Nu am putut încărca cheltuielile din backend/)).toBeInTheDocument()
     })
 })
