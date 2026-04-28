@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,11 +31,17 @@ class ExpensePipelineServiceTest {
     @Mock
     private PipelineValidationService validationService;
 
+    @Mock
+    private ThePipeHandler thePipeHandler;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
     @InjectMocks
     private ExpensePipelineService pipelineService;
 
     @Test
-    void testProcessRawInput() {
+    void testProcessRawInput() throws Exception {
         ExtractionResponse extractionResponse = ExtractionResponse.builder()
                 .amount(new BigDecimal("89.00"))
                 .category("Altele")
@@ -53,6 +60,9 @@ class ExpensePipelineServiceTest {
         when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
 
         doNothing().when(validationService).validatePersistence(1L);
+        
+        // Mocking ObjectMapper behavior
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
         List<Long> result = pipelineService.processRawInput("Am platit 89 lei la Mega Image");
 
@@ -61,5 +71,6 @@ class ExpensePipelineServiceTest {
         verify(extractionService, times(1)).process(any(ExtractionRequest.class));
         verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
         verify(validationService, times(1)).validatePersistence(1L);
+        verify(thePipeHandler, times(1)).broadcast(anyString());
     }
 }

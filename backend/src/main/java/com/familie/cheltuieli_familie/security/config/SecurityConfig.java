@@ -8,24 +8,43 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // Constante pentru roluri - evita duplicarea string-urilor (fix SonarCloud S1192)
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 1. ACTIVARE CORS GLOBAL (Rezolvă eroarea roșie din consolă)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Rute publice
                         .requestMatchers("/api/v1/auth/**").permitAll()
+
+                        // 2. THE PIPE - WebSockets & SSE (Rezolvă eroarea 403 Forbidden)
+                        // Am adăugat rutele din pozele tale anterioare
+                        .requestMatchers("/locatie/**").permitAll()
+                        .requestMatchers("/api/v1/parent/stream/**").permitAll()
+                        .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
+                        .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+
+                        // Swagger UI
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/swagger-ui.html").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
 
                         // Cheltuieli (folosite de frontend pentru harta/istoric)
                         .requestMatchers("/api/v1/expenses/**").permitAll()
@@ -49,5 +68,28 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    // Bean-ul care îi spune lui Spring Security să lase porturile de frontend să intre
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Permite conexiuni de pe orice port (ex: React pe 3000, Vite pe 5173, etc.)
+        configuration.setAllowedOriginPatterns(List.of("*"));
+
+        // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Permite orice headere trimise de frontend
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // Crucial pentru WebSockets si SSE ca sa isi mentina conexiunea deschisa
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Aplica aceste reguli pe absolut toate rutele aplicației
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
