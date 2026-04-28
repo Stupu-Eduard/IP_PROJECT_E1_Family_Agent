@@ -79,6 +79,38 @@ export default function ExpenseMap() {
     photoName?: string
   } | null>(null)
 
+  // --- THE PIPE: Conexiunea pentru actualizare LIVE ---
+  useEffect(() => {
+    console.log('⏳ HARTA: Se inițializează fluxul live prin THE PIPE...');
+    const socket = new WebSocket('ws://localhost:8081/locatie');
+
+    socket.onopen = () => console.log('🟢 HARTA: Conectat la fluxul live!');
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📍 HARTA: Locație nouă primită:', data);
+
+        // Actualizăm markerul și centrul hărții cu datele de la adaptorul tău
+        if (data.lat && data.lng) {
+          const newPos = { lat: data.lat, lng: data.lng };
+          setMarker(newPos);
+          setCenter(newPos);
+          
+          // Dacă adaptorul tău zice că e zonă restricționată, activăm alerta
+          if (data.isRestricted) {
+            setIsOutsideZone(true);
+          }
+        }
+      } catch (e) {
+        console.error('❌ HARTA: Eroare la procesarea datelor live', e);
+      }
+    };
+
+    return () => socket.close();
+  }, []);
+  // ----------------------------------------------------
+
   const label = (state.locationLabel ?? '').trim()
 
   async function geocodeAddress(address: string, signal: AbortSignal) {
