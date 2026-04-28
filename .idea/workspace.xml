@@ -81,53 +81,53 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.CheltuieliFamilieApplication.executor": "Run",
-    "JUnit.CheltuieliFamilieApplicationTests.executor": "Run",
-    "JUnit.ChildLocationControllerTest.executor": "Coverage",
-    "JUnit.ExpenseItemRepositoryTest.executor": "Run",
-    "JUnit.ExpenseItemRepositoryTest.shouldDeleteExpenseItem.executor": "Run",
-    "JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems.executor": "Run",
-    "JUnit.ExpenseRepositoryTest.executor": "Run",
-    "JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved.executor": "Run",
-    "JUnit.LocationValidationServiceTest.executor": "Coverage",
-    "JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor": "Run",
-    "JUnit.repository in cheltuieli-familie.executor": "Coverage",
-    "Maven.cheltuieli-familie [clean].executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "Spring Boot.CheltuieliFamilieApplication.executor": "Run",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
-    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "",
-    "git-widget-placeholder": "feature/miron-andrei-fix",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/home/adela/Desktop/IP_PROJECT_E1_Family_Agent/backend/pom.xml",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.CheltuieliFamilieApplication.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CheltuieliFamilieApplicationTests.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ChildLocationControllerTest.executor&quot;: &quot;Coverage&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.shouldDeleteExpenseItem.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseItemRepositoryTest.shouldFindAllExpenseItems.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseRepositoryTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExpenseRepositoryTest.shouldPersistItemsWhenExpenseIsSaved.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.LocationValidationServiceTest.executor&quot;: &quot;Coverage&quot;,
+    &quot;JUnit.com.familie.cheltuieli_familie in cheltuieli-familie.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.repository in cheltuieli-familie.executor&quot;: &quot;Coverage&quot;,
+    &quot;Maven.cheltuieli-familie [clean].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;Spring Boot.CheltuieliFamilieApplication.executor&quot;: &quot;Run&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/miron-andrei-fix&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/adela/Desktop/IP_PROJECT_E1_Family_Agent/backend/pom.xml&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecapSpentCounter">
     <option name="endsOfQuotaMs" value="1779127230992" />
     <option name="spentUsd" value="0.00473325" />
@@ -210,6 +210,13 @@
       <option name="PACKAGE_NAME" value="com.familie.cheltuieli_familie.security.service" />
       <option name="MAIN_CLASS_NAME" value="com.familie.cheltuieli_familie.security.service.MinorSafetyFilterServiceTest" />
       <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="CheltuieliFamilieApplication (1)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="cheltuieli-familie" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.familie.cheltuieli_familie.CheltuieliFamilieApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
