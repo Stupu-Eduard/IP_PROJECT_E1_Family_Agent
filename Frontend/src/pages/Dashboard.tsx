@@ -1,14 +1,28 @@
-import { useEffect, useState } from 'react' // 1. Adăugat hooks-urile necesare
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api' // Adăugat pentru hartă
 import KidDashboard from './KidDashboard'
+
+const containerStyle = {
+  width: '100%',
+  height: '200px',
+  borderRadius: '12px'
+};
 
 export default function Dashboard() {
   const token = useAuthStore((state) => state.token)
   const navigate = useNavigate()
 
-  // 2. State pentru a salva locația live primită prin THE PIPE
+  // State pentru a salva locația live primită prin THE PIPE
   const [liveLocation, setLiveLocation] = useState<any>(null)
+
+  // Încărcare Google Maps SDK
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: mapsApiKey ?? ''
+  })
 
   // Decodarea Token-ului și evaluarea permisiunilor (RBAC)
   let userRole = 'Parent';
@@ -21,44 +35,24 @@ export default function Dashboard() {
     }
   }
 
-  // 3. THE PIPE: Conexiunea WebSocket care preia datele în timp real
+  // THE PIPE: Conexiunea WebSocket care preia datele în timp real
   useEffect(() => {
-    // Dacă e copil, nu ne interesează stream-ul de părinte aici
     if (userRole === 'Child') return;
 
-    console.log('⏳ Se inițializează THE PIPE...');
-
-    // ATENȚIE: Verifică dacă adresa de aici este exact cea din backend-ul tău!
     const socket = new WebSocket('ws://localhost:8081/locatie');
 
-    socket.onopen = () => {
-      console.log('🟢 THE PIPE: Conectat cu succes la backend!');
-    };
-
     socket.onmessage = (event) => {
-      // Când backend-ul dă un push, React-ul reacționează aici
       try {
         const data = JSON.parse(event.data);
-        console.log('📍 THE PIPE a adus date noi:', data);
-        setLiveLocation(data); // Salvăm datele ca să se actualizeze pe ecran
+        setLiveLocation(data);
       } catch (e) {
-        // În caz că vine text simplu, nu JSON
-        console.log('📍 THE PIPE:', event.data);
         setLiveLocation({ raw: event.data });
       }
     };
 
-    socket.onerror = (error) => {
-      console.error('🔴 THE PIPE Eroare WebSocket:', error);
-    };
-
-    // La închiderea paginii, închidem frumos țeava
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, [userRole]);
 
-  // Interceptarea fluxului pentru minori
   if (userRole === 'Child') {
     return <KidDashboard />;
   }
@@ -154,14 +148,31 @@ export default function Dashboard() {
             <div className="text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-5">ACTIVITATE RECENTĂ & LOCAȚIE LIVE</div>
             <div className="flex flex-col items-center justify-center min-h-[100px] gap-2">
 
-              {/* Afișăm locația dacă primim date de la backend, altfel afișăm placeholder-ul lui Edi */}
-              {liveLocation ? (
-                  <div className="text-center">
-                    <div className="w-9 h-9 rounded-full bg-[#C97B4B]/10 flex items-center justify-center text-[16px] text-[#C97B4B] mx-auto mb-2 animate-pulse">📍</div>
-                    <div className="text-[14px] font-medium text-[#2D2926]">Date noi de pe server!</div>
-                    <pre className="text-[11px] text-[#C4B9AC] mt-1 bg-gray-50 p-2 rounded border border-[#EDE9E3] text-left">
-                      {JSON.stringify(liveLocation, null, 2)}
-                    </pre>
+              {/* Afișăm locația pe mini-hartă dacă primim date de la backend */}
+              {liveLocation && liveLocation.lat && liveLocation.lng && isLoaded ? (
+                  <div className="w-full">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-[#C97B4B] animate-ping"></div>
+                      <div className="text-[12px] font-medium text-[#2D2926]">LOCAȚIE COPIL DETECTATĂ LIVE</div>
+                    </div>
+                    <GoogleMap
+                        mapContainerStyle={containerStyle}
+                        center={{ lat: liveLocation.lat, lng: liveLocation.lng }}
+                        zoom={15}
+                        options={{
+                          disableDefaultUI: true,
+                          zoomControl: false,
+                        }}
+                    >
+                      <Marker position={{ lat: liveLocation.lat, lng: liveLocation.lng }} />
+                    </GoogleMap>
+                    <div className="mt-3 text-[11px] text-[#B8A99A] flex justify-between">
+                      <span>Lat: {liveLocation.lat.toFixed(4)}</span>
+                      <span>Lng: {liveLocation.lng.toFixed(4)}</span>
+                      <span className={liveLocation.isRestricted ? "text-red-500 font-bold" : ""}>
+                        {liveLocation.isRestricted ? "ZONĂ RESTRICȚIONATĂ!" : "Zonă Sigură"}
+                      </span>
+                    </div>
                   </div>
               ) : (
                   <>
