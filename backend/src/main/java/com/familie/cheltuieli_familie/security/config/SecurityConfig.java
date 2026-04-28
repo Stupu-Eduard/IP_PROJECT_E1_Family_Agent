@@ -38,6 +38,7 @@ public class SecurityConfig {
 
                         // Copilul si Parintele pot trimite date de locatie
                         .requestMatchers("/api/v1/child/location/sync").hasAnyRole("PARENT", "CHILD")
+                        .requestMatchers("/telemetry/**").permitAll()
 
                         // Orice alt request trebuie sa fie autentificat
                         .anyRequest().authenticated()
