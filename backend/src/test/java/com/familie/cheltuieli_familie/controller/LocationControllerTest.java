@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.dto.UpdateLocationCoordinatesRequest;
 import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.repository.LocationRepository;
+import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -16,7 +17,8 @@ class LocationControllerTest {
     @Test
     void updateCoordinates_whenLocationExists_updatesAndReturnsDto() {
         LocationRepository locationRepository = mock(LocationRepository.class);
-        LocationController controller = new LocationController(locationRepository);
+        ThePipeHandler thePipeHandler = mock(ThePipeHandler.class);
+        LocationController controller = new LocationController(locationRepository, thePipeHandler);
 
         Location location = new Location();
         location.setId(5L);
@@ -31,6 +33,7 @@ class LocationControllerTest {
 
         verify(locationRepository).updateCoordinates(5L, 46.1, 27.6);
         verify(locationRepository).findById(5L);
+        verify(thePipeHandler, times(1)).broadcast(anyString());
 
         assertEquals(5L, dto.id());
         assertEquals("Mega", dto.store());
@@ -44,7 +47,8 @@ class LocationControllerTest {
     @Test
     void updateCoordinates_whenUpdateCountZero_throwsIllegalArgumentException() {
         LocationRepository locationRepository = mock(LocationRepository.class);
-        LocationController controller = new LocationController(locationRepository);
+        ThePipeHandler thePipeHandler = mock(ThePipeHandler.class);
+        LocationController controller = new LocationController(locationRepository, thePipeHandler);
 
         when(locationRepository.updateCoordinates(404L, 1.0, 2.0)).thenReturn(0);
 		UpdateLocationCoordinatesRequest request = new UpdateLocationCoordinatesRequest(1.0, 2.0);
@@ -53,12 +57,14 @@ class LocationControllerTest {
 				() -> controller.updateCoordinates(404L, request));
 
         verify(locationRepository, never()).findById(anyLong());
+        verify(thePipeHandler, never()).broadcast(anyString());
     }
 
     @Test
     void updateCoordinates_whenNotFoundAfterUpdate_throwsIllegalArgumentException() {
         LocationRepository locationRepository = mock(LocationRepository.class);
-        LocationController controller = new LocationController(locationRepository);
+        ThePipeHandler thePipeHandler = mock(ThePipeHandler.class);
+        LocationController controller = new LocationController(locationRepository, thePipeHandler);
 
         when(locationRepository.updateCoordinates(6L, 1.0, 2.0)).thenReturn(1);
         when(locationRepository.findById(6L)).thenReturn(Optional.empty());
