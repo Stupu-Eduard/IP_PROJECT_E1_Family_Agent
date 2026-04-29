@@ -484,7 +484,6 @@ export default function ExpenseMap() {
                 </div>
               </div>
           )}
-        </div>
       </div>
   )
 }
