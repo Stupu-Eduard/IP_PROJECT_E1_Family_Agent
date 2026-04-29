@@ -9,6 +9,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
 import ExpenseMap from './pages/ExpenseMap'
+import ExpensesMapAll from './pages/ExpensesMapAll'
 import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
 import ChatAI from './components/ChatAi'
@@ -34,6 +35,7 @@ function App() {
                     <Route path="/expenses" element={<Expenses />} />
                     <Route path="/expenses/map" element={<ExpenseMap />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
                     <Route path="/family" element={<FamilySettings />} />
                 </Route>
 
