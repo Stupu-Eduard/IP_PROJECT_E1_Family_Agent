@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.service.LocationAdapterService;
+import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,18 +21,20 @@ class LocationStreamServiceTest {
 
     private LocationStreamService locationStreamService;
 
-    // Mock pentru LocationAdapterService - acum e dependenta obligatorie
+    // Mock-uri pentru dependente
     private LocationAdapterService locationAdapterService;
+    private ThePipeHandler thePipeHandler;
 
     @BeforeEach
     void setUp() {
-        // Cream mock-ul pentru adaptor
+        // Cream mock-urile
         locationAdapterService = mock(LocationAdapterService.class);
+        thePipeHandler = mock(ThePipeHandler.class);
 
-        // Instanțiem serviciul cu dependenta injectata
-        locationStreamService = new LocationStreamService(locationAdapterService);
+        // Instanțiem serviciul cu dependentele injectate
+        locationStreamService = new LocationStreamService(locationAdapterService, thePipeHandler);
 
-        // Configuram mock-ul sa returneze un DTO valid la orice apel
+        // Configuram mock-ul adaptorului sa returneze un DTO valid la orice apel
         when(locationAdapterService.adapt(anyLong(), anyLong(), anyDouble(), anyDouble(), anyList()))
                 .thenReturn(new LocationMapDto(2L, 1L, 47.1585, 27.6014, false, LocalDateTime.now()));
     }
@@ -54,10 +57,11 @@ class LocationStreamServiceTest {
 
     @Test
     void testSendLocationToParent_WhenNoParentConnected() {
-        // Daca parentId nu exista in map, nu trebuie sa arunce eroare
-        assertDoesNotThrow(() ->
-                locationStreamService.sendLocationToParent(2L, 999L, 45.0, 25.0, List.of())
-        );
+        // Chiar daca parintele nu e conectat prin SSE, trebuie sa mearga prin WebSockets (The Pipe)
+        locationStreamService.sendLocationToParent(2L, 999L, 45.0, 25.0, List.of());
+        
+        // Verificam ca s-a incercat broadcast prin The Pipe
+        verify(thePipeHandler, times(1)).broadcast(anyString());
     }
 
     @Test
@@ -71,8 +75,11 @@ class LocationStreamServiceTest {
 
         locationStreamService.sendLocationToParent(2L, parentId, 44.42, 26.10, List.of("restaurant"));
 
-        // Verificam ca s-a apelat send() cu datele din adaptor
+        // Verificam ca s-a apelat send() pentru SSE
         verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
+        
+        // Verificam ca s-a apelat broadcast() pentru THE PIPE
+        verify(thePipeHandler, times(1)).broadcast(anyString());
     }
 
     @Test
@@ -84,12 +91,15 @@ class LocationStreamServiceTest {
         mockMap.put(parentId, mockEmitter);
         ReflectionTestUtils.setField(locationStreamService, "parentEmitters", mockMap);
 
-        // Simulam o eroare de retea
+        // Simulam o eroare de retea pe SSE
         doThrow(new IOException("Connection reset")).when(mockEmitter).send(any(SseEmitter.SseEventBuilder.class));
 
         locationStreamService.sendLocationToParent(2L, parentId, 44.42, 26.10, List.of("restaurant"));
 
-        // In caz de eroare, parintele trebuie scos din map
-        assertFalse(mockMap.containsKey(parentId), "Parintele ar trebui scos din map daca trimiterea esueaza");
+        // In caz de eroare SSE, parintele trebuie scos din map
+        assertFalse(mockMap.containsKey(parentId), "Parintele ar trebui scos din map daca trimiterea SSE esueaza");
+        
+        // Dar broadcast-ul prin The Pipe ar trebui sa fi fost incercat oricum
+        verify(thePipeHandler, times(1)).broadcast(anyString());
     }
 }
