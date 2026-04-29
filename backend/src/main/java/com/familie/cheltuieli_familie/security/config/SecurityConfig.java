@@ -83,7 +83,7 @@ public class SecurityConfig {
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
                 "https://family-agent.me",
-                "https://api.family-agent.me"
+                "https://api.family-agent.me",
                 "http://localhost:4173" // vite preview
         ));
 
