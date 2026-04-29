@@ -38,9 +38,9 @@ public class SecurityConfig {
                         // 2. THE PIPE - WebSockets & SSE (Rezolvă eroarea 403 Forbidden)
                         // Am adăugat rutele din pozele tale anterioare
                         .requestMatchers("/locatie/**").permitAll()
-                        .requestMatchers("/api/v1/parent/stream/**").permitAll()
-                        .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
-                        .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+                        .requestMatchers("/v1/parent/stream/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // in caz ca ai un prefix general de ws
+                        .requestMatchers("/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
 
                         // Swagger UI
                         .requestMatchers("/swagger-ui/**").permitAll()
@@ -48,21 +48,22 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**").permitAll()
 
                         // Cheltuieli (folosite de frontend pentru harta/istoric)
-                        .requestMatchers("/api/v1/expenses/**").permitAll()
+                        .requestMatchers("/v1/expenses/**").permitAll()
 
                         // Lookups pentru filtre
-                        .requestMatchers("/api/v1/categories/**").permitAll()
-                        .requestMatchers("/api/v1/users/**").permitAll()
+                        .requestMatchers("/v1/categories/**").permitAll()
+                        .requestMatchers("/v1/users/**").permitAll()
 
                         // Persistare coordonate geocodate in PostGIS
-                        .requestMatchers("/api/v1/locations/**").permitAll()
+                        .requestMatchers("/v1/locations/**").permitAll()
 
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
-                        .requestMatchers("/api/v1/parent/**").hasRole(ROLE_PARENT)
-                        .requestMatchers("/api/v1/alerts/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/v1/parent/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/v1/alerts/**").hasRole(ROLE_PARENT)
 
                         // Copilul si Parintele pot trimite date de locatie
-                        .requestMatchers("/api/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)
+                        .requestMatchers("/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)
+                        .requestMatchers("/telemetry/**").permitAll()
 
                         // Orice alt request trebuie sa fie autentificat
                         .anyRequest().authenticated()
@@ -81,7 +82,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
-                "http://localhost:8080"  // Swagger / Altele
+                "https://family-agent.me",
+                "https://api.family-agent.me"
+                "http://localhost:4173" // vite preview
         ));
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
