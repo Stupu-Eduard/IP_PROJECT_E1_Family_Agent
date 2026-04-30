@@ -5,7 +5,6 @@ import type { ExpenseDTO } from '../types/ExpenseDTO';
 import { processReceiptOCR } from '../services/expenses';
 import { ImageUploader } from './ImageUploader';
 
-// ── Icoane SVG inline (fără dependință lucide pe componente noi) ──────────────
 const IcoArrowLeft = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M19 12H5"/><path d="m11 5-7 7 7 7"/>
@@ -25,19 +24,16 @@ const IcoCamera = () => (
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
 
-  // ── Stări formular (NEATINSE) ──────────────────────────────────────────────
   const [amount,   setAmount]   = useState<number | ''>('');
   const [category, setCategory] = useState('');
   const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
 
-  // ── Stări procesare (NEATINSE) ─────────────────────────────────────────────
   const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error,       setError]       = useState('');
   const [ocrError,    setOcrError]    = useState<string | null>(null);
   const [success,     setSuccess]     = useState(false);
 
-  // ── OCR handler (NEATINS — apelează processReceiptOCR real) ───────────────
   const handleOcrProcess = async (file: File) => {
     setIsAnalyzing(true);
     setOcrError(null);
@@ -57,7 +53,6 @@ const ExpenseForm: React.FC = () => {
     }
   };
 
-  // ── Submit handler (NEATINS) ───────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -80,15 +75,11 @@ const ExpenseForm: React.FC = () => {
     }, 1000);
   };
 
-  // Câmpurile rămân editabile în timpul OCR (isAnalyzing) —
-  // OCR populează automat dar userul poate corecta oricând.
-  // Dezactivăm doar la salvare (loading).
   const isInputDisabled = loading;
 
   return (
       <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
           <button
               className="btn btn-ghost btn-icon"
@@ -105,7 +96,6 @@ const ExpenseForm: React.FC = () => {
           Trage un bon, fă-i o poză sau introdu manual. AI-ul detectează magazinul, suma, categoria și locația.
         </div>
 
-        {/* ── Notificări globale ───────────────────────────────────────────── */}
         {success && (
             <div className="fade-up" style={{
               display: 'flex', alignItems: 'center', gap: 10,
@@ -142,13 +132,10 @@ const ExpenseForm: React.FC = () => {
             </div>
         )}
 
-        {/* ── Grid: OCR dropzone + formular ───────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
 
-          {/* ── Stânga: ImageUploader cu wrapper alive ──────────────────── */}
           <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
 
-            {/* Overlay OCR procesare (LOGICĂ NEATINSĂ — isAnalyzing) */}
             {isAnalyzing && (
                 <div style={{
                   position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
@@ -167,7 +154,6 @@ const ExpenseForm: React.FC = () => {
                       FamilyAgent citește datele
                     </div>
                   </div>
-                  {/* Skeleton fields preview */}
                   <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div className="field-skeleton" style={{ width: '40%' }} />
                     <div className="field-skeleton" style={{ width: '80%' }} />
@@ -176,7 +162,6 @@ const ExpenseForm: React.FC = () => {
                 </div>
             )}
 
-            {/* Header card */}
             <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div className="label" style={{ marginBottom: 6 }}>BON FISCAL · SCANARE</div>
@@ -189,19 +174,17 @@ const ExpenseForm: React.FC = () => {
               </div>
             </div>
 
-            {/* ImageUploader existent (NEATINS — validare, preview, onImageSelect) */}
             <div style={{ padding: '18px 28px 28px' }}>
               <ImageUploader
                   onImageSelect={(file) => {
                     if (file) {
-                      handleOcrProcess(file);   // ← apelul real OCR
+                      handleOcrProcess(file);
                     } else {
                       setOcrError(null);
                     }
                   }}
               />
 
-              {/* Hint text */}
               <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-muted)' }}>
                 <IcoCamera />
                 JPG, PNG · max 5 MB · OCR completează câmpurile automat
@@ -209,7 +192,6 @@ const ExpenseForm: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Dreapta: Formular ────────────────────────────────────────── */}
           <div className="card" style={{}}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div className="label">DETALII CHELTUIALĂ</div>
@@ -223,12 +205,12 @@ const ExpenseForm: React.FC = () => {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-              {/* Sumă */}
               <div>
-                <label className="label" style={{ display: 'block', marginBottom: 8 }}>
+                <label htmlFor="amount" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Sumă (RON) <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
                 <input
+                    id="amount"
                     type="number"
                     step="0.01"
                     value={amount}
@@ -241,13 +223,13 @@ const ExpenseForm: React.FC = () => {
                 />
               </div>
 
-              {/* Categorie */}
               <div>
-                <label className="label" style={{ display: 'block', marginBottom: 8 }}>
+                <label htmlFor="category" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Categorie <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <select
+                      id="category"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="input"
@@ -267,12 +249,12 @@ const ExpenseForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* Dată */}
               <div>
-                <label className="label" style={{ display: 'block', marginBottom: 8 }}>
+                <label htmlFor="date" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Dată <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
                 <input
+                    id="date"
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
@@ -283,7 +265,6 @@ const ExpenseForm: React.FC = () => {
                 />
               </div>
 
-              {/* Submit */}
               <button
                   type="submit"
                   disabled={isInputDisabled}
@@ -301,7 +282,6 @@ const ExpenseForm: React.FC = () => {
               </button>
             </form>
 
-            {/* Info securitate */}
             <div style={{
               marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--color-border)',
               display: 'flex', alignItems: 'center', gap: 10,
