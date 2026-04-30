@@ -1,14 +1,27 @@
 import { Outlet } from 'react-router-dom'
-import LogoutTopBar from './LogoutTopBar'
+import Sidebar from './Sidebar'
+import ChatAI from './ChatAi'
+import { useAuthStore } from '../store/authStore'
 
 export default function ProtectedLayout() {
-  return (
-	<div className="min-h-screen bg-[#FAF8F5] font-sans text-[#2D2926] flex flex-col">
-	  <LogoutTopBar />
-	  <main className="flex-1 flex flex-col">
-		<Outlet />
-	  </main>
-	</div>
-  )
-}
+	const token = useAuthStore((s) => s.token)
 
+	let isChild = false
+	if (token) {
+		try {
+			const payload = JSON.parse(atob(token.split('.')[1]))
+			isChild = payload.role === 'Child'
+		} catch {}
+	}
+
+	return (
+		<div className="fa-layout">
+			<Sidebar />
+			<main className="fa-layout-content">
+				<Outlet />
+			</main>
+			{/* Chat AI — doar pentru părinți, fixed bottom-right */}
+			{!isChild && <ChatAI />}
+		</div>
+	)
+}
