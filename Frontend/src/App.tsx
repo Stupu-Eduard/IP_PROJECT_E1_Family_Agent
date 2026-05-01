@@ -17,8 +17,7 @@ const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
 
 function App() {
     const location = useLocation()
-    const isPublic = PUBLIC_PATHS.includes(location.pathname.toLowerCase())
-
+    PUBLIC_PATHS.includes(location.pathname.toLowerCase());
     return (
         <div style={{ width: '100%' }}>
             <Routes>

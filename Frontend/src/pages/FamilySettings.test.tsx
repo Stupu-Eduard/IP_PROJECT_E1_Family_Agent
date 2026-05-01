@@ -44,7 +44,7 @@ describe('FamilySettings Component', () => {
 
     it('randează vizualizarea limitată pentru rolul Child (fără formular de invitare)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child' }as any);
 
         renderComponent();
 
@@ -55,7 +55,7 @@ describe('FamilySettings Component', () => {
 
     it('randează vizualizarea completă pentru rolul Parent', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
 
         renderComponent();
 
@@ -68,7 +68,7 @@ describe('FamilySettings Component', () => {
 
     it('randează vizualizarea completă pentru rolul Co-Parent', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Co-Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Co-Parent' }as any);
 
         renderComponent();
         expect(screen.getByText('Gestionare Familie')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('FamilySettings Component', () => {
 
     it('navighează spre dashboard la click pe back', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' } as any);
 
         const { container } = renderComponent();
 
@@ -99,7 +99,7 @@ describe('FamilySettings Component', () => {
 
     it('nu trimite invitația dacă emailul este gol sau conține doar spații (early return)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
 
         renderComponent();
 
@@ -114,7 +114,7 @@ describe('FamilySettings Component', () => {
 
     it('trimite invitația și adaugă un nou membru în listă după delay (setTimeout)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
 
         renderComponent();
 
@@ -143,7 +143,7 @@ describe('FamilySettings Component', () => {
 
     it('șterge un membru cu nume valid dacă se acceptă confirmarea', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
         confirmSpy.mockReturnValue(true);
 
         renderComponent();
@@ -162,7 +162,7 @@ describe('FamilySettings Component', () => {
 
     it('șterge un membru fără nume (invitat) dacă se acceptă confirmarea', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
         confirmSpy.mockReturnValue(true);
 
         renderComponent();
@@ -179,7 +179,7 @@ describe('FamilySettings Component', () => {
 
     it('NU șterge membrul dacă se apasă Cancel pe confirmare', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' });
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
         confirmSpy.mockReturnValue(false); // Simulăm click pe "Cancel"
 
         renderComponent();

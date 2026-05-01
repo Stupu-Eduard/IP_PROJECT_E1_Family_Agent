@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import Sidebar from './Sidebar'
+import Sidebar from './Sidebar.tsx'
 import ChatAI from './ChatAi'
 import { useAuthStore } from '../store/authStore'
 
@@ -11,7 +11,7 @@ export default function ProtectedLayout() {
 		try {
 			const payload = JSON.parse(atob(token.split('.')[1]))
 			isChild = payload.role === 'Child'
-		} catch {}
+		} catch { /* empty */ }
 	}
 
 	return (

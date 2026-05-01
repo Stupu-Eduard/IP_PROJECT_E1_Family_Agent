@@ -10,7 +10,7 @@ const mockObserve = vi.fn();
 const mockDisconnect = vi.fn();
 
 // Fix: Folosim o funcție clasică, nu arrow function, pentru a permite folosirea 'new'
-global.IntersectionObserver = vi.fn().mockImplementation(function(callback) {
+globalThis.IntersectionObserver = vi.fn().mockImplementation(function(callback) {
     observerCallback = callback;
     return {
         observe: mockObserve,

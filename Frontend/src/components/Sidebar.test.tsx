@@ -2,7 +2,7 @@ import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import Sidebar from './Sidebar'
+import Sidebar from './Sidebar.tsx'
 import { useAuthStore } from '../store/authStore'
 
 const mockNavigate = vi.fn()
@@ -89,7 +89,7 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
     })
 
     it('5. Marchează ruta activă folosind startsWith (Sub-rute)', () => {
-        vi.mocked(useLocation).mockReturnValue({ pathname: '/expenses/123', state: null, key: '', search: '', hash: '' })
+        vi.mocked(useLocation).mockReturnValue({ pathname: '/expenses/123', state: null, key: '', search: '', hash: '' }as any)
 
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
 
@@ -98,7 +98,7 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
     })
 
     it('6. Revine la dashboard dacă ruta nu este găsită (Default activeId)', () => {
-        vi.mocked(useLocation).mockReturnValue({ pathname: '/ruta-inexistenta', state: null, key: '', search: '', hash: '' })
+        vi.mocked(useLocation).mockReturnValue({ pathname: '/ruta-inexistenta', state: null, key: '', search: '', hash: '' }as any)
 
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
 

@@ -9,7 +9,7 @@ describe('ImageUploader Component', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
-        global.URL.createObjectURL = vi.fn(() => 'mock-url')
+        globalThis.URL.createObjectURL = vi.fn(() => 'mock-url')
         inputClickMock = vi.fn()
         window.HTMLInputElement.prototype.click = inputClickMock
     })
@@ -66,7 +66,7 @@ describe('ImageUploader Component', () => {
 
         fireEvent.change(input, { target: { files: [validFile] } })
 
-        expect(global.URL.createObjectURL).toHaveBeenCalledWith(validFile)
+        expect(globalThis.URL.createObjectURL).toHaveBeenCalledWith(validFile)
         expect(screen.getByText('Bon încărcat')).toBeInTheDocument()
         expect(mockOnImageSelect).toHaveBeenCalledWith(validFile)
     })

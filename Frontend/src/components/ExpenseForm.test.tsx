@@ -94,7 +94,8 @@ describe('ExpenseForm Component', () => {
             amount: 250,
             category: 'facturi',
             date: '2026-04-30T12:00:00'
-        })
+        }as any
+        )
         renderComponent()
         fireEvent.click(screen.getByText('Simulare Încărcare OCR'))
         expect(screen.getByText('Procesăm bonul tău…')).toBeInTheDocument()

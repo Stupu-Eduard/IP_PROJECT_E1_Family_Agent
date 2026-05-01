@@ -31,16 +31,20 @@ vi.mock('@react-google-maps/api', () => ({
 // Mock pentru WebSocket
 let activeWsInstance: MockWebSocket | null = null;
 class MockWebSocket {
-    onmessage: ((event: any) => void) | null = null;
+    onmessage: ((event: MessageEvent) => void) | null = null;
     close = vi.fn();
-    constructor(public url: string) {
+    public url: string;
+    constructor(url: string) {
+        this.url = url;
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         activeWsInstance = this;
     }
 }
-global.WebSocket = MockWebSocket as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).WebSocket = MockWebSocket;
 
 // Generatoare de token-uri pentru toate cazurile
-const generateMockToken = (payloadObj: any) => {
+const generateMockToken = (payloadObj: Record<string, unknown>) => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const payload = btoa(JSON.stringify(payloadObj));
     return `${header}.${payload}.signature`;
@@ -53,7 +57,7 @@ describe('Dashboard Component', () => {
     beforeAll(() => {
         // Mock pentru getBoundingClientRect ca să acoperim 100% onMouseMove-ul
         Element.prototype.getBoundingClientRect = vi.fn(() => ({
-            width: 100, height: 100, top: 10, left: 10, bottom: 0, right: 0, x: 0, y: 0, toJSON: () => {}
+            width: 100, height: 100, top: 10, left: 10, bottom: 0, right: 0, x: 0, y: 0, toJSON: () => ({})
         }));
     });
 
@@ -70,24 +74,28 @@ describe('Dashboard Component', () => {
     // ─── 1. TESTE DE AUTENTIFICARE ȘI ROLURI (JWT) ───
 
     it('randează <KidDashboard /> dacă rolul este Child', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Child' }) }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
         expect(screen.getByTestId('kid-dashboard')).toBeInTheDocument();
     });
 
     it('folosește rolul implicit Parent dacă JWT-ul este valid, dar nu are campul "role"', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ otherData: 'test' }) }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
         expect(screen.getByText(/Bine ai revenit/i)).toBeInTheDocument();
     });
 
     it('folosește rolul implicit Parent dacă JWT-ul e corupt complet', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'corrupted-token-without-dots' }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
         expect(screen.getByText(/Bine ai revenit/i)).toBeInTheDocument();
     });
 
     it('folosește rolul implicit Parent dacă token-ul lipsește (null)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: null }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
         expect(screen.getByText(/Bine ai revenit/i)).toBeInTheDocument();
@@ -96,6 +104,7 @@ describe('Dashboard Component', () => {
     // ─── 2. TESTE DE INTERACȚIUNE ȘI NAVIGARE ───
 
     it('navighează corect la toate linkurile (KPI, Acțiuni, Extra)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
@@ -119,6 +128,7 @@ describe('Dashboard Component', () => {
     });
 
     it('aplică efectul de glow la mousemove pe KPI (getBoundingClientRect)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
@@ -126,13 +136,14 @@ describe('Dashboard Component', () => {
         fireEvent.mouseMove(kpiCard, { clientX: 50, clientY: 50 });
 
         // Verificăm dacă s-au setat corect variabilele CSS custom (--mx, --my)
-        expect(kpiCard.style.getPropertyValue('--mx')).toBe('40px'); // 50 - 10 (din mock-ul bounding box)
-        expect(kpiCard.style.getPropertyValue('--my')).toBe('40px');
+        expect((kpiCard as HTMLElement).style.getPropertyValue('--mx')).toBe('40px'); // 50 - 10 (din mock-ul bounding box)
+        expect((kpiCard as HTMLElement).style.getPropertyValue('--my')).toBe('40px');
     });
 
     // ─── 3. TESTE DE INTERVAL ȘI WEBSOCKET ───
 
     it('incrementează timer-ul de actualizare corect', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
@@ -142,13 +153,14 @@ describe('Dashboard Component', () => {
     });
 
     it('randează harta reală când locația este primită și este RESTRICȚIONATĂ', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
-        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true } as any);
+        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true, loadError: undefined });
 
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
         act(() => {
-            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268, lng: 26.1025, isRestricted: true }) });
+            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268, lng: 26.1025, isRestricted: true }) } as MessageEvent);
         });
 
         expect(screen.getByText('Locație detectată')).toBeInTheDocument();
@@ -157,13 +169,14 @@ describe('Dashboard Component', () => {
     });
 
     it('randează harta reală când locația este primită și este SIGURĂ (isRestricted = false)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
-        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true } as any);
+        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true, loadError: undefined });
 
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
         act(() => {
-            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268, lng: 26.1025, isRestricted: false }) });
+            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268, lng: 26.1025, isRestricted: false }) } as MessageEvent);
         });
 
         // Acoperim cazul cu textul verde
@@ -171,14 +184,15 @@ describe('Dashboard Component', () => {
     });
 
     it('randează harta MOCK (fallback) dacă locația este incompletă (fără lng)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
-        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true } as any);
+        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true, loadError: undefined });
 
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
         act(() => {
             // Trimitem doar latitudinea (fără lng), ar trebui să prindă "Locație detectată" dar să afișeze harta Mock
-            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268 }) });
+            activeWsInstance?.onmessage?.({ data: JSON.stringify({ lat: 44.4268 }) } as MessageEvent);
         });
 
         expect(screen.getByText('Locație detectată')).toBeInTheDocument();
@@ -187,14 +201,15 @@ describe('Dashboard Component', () => {
     });
 
     it('randează harta MOCK și procesează erori JSON de la WebSocket (catch block)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
-        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true } as any);
+        vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValue({ isLoaded: true, loadError: undefined });
 
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
         act(() => {
             // Date invalide JSON (ajunge in block-ul catch care setează { raw: e.data })
-            activeWsInstance?.onmessage?.({ data: 'O eroare neprevazuta de server' });
+            activeWsInstance?.onmessage?.({ data: 'O eroare neprevazuta de server' } as MessageEvent);
         });
 
         // liveLocation.lat va fi false, deci apare 'În drum spre școală'
@@ -203,6 +218,7 @@ describe('Dashboard Component', () => {
     });
 
     it('curăță socket-ul și intervalul la demontare (unmount cleanup)', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: generateMockToken({ role: 'Parent' }) }));
         const { unmount } = render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
