@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/locations")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 public class LocationController {
 
     private final LocationRepository locationRepository;
