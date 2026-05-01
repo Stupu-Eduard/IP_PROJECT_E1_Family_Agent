@@ -39,7 +39,8 @@ public class SecurityConfig {
                 .requestMatchers("/locatie/**").permitAll()
                 .requestMatchers("/v1/parent/stream/**").permitAll()
                 .requestMatchers("/ws/**").permitAll() // in caz ca ai un prefix general de ws
-                .requestMatchers("/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+                .requestMatchers("/v1/demo/**").permitAll()
+                .requestMatchers("/v1/chat/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
 
                 // Swagger UI
                 .requestMatchers("/swagger-ui/**").permitAll()
