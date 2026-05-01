@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ExpensesMapAll from './ExpensesMapAll';
 
@@ -21,6 +21,13 @@ vi.mock('../services/lookups', () => ({
 describe('ExpensesMapAll', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Injectăm o cheie falsă ca să nu apară mesajul "Nu s-a putut încărca Google Maps"
+    vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', 'fake-api-key');
+  });
+
+  afterEach(() => {
+    // Curățăm mediul de test la final
+    vi.unstubAllEnvs();
   });
 
   const mockExpenses = [
@@ -28,47 +35,49 @@ describe('ExpensesMapAll', () => {
     { id: 2, lat: 44.41, lng: 26.11, amount: 50, category: 'Fun', person: 'Bob', description: 'Cinema', date: '2026-04-21' },
   ];
 
-  const renderComponent = (state: any = { expenses: mockExpenses, filters: {} }) =>
+  const renderComponent = async (state: any = { expenses: mockExpenses, filters: {} }) => {
     render(
-      <MemoryRouter initialEntries={[{ pathname: '/all-map', state }]}> 
-        <Routes>
-          <Route path="/all-map" element={<ExpensesMapAll />} />
-        </Routes>
-      </MemoryRouter>
+        <MemoryRouter initialEntries={[{ pathname: '/all-map', state }]}>
+          <Routes>
+            <Route path="/all-map" element={<ExpensesMapAll />} />
+          </Routes>
+        </MemoryRouter>
     );
 
-  it('renders map and markers', () => {
-    renderComponent();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+  };
+
+  it('renders map and markers', async () => {
+    await renderComponent();
     expect(screen.getByText('Toate Cheltuielile pe Hartă')).toBeInTheDocument();
+    // Acum ar trebui să găsească harta pentru că are o cheie API falsă!
     expect(screen.getByTestId('google-map')).toBeInTheDocument();
     expect(screen.getAllByTestId('marker')).toHaveLength(2);
   });
 
   it('shows filter controls and resets filters', async () => {
-    renderComponent();
+    await renderComponent();
     expect(screen.getByText('Resetează Filtre')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Resetează Filtre'));
-    // Should not throw and should still show map
     expect(screen.getByTestId('google-map')).toBeInTheDocument();
   });
 
   it('filters by category and person', async () => {
-    renderComponent();
+    await renderComponent();
     const combos = screen.getAllByRole('combobox');
-    // combos[0] = category, combos[1] = person
     fireEvent.change(combos[0], { target: { value: 'Food' } });
     fireEvent.change(combos[1], { target: { value: 'Alice' } });
-    // Only one marker should match
     await waitFor(() => expect(screen.getAllByTestId('marker')).toHaveLength(1));
   });
 
-  it('shows date filters and can set them', () => {
-    renderComponent();
+  it('shows date filters and can set them', async () => {
+    await renderComponent();
     expect(screen.getByTitle('Data de început')).toBeInTheDocument();
     expect(screen.getByTitle('Data de final')).toBeInTheDocument();
     fireEvent.change(screen.getByTitle('Data de început'), { target: { value: '2026-04-20' } });
     fireEvent.change(screen.getByTitle('Data de final'), { target: { value: '2026-04-21' } });
-    // Should still show map
     expect(screen.getByTestId('google-map')).toBeInTheDocument();
   });
 });
