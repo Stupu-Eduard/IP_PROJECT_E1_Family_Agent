@@ -17,9 +17,9 @@ interface ExpenseListDTO {
     lat?: number;
     lng?: number;
     person: string;
+    rawDate?: string;
 }
 
-// Avatar color per persoană
 const avatarStyle = (name: string) => {
     if (name.startsWith('E')) return { background: 'linear-gradient(135deg, #C97B4B, #E8A87C)' };
     if (name.startsWith('M')) return { background: 'linear-gradient(135deg, #9A8A7C, #B8A99A)' };
@@ -29,18 +29,15 @@ const avatarStyle = (name: string) => {
 export default function Expenses() {
     const navigate = useNavigate();
 
-    // ── Paginare (NEATINS) ─────────────────────────────────────────────────
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = 2;
 
-    // ── State date (NEATINS) ───────────────────────────────────────────────
     const [expenses,            setExpenses]            = useState<ExpenseListDTO[]>([]);
     const [isLoading,           setIsLoading]           = useState(true);
     const [loadError,           setLoadError]           = useState<string | null>(null);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [availablePeople,     setAvailablePeople]     = useState<string[]>([]);
 
-    // ── Fetch categorii și persoane (NEATINS) ──────────────────────────────
     useEffect(() => {
         const controller = new AbortController();
         const run = async () => {
@@ -57,12 +54,11 @@ export default function Expenses() {
         return () => controller.abort();
     }, []);
 
-    // ── Filtre (NEATINS) ───────────────────────────────────────────────────
-    const [selectedDate,     setSelectedDate]     = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson,   setSelectedPerson]   = useState('');
 
-    // ── Fetch cheltuieli (NEATINS) ─────────────────────────────────────────
     useEffect(() => {
         let isCancelled = false;
         const controller = new AbortController();
@@ -72,7 +68,7 @@ export default function Expenses() {
             try {
                 const data = await fetchExpenses(
                     {
-                        date:     selectedDate     || undefined,
+                        date: undefined,
                         category: selectedCategory || undefined,
                         person:   selectedPerson   || undefined,
                     },
@@ -83,7 +79,7 @@ export default function Expenses() {
                     const isoDate  = expense.expenseDate ?? '';
                     const datePart = isoDate ? isoDate.slice(0, 10) : '';
                     const date     = datePart ? datePart.split('-').reverse().join('.') : '';
-                    const store    = expense.location?.store   ?? '';
+                    const store    = expense.location?.store    ?? '';
                     const address  = expense.location?.address ?? '';
                     const city     = expense.location?.city    ?? '';
                     const country  = expense.location?.country ?? '';
@@ -92,9 +88,9 @@ export default function Expenses() {
                     return {
                         id: expense.id,
                         date,
-                        category:      expense.category    ?? 'Fără categorie',
-                        description:   expense.description ?? '',
-                        amount:        Number.isFinite(amountNumber) ? amountNumber : 0,
+                        category:        expense.category    ?? 'Fără categorie',
+                        description:     expense.description ?? '',
+                        amount:          Number.isFinite(amountNumber) ? amountNumber : 0,
                         location,
                         locationId:      expense.location?.id      ?? undefined,
                         locationCity:    expense.location?.city    ?? undefined,
@@ -102,6 +98,7 @@ export default function Expenses() {
                         lat:             expense.location?.lat     ?? undefined,
                         lng:             expense.location?.lng     ?? undefined,
                         person:          expense.person            ?? 'N/A',
+                        rawDate:         datePart,
                     };
                 });
                 setExpenses(mapped);
@@ -114,111 +111,130 @@ export default function Expenses() {
             }
         };
         void run();
-        return () => { isCancelled = true; controller.abort(); };
-    }, [selectedCategory, selectedDate, selectedPerson]);
 
-    // ── openMap (NEATINS) ──────────────────────────────────────────────────
+        return () => {
+            isCancelled = true;
+            controller.abort();
+        };
+    }, [selectedCategory, selectedPerson]);
+
     const openMap = (expense: ExpenseListDTO) => {
         navigate('/expenses/map', {
             state: {
-                lat:           expense.lat,
-                lng:           expense.lng,
-                locationId:    expense.locationId,
-                locationLabel: expense.location,
-                locationCity:  expense.locationCity,
+                lat:             expense.lat,
+                lng:             expense.lng,
+                locationId:      expense.locationId,
+                locationLabel:   expense.location,
+                locationCity:    expense.locationCity,
                 locationCountry: expense.locationCountry,
-                description:   expense.description,
+                description:     expense.description,
             },
         });
     };
 
-    const filteredExpenses = expenses;
+    const filteredExpenses = expenses.filter((e) => {
+        if (startDate && e.rawDate && e.rawDate < startDate) return false;
+        if (endDate && e.rawDate && e.rawDate > endDate) return false;
+        return true;
+    });
+
+    const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] h-10 px-3 text-[13px] text-[#2D2926] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
     return (
         <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
-
-            {/* ── Header ──────────────────────────────────────────────────── */}
-            <div className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-                <button className="btn btn-ghost btn-icon" onClick={() => navigate('/dashboard')}>
-                    <ArrowLeft size={16} />
-                </button>
-                <div className="chip chip-live">{filteredExpenses.length > 0 ? `${filteredExpenses.length} TRANZACȚII` : 'CHELTUIELI'}</div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 fade-in-up">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">Istoric Cheltuieli</h2>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => navigate('/expenses/all-map', { state: { expenses: filteredExpenses, filters: { startDate, endDate, selectedCategory, selectedPerson } } })}
+                        className="bg-[#FAF8F5] border border-[#EDE9E3] text-[#2D2926] px-5 py-2.5 rounded-[10px] text-[14px] font-medium flex items-center justify-center gap-2 hover:bg-[#F0ECE7] transition-colors shadow-sm"
+                    >
+                        <MapPin size={18} />
+                        <span>Vezi pe Hartă</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/add-expense')}
+                        className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[14px] font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-[0_4px_12px_rgba(45,41,38,0.15)]"
+                    >
+                        <Plus size={18} /><span>Adaugă</span>
+                    </button>
+                </div>
             </div>
-            <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>Istoric cheltuieli</h1>
-            <div className="fade-up" style={{ color: 'var(--color-muted)', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
-                Caută, filtrează și analizează tot ce a cheltuit familia ta.
-            </div>
 
-            {/* ── Filtre (logică neatinsă) ─────────────────────────────── */}
-            <div className="card fade-up" style={{ padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-
-                {/* Dată */}
-                <div style={{ position: 'relative' }}>
-                    <Calendar size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', pointerEvents: 'none' }} />
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="relative">
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                     <input
                         type="date"
-                        className="input"
-                        style={{ paddingLeft: 34, width: 160, fontSize: 13 }}
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className={`${inputStyle} pl-10`}
+                        title="Data de început"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                     />
                 </div>
-
-                {/* Categorie */}
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
+                    <input
+                        type="date"
+                        className={`${inputStyle} pl-10`}
+                        title="Data de final"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                    />
+                </div>
+                <div className="relative">
                     <select
-                        className="input"
-                        style={{ width: 170, fontSize: 13, appearance: 'none', paddingRight: 32 }}
+                        className={inputStyle}
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                     >
                         <option value="">Toate Categoriile</option>
-                        {availableCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                        {availableCategories.map((c) => (
+                            <option key={c} value={c}>
+                                {c}
+                            </option>
+                        ))}
                     </select>
-                    <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', pointerEvents: 'none' }} />
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
-
-                {/* Persoană */}
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                     <select
-                        className="input"
-                        style={{ width: 160, fontSize: 13, appearance: 'none', paddingRight: 32 }}
+                        className={inputStyle}
                         value={selectedPerson}
                         onChange={(e) => setSelectedPerson(e.target.value)}
                     >
                         <option value="">Orice Persoană</option>
-                        {availablePeople.map((p) => <option key={p} value={p}>{p}</option>)}
+                        {availablePeople.map((p) => (
+                            <option key={p} value={p}>
+                                {p}
+                            </option>
+                        ))}
                     </select>
-                    <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-muted)', pointerEvents: 'none' }} />
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
-
-                {/* Reset */}
                 <button
-                    className="btn btn-ghost"
-                    style={{ fontSize: 13, padding: '10px 14px' }}
-                    onClick={() => { setSelectedDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+                    onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+                    className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors"
+                    title="Resetează filtrele"
                 >
-                    <Filter size={14} /> Resetează
-                </button>
-
-                {/* Adaugă */}
-                <button
-                    className="btn btn-primary"
-                    style={{ marginLeft: 'auto', fontSize: 13 }}
-                    onClick={() => navigate('/add-expense')}
-                >
-                    <Plus size={15} /> Adaugă
+                    <Filter size={16} /> Resetează
                 </button>
             </div>
 
-            {/* ── Eroare backend (NEATINS) ─────────────────────────────── */}
             {loadError && (
                 <div className="card fade-up" style={{ padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--color-muted)' }}>
                     <Search size={16} style={{ flexShrink: 0 }} /> {loadError}
                 </div>
             )}
 
-            {/* ── Loading skeleton (NEATINS — isLoading) ──────────────── */}
             {isLoading && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
                     {[1, 2, 3, 4].map((i) => (
@@ -233,7 +249,6 @@ export default function Expenses() {
                 </div>
             )}
 
-            {/* ── Empty state (NEATINS — filteredExpenses.length === 0) ── */}
             {!isLoading && filteredExpenses.length === 0 && (
                 <div className="card fade-up" style={{ padding: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                     <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, color: 'var(--color-muted-3)' }}>
@@ -244,9 +259,8 @@ export default function Expenses() {
                 </div>
             )}
 
-            {/* ── Carduri mobile (NEATINS — logică openMap) ───────────── */}
             {!isLoading && filteredExpenses.length > 0 && (
-                <div className="stagger" style={{ display: 'none' /* md:block e gestionat de tabel */ }}>
+                <div className="stagger" style={{ display: 'none' }}>
                     {filteredExpenses.map((expense) => (
                         <div key={expense.id} className="card card-hover fade-up" style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -279,18 +293,14 @@ export default function Expenses() {
                 </div>
             )}
 
-            {/* ── Tabel desktop (NEATINS — logică openMap, paginare) ──── */}
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-
-                    {/* Header tabel */}
                     <div style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
                         {['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ'].map((h, i) => (
                             <div key={h} className="label" style={{ textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
                         ))}
                     </div>
 
-                    {/* Rânduri (logică openMap neatinsă) */}
                     <div className="stagger">
                         {filteredExpenses.map((expense) => (
                             <div
@@ -316,7 +326,6 @@ export default function Expenses() {
                                     </button>
                                 </div>
 
-                                {/* Avatar + nume persoană */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <div className="avatar avatar-sm" style={avatarStyle(expense.person)}>
                                         {expense.person.charAt(0)}
@@ -331,7 +340,6 @@ export default function Expenses() {
                         ))}
                     </div>
 
-                    {/* ── Paginare (NEATINS — setCurrentPage, currentPage, totalPages) */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid var(--color-border)' }}>
                         <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
                             Pagina <strong style={{ color: 'var(--color-ink)' }}>{currentPage}</strong> din {totalPages}

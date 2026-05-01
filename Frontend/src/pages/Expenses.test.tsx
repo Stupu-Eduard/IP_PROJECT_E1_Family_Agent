@@ -35,28 +35,26 @@ describe('Expenses Component', () => {
     })
 
     it('1. afișează scheletul de loading la inițializare', async () => {
+        // Le facem să stea pending intenționat ca să nu facă update de state și să dea eroarea de act(...)
         vi.mocked(expensesService.fetchExpenses).mockImplementation(() => new Promise(() => {}))
+        vi.mocked(lookupsService.fetchCategoryNames).mockImplementation(() => new Promise(() => {}))
+        vi.mocked(lookupsService.fetchUserNames).mockImplementation(() => new Promise(() => {}))
+
         const { container } = renderWithRouter()
 
-        expect(screen.getByText('Istoric cheltuieli')).toBeInTheDocument()
+        expect(screen.getByText(/Istoric Cheltuieli/i)).toBeInTheDocument()
         expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0)
-
-        await act(async () => {
-            await new Promise(resolve => setTimeout(resolve, 0))
-        })
     })
 
     it('2. nu actualizează state-ul dacă componenta este demontată înainte de finalizarea request-ului', async () => {
         let resolveFetch: any
         vi.mocked(expensesService.fetchExpenses).mockImplementation(() => new Promise((res) => { resolveFetch = res }))
+        vi.mocked(lookupsService.fetchCategoryNames).mockImplementation(() => new Promise(() => {}))
+        vi.mocked(lookupsService.fetchUserNames).mockImplementation(() => new Promise(() => {}))
 
         const { unmount } = renderWithRouter()
 
-        await act(async () => {
-            await new Promise(resolve => setTimeout(resolve, 0))
-        })
-
-        unmount()
+        unmount() // Demontăm imediat
 
         await act(async () => {
             resolveFetch([])
@@ -68,12 +66,10 @@ describe('Expenses Component', () => {
     it('3. prinde eroarea dar nu actualizează state-ul dacă componenta a fost demontată', async () => {
         let rejectFetch: any
         vi.mocked(expensesService.fetchExpenses).mockImplementation(() => new Promise((_, rej) => { rejectFetch = rej }))
+        vi.mocked(lookupsService.fetchCategoryNames).mockImplementation(() => new Promise(() => {}))
+        vi.mocked(lookupsService.fetchUserNames).mockImplementation(() => new Promise(() => {}))
 
         const { unmount } = renderWithRouter()
-
-        await act(async () => {
-            await new Promise(resolve => setTimeout(resolve, 0))
-        })
 
         unmount()
 
@@ -154,9 +150,14 @@ describe('Expenses Component', () => {
 
         await screen.findAllByDisplayValue('Toate Categoriile')
 
-        const dateInput = container.querySelector('input[type="date"]')
-        if (dateInput) fireEvent.change(dateInput, { target: { value: '2023-10-10' } })
+        // Setăm filtrele de date (care funcționează acum doar în frontend)
+        const dateInputs = container.querySelectorAll('input[type="date"]')
+        if (dateInputs.length >= 2) {
+            fireEvent.change(dateInputs[0], { target: { value: '2023-10-10' } }) // startDate
+            fireEvent.change(dateInputs[1], { target: { value: '2023-10-20' } }) // endDate
+        }
 
+        // Setăm filtrele pentru backend
         const categorySelect = screen.getAllByRole('combobox')[0]
         fireEvent.change(categorySelect, { target: { value: 'Alimentare' } })
 
@@ -164,8 +165,9 @@ describe('Expenses Component', () => {
         fireEvent.change(personSelect, { target: { value: 'Eduard' } })
 
         await waitFor(() => {
+            // Verificăm că a trimis datele noi către API (atenție, date: undefined)
             expect(expensesService.fetchExpenses).toHaveBeenCalledWith(
-                { date: '2023-10-10', category: 'Alimentare', person: 'Eduard' },
+                { date: undefined, category: 'Alimentare', person: 'Eduard' },
                 expect.any(AbortSignal)
             )
         })
@@ -192,10 +194,11 @@ describe('Expenses Component', () => {
         vi.mocked(expensesService.fetchExpenses).mockResolvedValue([])
         const { container } = renderWithRouter()
 
-        await screen.findByText('Istoric cheltuieli')
+        await screen.findByText(/Istoric Cheltuieli/i)
 
-        const backBtn = container.querySelector('.btn-icon')
-        if(backBtn) fireEvent.click(backBtn)
+        // Primul buton din UI-ul nou Tailwind este mereu cel de ArrowLeft (Back)
+        const backBtn = container.querySelectorAll('button')[0]
+        fireEvent.click(backBtn)
 
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
@@ -208,6 +211,7 @@ describe('Expenses Component', () => {
         expect(screen.getByText('1', { selector: 'strong' })).toBeInTheDocument()
 
         const buttons = screen.getAllByRole('button')
+        // Găsim butoanele de paginare (în noul design sunt la sfârșit)
         const nextPageBtn = buttons[buttons.length - 1]
         const prevPageBtn = buttons[buttons.length - 4]
 
