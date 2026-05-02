@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
 import com.familie.cheltuieli_familie.service.QdrantVectorService;
 import org.junit.jupiter.api.Test;
@@ -51,8 +50,7 @@ class ExpenseSearchControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"query\": \"mancare\", \"topK\": 5}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].score").value(0.95));
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 
     @Test

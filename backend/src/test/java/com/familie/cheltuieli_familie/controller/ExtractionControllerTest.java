@@ -1,20 +1,20 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -22,21 +22,18 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.util.List;
-
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(ExtractionController.class)
 @ActiveProfiles("test")
-@SuppressWarnings("deprecation")
 class ExtractionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private ExtractionService extractionService;
 
-    @MockBean
+    @MockitoBean
     private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
 
     @Test
@@ -64,7 +61,6 @@ class ExtractionControllerTest {
     void testValidateOcr() throws Exception {
         when(extractionService.validateOcrContent(anyString())).thenReturn("VALID");
 
-        // Trimitem un singur string JSON valid (inclus intre ghilimele)
         mockMvc.perform(post("/v1/extract/validate-ocr")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("\"raw ocr text\""))

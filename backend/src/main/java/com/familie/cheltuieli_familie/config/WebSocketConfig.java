@@ -1,5 +1,4 @@
-package com.familie.cheltuieli_familie.config;
-
+import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -11,7 +10,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final com.familie.cheltuieli_familie.service.ThePipeHandler thePipeHandler;
+    private final ThePipeHandler thePipeHandler;
     private final com.familie.cheltuieli_familie.security.interceptor.SessionHandshakeInterceptor sessionHandshakeInterceptor;
 
     @Override
