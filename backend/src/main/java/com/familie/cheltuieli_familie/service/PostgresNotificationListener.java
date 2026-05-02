@@ -26,9 +26,15 @@ public class PostgresNotificationListener {
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void listenToLocationUpdates() {
-        log.info("📡 Pornesc ascultarea evenimentelor de tip Postgres LISTEN pe canalul 'location_updates'...");
-
         try (Connection connection = dataSource.getConnection()) {
+            // VERIFICARE DE SIGURANȚĂ PENTRU TESTE:
+            // Nu pornim listener-ul dacă nu avem un driver de Postgres (ex: în teste H2)
+            if (!connection.getMetaData().getDriverName().contains("PostgreSQL")) {
+                log.info("ℹ️ PostgresNotificationListener dezactivat: Driver-ul detectat nu este PostgreSQL (probabil mediu de test H2).");
+                return;
+            }
+
+            log.info("📡 Pornesc ascultarea evenimentelor de tip Postgres LISTEN pe canalul 'location_updates'...");
             // Avem nevoie de conexiunea nativa Postgres pentru a folosi PGConnection
             PGConnection pgConnection = connection.unwrap(PGConnection.class);
             
