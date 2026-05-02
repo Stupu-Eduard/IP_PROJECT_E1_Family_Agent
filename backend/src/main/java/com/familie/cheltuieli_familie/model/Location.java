@@ -12,8 +12,13 @@ public class Location {
 
     private Long id;
     private String store;
-    private String adress;
     private String city;
     private String country;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 
 }
