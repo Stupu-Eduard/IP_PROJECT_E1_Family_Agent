@@ -2,26 +2,29 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/base.xml" />
 
-    <!-- Appender-ul Loki a fost dezactivat temporar deoarece host-ul 'my-loki' nu este rezolvabil local -->
-    <!-- 
-    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-        <http>
-            <url>http://my-loki:3100/loki/api/v1/push</url>
-        </http>
-        <format>
-            <label>
-                <pattern>app=cheltuieli-familie,host=${HOSTNAME},level=%level</pattern>
-            </label>
-            <message>
-                <pattern>l=%level c=%logger{20} t=%thread | %msg %ex</pattern>
-            </message>
-            <sortByTime>true</sortByTime>
-        </format>
-    </appender>
-    -->
+    <!-- Appender-ul Loki se activează DOAR pe profilul de producție/hosting -->
+    <springProfile name="prod">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <http>
+                <url>http://my-loki:3100/loki/api/v1/push</url>
+            </http>
+            <format>
+                <label>
+                    <pattern>app=cheltuieli-familie,host=${HOSTNAME},level=%level</pattern>
+                </label>
+                <message>
+                    <pattern>l=%level c=%logger{20} t=%thread | %msg %ex</pattern>
+                </message>
+                <sortByTime>true</sortByTime>
+            </format>
+        </appender>
+    </springProfile>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
-        <!-- <appender-ref ref="LOKI" /> -->
+        <!-- Adăugăm referința la Loki doar dacă profilul 'prod' este activ -->
+        <springProfile name="prod">
+            <appender-ref ref="LOKI" />
+        </springProfile>
     </root>
 </configuration>
