@@ -12,6 +12,7 @@ public class Location {
 
     private Long id;
     private String store;
+    private String adress;
     private String city;
     private String country;
 
