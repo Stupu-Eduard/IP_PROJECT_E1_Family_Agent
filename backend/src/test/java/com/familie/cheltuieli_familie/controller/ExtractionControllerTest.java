@@ -34,6 +34,9 @@ class ExtractionControllerTest {
     @MockBean
     private ExtractionService extractionService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testExtractDetails() throws Exception {
         ExtractionResponse response = ExtractionResponse.builder()

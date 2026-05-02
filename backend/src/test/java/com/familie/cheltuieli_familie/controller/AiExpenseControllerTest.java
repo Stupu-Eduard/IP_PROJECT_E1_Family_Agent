@@ -36,6 +36,9 @@ class AiExpenseControllerTest {
     @MockBean
     private ExpenseJpaRepository repository;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testGetAll() throws Exception {
         ExpenseEntity expense = ExpenseEntity.builder()

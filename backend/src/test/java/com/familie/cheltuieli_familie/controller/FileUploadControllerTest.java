@@ -38,6 +38,9 @@ class FileUploadControllerTest {
     @MockBean
     private ExtractionService extractionService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testUploadPdf() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "test.pdf", MediaType.APPLICATION_PDF_VALUE, "PDF content".getBytes());

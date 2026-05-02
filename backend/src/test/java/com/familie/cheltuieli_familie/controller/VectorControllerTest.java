@@ -25,6 +25,9 @@ class VectorControllerTest {
     @MockBean
     private QdrantVectorService qdrantVectorService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testCheckVectorExistsTrue() throws Exception {
         when(qdrantVectorService.existsInVectorStore(1L)).thenReturn(true);

@@ -33,6 +33,9 @@ class AnalyticsControllerTest {
     @MockBean
     private ReportService reportService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testQuery() throws Exception {
         when(analyticsAssistant.chat(contains("Cât am cheltuit"))).thenReturn("Ai cheltuit 500 RON.");

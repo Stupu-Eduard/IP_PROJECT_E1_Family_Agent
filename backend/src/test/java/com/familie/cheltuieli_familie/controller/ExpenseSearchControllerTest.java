@@ -32,6 +32,9 @@ class ExpenseSearchControllerTest {
     @MockBean
     private QdrantVectorService qdrantVectorService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testSemanticSearch() throws Exception {
         EmbeddedExpense result = EmbeddedExpense.builder()

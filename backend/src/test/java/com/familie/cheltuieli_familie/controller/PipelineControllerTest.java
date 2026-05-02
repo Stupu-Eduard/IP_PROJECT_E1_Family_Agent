@@ -28,6 +28,9 @@ class PipelineControllerTest {
     @MockBean
     private ExpensePipelineService pipelineService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testProcess() throws Exception {
         when(pipelineService.processRawInput("Am platit 100 lei")).thenReturn(List.of(1L));

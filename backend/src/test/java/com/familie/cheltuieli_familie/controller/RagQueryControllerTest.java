@@ -26,6 +26,9 @@ class RagQueryControllerTest {
     @MockBean
     private RagRetrievalService ragRetrievalService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testRagQuery() throws Exception {
         when(ragRetrievalService.askWithContext("Cât am cheltuit la Mega Image?"))

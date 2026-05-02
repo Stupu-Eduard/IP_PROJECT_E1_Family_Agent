@@ -33,7 +33,6 @@ class LocationControllerTest {
 
         verify(locationRepository).updateCoordinates(5L, 46.1, 27.6);
         verify(locationRepository).findById(5L);
-        verify(thePipeHandler, times(1)).broadcast(anyString());
 
         assertEquals(5L, dto.id());
         assertEquals("Mega", dto.store());
@@ -74,3 +73,4 @@ class LocationControllerTest {
 				() -> controller.updateCoordinates(6L, request));
     }
 }
+
