@@ -6,27 +6,29 @@ import KidDashboard from './pages/KidDashboard'
 import LoginForm from './pages/LoginForm'
 import RegisterForm from './pages/RegisterForm'
 import ForgotPassword from './pages/ForgotPassword'
+import LandingPage from './pages/LandingPage'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
 import ExpenseMap from './pages/ExpenseMap'
+import ExpensesMapAll from './pages/ExpensesMapAll'
 import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
-import ChatAI from './components/ChatAi'
+
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
 
 function App() {
-    const location = useLocation();
-
-    const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname.toLowerCase());
-
+    const location = useLocation()
+    PUBLIC_PATHS.includes(location.pathname.toLowerCase());
     return (
-        <div className="min-h-screen w-full flex flex-col bg-[#FAF8F5] font-sans text-[#2D2926]">
+        <div style={{ width: '100%' }}>
             <Routes>
-                {/* Rute Publice */}
+                {/* Public */}
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegisterForm />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                {/* Rute Protejate */}
+                {/* Protected — sidebar layout */}
                 <Route element={<PrivateRoute><ProtectedLayout /></PrivateRoute>}>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/kid-dashboard" element={<KidDashboard />} />
@@ -34,13 +36,13 @@ function App() {
                     <Route path="/expenses" element={<Expenses />} />
                     <Route path="/expenses/map" element={<ExpenseMap />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
                     <Route path="/family" element={<FamilySettings />} />
                 </Route>
 
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
 
-            {!isAuthPage && <ChatAI />}
         </div>
     )
 }
