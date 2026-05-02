@@ -1,3 +1,5 @@
+package com.familie.cheltuieli_familie.config;
+
 import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +20,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
         // Înregistrăm "The Pipe" la endpoint-ul /locatie
         registry.addHandler(thePipeHandler, "/locatie")
                 .addInterceptors(sessionHandshakeInterceptor)
-                .setAllowedOriginPatterns("*"); // Mai robust decat setAllowedOrigins pentru handshakes
+                .setAllowedOrigins("*"); 
     }
 }
