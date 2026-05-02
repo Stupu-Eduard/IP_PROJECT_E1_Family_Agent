@@ -73,12 +73,15 @@ public class PostgresNotificationListener {
                         String finalJson = String.format("{\"id\": %d, \"lat\": %f, \"lng\": %f, \"type\": \"LIVE_UPDATE\"}",
                                 id, rs.getDouble("lat"), rs.getDouble("lng"));
                         thePipeHandler.broadcast(finalJson);
+                    } else {
+                        log.warn("⚠️ Coordonate negăsite în DB pentru ID: {}", id);
                     }
                 }
             }
         } catch (Exception e) {
             log.error("❌ Eroare transformare locație: {}", e.getMessage());
-            thePipeHandler.broadcast(payload);
+            // Nu mai facem broadcast aici daca este o eroare de business/format, 
+            // pentru a evita trimiterea de date binare catre frontend.
         }
     }
 
