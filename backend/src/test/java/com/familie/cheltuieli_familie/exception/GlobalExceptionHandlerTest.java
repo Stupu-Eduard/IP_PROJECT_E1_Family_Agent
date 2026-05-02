@@ -28,6 +28,9 @@ class GlobalExceptionHandlerTest {
     @MockBean
     private ExtractionService extractionService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
     @Test
     void testAmountNotFoundException() throws Exception {
         when(extractionService.process(any())).thenThrow(new AmountNotFoundException("Suma nu a fost găsită"));
