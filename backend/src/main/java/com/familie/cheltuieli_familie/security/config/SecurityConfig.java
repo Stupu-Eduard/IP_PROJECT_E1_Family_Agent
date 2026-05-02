@@ -85,7 +85,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
-                "http://localhost:8080"  // Swagger / Altele
+                "https://family-agent.me",
+                "https://api.family-agent.me",
+                "http://localhost:4173" // vite preview
         ));
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets

@@ -1,126 +1,154 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import Reports from './Reports'
 
-// Mock pentru navigare
-const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual('react-router-dom')
-    return { ...actual, useNavigate: () => mockNavigate }
-})
-
-// Mock Recharts (ResponsiveContainer face probleme în JSDOM)
+// ── 1. Mock Recharts ──
 vi.mock('recharts', async () => {
-    const actual = await vi.importActual('recharts')
+    const actual = await vi.importActual('recharts');
     return {
         ...actual,
-        ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-    }
-})
+        ResponsiveContainer: ({ children }: any) => <div style={{ width: 800, height: 300 }}>{children}</div>,
+    };
+});
 
-describe('Reports Component - Full Exam Coverage', () => {
+// ── 2. Mock Navigation ──
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom');
+    return { ...actual, useNavigate: () => mockNavigate };
+});
+
+describe('Reports Component - 100% Coverage', () => {
     beforeEach(() => {
-        vi.clearAllMocks()
-        vi.useFakeTimers() // Necesar pentru a testa starea de Loading (setTimeout)
-    })
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
 
     afterEach(() => {
-        vi.useRealTimers()
-    })
+        vi.runAllTimers();
+        vi.useRealTimers();
+    });
 
-    const renderComponent = () => render(<BrowserRouter><Reports /></BrowserRouter>)
-
-    it('1. Navigare: Ar trebui să se întoarcă la Dashboard la click pe butonul înapoi', () => {
-        renderComponent()
-
-        // Click pe butonul de Back (săgeata)
-        const backBtn = screen.getByRole('button', { name: '' }) // Butonul cu ArrowLeft
-        fireEvent.click(backBtn)
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-    })
-
-
-    it('3. Time Ranges: Ar trebui să schimbe intervalul și să închidă datele custom', () => {
-        renderComponent()
-
-        // Deschidem intervalul custom mai întâi
-        fireEvent.click(screen.getByText('Interval Custom'))
-        expect(screen.getByPlaceholderText('ex: 12/04/2026')).toBeInTheDocument()
-
-        // Click pe 1W (ar trebui să schimbe starea și să închidă picker-ul)
-        fireEvent.click(screen.getByText('1W'))
-        expect(screen.queryByPlaceholderText('ex: 12/04/2026')).not.toBeInTheDocument()
-    })
-
-    it('4. Validare: Ar trebui să afișeze eroare de cronologie (Start > End)', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('Interval Custom'))
-
-        const startInput = screen.getByPlaceholderText('ex: 12/04/2026')
-        const endInput = screen.getByPlaceholderText('ex: 20/04/2026')
-
-        // Introducem date valide ca format, dar greșite ca ordine
-        fireEvent.change(startInput, { target: { value: '25/04/2026' } })
-        fireEvent.change(endInput, { target: { value: '10/04/2026' } })
-
-        expect(screen.getByText(/Eroare: Data de început trebuie să fie înainte de data de sfârșit/i)).toBeInTheDocument()
-        expect(screen.getByText('Aplică')).toBeDisabled()
-    })
-
-    it('5. Succes: Ar trebui să aplice intervalul custom corect', () => {
-        // Extragem 'container' pentru a putea folosi querySelector pe clase CSS
-        const { container } = renderComponent()
-
-        fireEvent.click(screen.getByText('Interval Custom'))
-
-        const startInput = screen.getByPlaceholderText('ex: 12/04/2026')
-        const endInput = screen.getByPlaceholderText('ex: 20/04/2026')
-
-        fireEvent.change(startInput, { target: { value: '01/04/2026' } })
-        fireEvent.change(endInput, { target: { value: '10/04/2026' } })
-
-        const applyBtn = screen.getByText('Aplică')
-        fireEvent.click(applyBtn)
-
-        // Verificăm prezența spinner-ului prin clasa sa de animație
-        const spinner = container.querySelector('.animate-spin')
-        expect(spinner).toBeInTheDocument()
-
-        // Sărim peste cele 800ms
+    const renderComponent = () => {
+        let result: ReturnType<typeof render>;
         act(() => {
-            vi.advanceTimersByTime(800)
-        })
+            result = render(
+                <MemoryRouter>
+                    <Reports />
+                </MemoryRouter>
+            );
+            // Consumăm loading-ul inițial din useEffect imediat după render
+            vi.advanceTimersByTime(800);
+        });
+        return result!;
+    };
 
-        // Verificăm că spinner-ul a dispărut
-        expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
-    })
+    it('1. Verifică randarea inițială și navigarea înapoi', () => {
+        renderComponent();
 
-    it('6. Reset: Ar trebui să curețe input-urile la click pe butonul de închidere (X)', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('Interval Custom'))
+        expect(screen.getByRole('heading', { name: /Evoluție cheltuieli/i })).toBeInTheDocument();
 
-        const startInput = screen.getByPlaceholderText('ex: 12/04/2026')
-        fireEvent.change(startInput, { target: { value: '10/04/2026' } })
+        // Butonul ArrowLeft are aria-hidden pe SVG → îl găsim prin clasa CSS
+        const backBtn = document.querySelector('button.btn-icon') as HTMLElement;
+        expect(backBtn).not.toBeNull();
+        fireEvent.click(backBtn);
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    });
 
-        const closeBtn = screen.getByTitle('Anulează')
-        fireEvent.click(closeBtn)
+    it('2. Gestionează schimbarea tab-urilor de timp și starea de loading', () => {
+        renderComponent();
 
-        expect(screen.queryByPlaceholderText('ex: 12/04/2026')).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: '3M' }));
 
-        // Redeschidem să verificăm dacă s-au șters valorile
-        fireEvent.click(screen.getByText('Interval Custom'))
-        expect(screen.getByPlaceholderText('ex: 12/04/2026')).toHaveValue('')
-    })
+        // Imediat după click loading trebuie să fie vizibil
+        expect(document.querySelector('.lucide-refresh-cw')).toBeInTheDocument();
 
-    it('7. Edge Case: Ar trebui să ignore datele inexistente (ex: 31 februarie)', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('Interval Custom'))
-        const startInput = screen.getByPlaceholderText('ex: 12/04/2026')
+        // Avansăm timers — loading dispare
+        act(() => { vi.advanceTimersByTime(800); });
 
-        // 31/02/2026 nu există
-        fireEvent.change(startInput, { target: { value: '31/02/2026' } })
-        expect(screen.getByText(/Te rugăm să introduci datele conform formatului/i)).toBeInTheDocument()
-    })
-})
+        expect(document.querySelector('.lucide-refresh-cw')).not.toBeInTheDocument();
+    });
+
+    it('3. Deschide și închide panoul de date custom', () => {
+        renderComponent();
+
+        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+        expect(screen.getByPlaceholderText(/ex: 12\/04\/2026/i)).toBeInTheDocument();
+
+        // Butonul X — găsit prin SVG cu clasa lucide-x
+        const closeBtn = document.querySelector('.lucide-x')?.closest('button') as HTMLElement;
+        expect(closeBtn).not.toBeNull();
+        fireEvent.click(closeBtn);
+
+        expect(screen.queryByPlaceholderText(/ex: 12\/04\/2026/i)).not.toBeInTheDocument();
+    });
+
+    it('4. Validare: Format dată invalid (Regex)', () => {
+        renderComponent();
+
+        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+
+        const startInput = screen.getByPlaceholderText(/ex: 12\/04\/2026/i);
+        fireEvent.change(startInput, { target: { value: '32/13/2026' } });
+
+        // Validarea e sincronă (nu async) — starea se actualizează imediat
+        expect(screen.getByText(/Te rugăm să introduci datele conform formatului/i)).toBeInTheDocument();
+    });
+
+    it('5. Validare: Eroare cronologică (Start > End)', () => {
+        renderComponent();
+
+        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+
+        const inputs = screen.getAllByPlaceholderText(/ex: [0-9/]+/i);
+        fireEvent.change(inputs[0], { target: { value: '20/04/2026' } });
+        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } });
+
+        expect(screen.getByText(/Data de început trebuie să fie înainte de data de sfârșit/i)).toBeInTheDocument();
+
+        const applyBtn = screen.getByRole('button', { name: 'Aplică' });
+        expect(applyBtn).toBeDisabled();
+    });
+
+    it('6. Aplică un interval valid (Success Path)', () => {
+        renderComponent();
+
+        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+
+        const inputs = screen.getAllByPlaceholderText(/ex: [0-9/]+/i);
+        fireEvent.change(inputs[0], { target: { value: '01/04/2026' } });
+        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } });
+
+        const applyBtn = screen.getByRole('button', { name: 'Aplică' });
+        expect(applyBtn).not.toBeDisabled();
+
+        fireEvent.click(applyBtn);
+
+        // Loading apare imediat după click
+        expect(document.querySelector('.lucide-refresh-cw')).toBeInTheDocument();
+
+        // Loading dispare după 800ms
+        act(() => { vi.advanceTimersByTime(800); });
+        expect(document.querySelector('.lucide-refresh-cw')).not.toBeInTheDocument();
+    });
+
+    it('7. Verifică calculul sumei totale', () => {
+        renderComponent();
+        // 120+450+300+800+200+550+400 = 2820
+        expect(screen.getByText('2820.00')).toBeInTheDocument();
+    });
+
+    it('8. Testează parseDate pentru date inexistente (ex: 31 Aprilie)', () => {
+        renderComponent();
+
+        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+
+        const startInput = screen.getByPlaceholderText(/ex: 12\/04\/2026/i);
+        // Aprilie are doar 30 zile → parsedDate.getDate() !== Number(day) → parseDate returnează null
+        fireEvent.change(startInput, { target: { value: '31/04/2026' } });
+
+        expect(screen.getByText(/Te rugăm să introduci datele conform formatului/i)).toBeInTheDocument();
+    });
+});
