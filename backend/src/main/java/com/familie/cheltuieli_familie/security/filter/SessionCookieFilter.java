@@ -43,12 +43,12 @@ public class SessionCookieFilter extends OncePerRequestFilter {
 
         // 2. Verificăm în baza de date dacă sesiunea există și este validă
         if (sessionId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Optional<UserSession> sessionOpt = sessionRepository.findById(sessionId);
+            Optional<UserSession> sessionOpt = sessionRepository.findBySessionToken(sessionId);
 
             if (sessionOpt.isPresent()) {
                 UserSession session = sessionOpt.get();
 
-                if (!session.isExpired()) {
+                if (session.isValid()) {
                     // Sesiune validă -> Setăm autentificarea în contextul Spring Security
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             session.getUser(),

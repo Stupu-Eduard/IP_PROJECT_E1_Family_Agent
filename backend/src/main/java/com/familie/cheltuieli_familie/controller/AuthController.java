@@ -44,11 +44,11 @@ public class AuthController {
             // 1. Generăm un Session ID unic
             String sessionId = UUID.randomUUID().toString();
 
-            // 2. Salvăm sesiunea în baza de date (valabilă 24 de ore)
+            // 2. Salvăm sesiunea în baza de date
             UserSession session = UserSession.builder()
-                    .id(sessionId)
+                    .sessionToken(sessionId)
                     .user(user)
-                    .expiresAt(LocalDateTime.now().plusHours(24))
+                    .lastActive(LocalDateTime.now())
                     .build();
             sessionRepository.save(session);
 

@@ -17,20 +17,22 @@ import java.time.LocalDateTime;
 public class UserSession {
 
     @Id
-    @Column(name = "id", length = 255)
-    private String id; // Aici stocăm session_id-ul din cookie
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "session_token", length = 255)
+    private String sessionToken;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "last_active")
+    private LocalDateTime lastActive;
 
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
+    // Adăugăm un câmp virtual sau calculat pentru expirare dacă este nevoie, 
+    // dar momentan ne bazăm pe structura lor oficială.
+    public boolean isValid() {
+        return lastActive != null && lastActive.isAfter(LocalDateTime.now().minusDays(1));
     }
 }

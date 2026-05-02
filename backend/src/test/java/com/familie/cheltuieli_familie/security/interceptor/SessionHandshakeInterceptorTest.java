@@ -43,12 +43,13 @@ class SessionHandshakeInterceptorTest {
 
         User user = new User();
         UserSession session = UserSession.builder()
-                .id(sessionId)
+                .id(1L)
+                .sessionToken(sessionId)
                 .user(user)
-                .expiresAt(LocalDateTime.now().plusHours(1))
+                .lastActive(LocalDateTime.now())
                 .build();
 
-        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
         Map<String, Object> attributes = new HashMap<>();
 
         // WHEN
@@ -80,7 +81,7 @@ class SessionHandshakeInterceptorTest {
         mockRequest.setCookies(new Cookie("session_id", sessionId));
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
 
-        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
 
         // WHEN
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());

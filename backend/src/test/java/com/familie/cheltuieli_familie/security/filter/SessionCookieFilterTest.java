@@ -51,12 +51,13 @@ class SessionCookieFilterTest {
         user.setEmail("test@familie.com");
         
         UserSession session = UserSession.builder()
-                .id(sessionId)
+                .id(1L)
+                .sessionToken(sessionId)
                 .user(user)
-                .expiresAt(LocalDateTime.now().plusHours(1))
+                .lastActive(LocalDateTime.now())
                 .build();
 
-        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
 
         // WHEN
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
@@ -88,7 +89,7 @@ class SessionCookieFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", sessionId));
         
-        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
 
         // WHEN
         sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);

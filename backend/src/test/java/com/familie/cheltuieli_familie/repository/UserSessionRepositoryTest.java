@@ -34,14 +34,14 @@ class UserSessionRepositoryTest {
 
         String sessionId = "repo-session-id";
         UserSession session = UserSession.builder()
-                .id(sessionId)
+                .sessionToken(sessionId)
                 .user(user)
-                .expiresAt(LocalDateTime.now().plusDays(1))
+                .lastActive(LocalDateTime.now())
                 .build();
         userSessionRepository.save(session);
 
         // WHEN
-        Optional<UserSession> found = userSessionRepository.findById(sessionId);
+        Optional<UserSession> found = userSessionRepository.findBySessionToken(sessionId);
 
         // THEN
         assertTrue(found.isPresent());

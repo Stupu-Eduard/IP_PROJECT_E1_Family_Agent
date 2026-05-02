@@ -36,9 +36,9 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
             
             if (cookie != null) {
                 String sessionId = cookie.getValue();
-                Optional<UserSession> sessionOpt = sessionRepository.findById(sessionId);
+                Optional<UserSession> sessionOpt = sessionRepository.findBySessionToken(sessionId);
                 
-                if (sessionOpt.isPresent() && !sessionOpt.get().isExpired()) {
+                if (sessionOpt.isPresent() && sessionOpt.get().isValid()) {
                     log.info("🟢 Handshake permis pentru sesiunea validă: {}", sessionId);
                     attributes.put("user", sessionOpt.get().getUser());
                     return true;
