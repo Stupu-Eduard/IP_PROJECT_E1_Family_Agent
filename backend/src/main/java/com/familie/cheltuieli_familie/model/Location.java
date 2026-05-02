@@ -15,6 +15,5 @@ public class Location {
     private String adress;
     private String city;
     private String country;
-    private Object location;
 
 }
