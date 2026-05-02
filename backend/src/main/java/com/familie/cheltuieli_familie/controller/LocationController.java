@@ -13,11 +13,9 @@ import org.springframework.web.bind.annotation.*;
 public class LocationController {
 
     private final LocationRepository locationRepository;
-    private final ThePipeHandler thePipeHandler;
 
-    public LocationController(LocationRepository locationRepository, ThePipeHandler thePipeHandler) {
+    public LocationController(LocationRepository locationRepository) {
         this.locationRepository = locationRepository;
-        this.thePipeHandler = thePipeHandler;
     }
 
     @PostMapping("/{id}/coordinates")

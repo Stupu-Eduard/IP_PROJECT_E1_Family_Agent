@@ -58,18 +58,22 @@ public class PostgresNotificationListener {
     }
 
     private void processNotification(String payload) {
-        System.out.println("🔔 NOTIFICARE POSTGRES DETECTATĂ: " + payload);
+        log.info("🔔 NOTIFICARE POSTGRES DETECTATĂ: {}", payload);
         try {
             com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(payload);
             Long id = node.get("id").asLong();
+
             try (Connection conn = dataSource.getConnection();
-                 Statement stmt = conn.createStatement();
-                 java.sql.ResultSet rs = stmt.executeQuery(
-                         "SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng FROM locations WHERE id = " + id)) {
-                if (rs.next()) {
-                    String finalJson = String.format("{\"id\": %d, \"lat\": %f, \"lng\": %f, \"type\": \"LIVE_UPDATE\"}",
-                            id, rs.getDouble("lat"), rs.getDouble("lng"));
-                    thePipeHandler.broadcast(finalJson);
+                 java.sql.PreparedStatement pstmt = conn.prepareStatement(
+                         "SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng FROM locations WHERE id = ?")) {
+                
+                pstmt.setLong(1, id);
+                try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        String finalJson = String.format("{\"id\": %d, \"lat\": %f, \"lng\": %f, \"type\": \"LIVE_UPDATE\"}",
+                                id, rs.getDouble("lat"), rs.getDouble("lng"));
+                        thePipeHandler.broadcast(finalJson);
+                    }
                 }
             }
         } catch (Exception e) {

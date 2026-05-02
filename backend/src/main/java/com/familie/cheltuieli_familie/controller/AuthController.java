@@ -30,7 +30,7 @@ public class AuthController {
     private final UserSessionRepository sessionRepository;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         log.info("Încercare login pentru: {}", loginRequest.getEmail());
 
         Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
