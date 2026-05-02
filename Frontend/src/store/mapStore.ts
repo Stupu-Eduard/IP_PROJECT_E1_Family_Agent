@@ -10,8 +10,7 @@ interface MapState {
 }
 
 let sse: EventSource | null = null;
-
-export const useMapStore = create<MapState>((set, get) => ({
+export const useMapStore = create<MapState>((set,) => ({
     childLocation: null,
     isOptimisticallyDanger: false,
 
