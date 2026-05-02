@@ -30,13 +30,6 @@ public class LocationController {
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Location not found"));
 
-        // Broadcast to The Pipe so the map updates in real-time
-        try {
-            thePipeHandler.broadcast("{\"type\":\"LOCATION_UPDATE\", \"id\":" + id + ", \"lat\":" + body.lat() + ", \"lng\":" + body.lng() + "}");
-        } catch (Exception e) {
-            // ignore
-        }
-
         return new LocationDto(location.getId(), location.getStore(), null, location.getCity(), location.getCountry(), body.lat(), body.lng());
     }
 }

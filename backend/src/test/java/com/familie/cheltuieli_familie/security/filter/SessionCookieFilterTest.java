@@ -1,0 +1,89 @@
+package com.familie.cheltuieli_familie.security.filter;
+
+import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.model.UserSession;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SessionCookieFilterTest {
+
+    @Mock
+    private UserSessionRepository sessionRepository;
+
+    @Mock
+    private FilterChain filterChain;
+
+    @InjectMocks
+    private SessionCookieFilter sessionCookieFilter;
+
+    @BeforeEach
+    void setUp() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void doFilter_CandCookieExistaSiSesiuneValida_SeteazaAutentificarea() throws Exception {
+        // GIVEN
+        String sessionId = "test-session-123";
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("session_id", sessionId));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        User user = new User();
+        user.setEmail("test@familie.com");
+        
+        UserSession session = UserSession.builder()
+                .id(sessionId)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .build();
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+
+        // WHEN
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        // THEN
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+        assertEquals(user, SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilter_CandSesiuneaEsteExpirata_NuSeteazaAutentificarea() throws Exception {
+        // GIVEN
+        String sessionId = "expired-session";
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("session_id", sessionId));
+        
+        UserSession session = UserSession.builder()
+                .id(sessionId)
+                .expiresAt(LocalDateTime.now().minusHours(1))
+                .build();
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+
+        // WHEN
+        sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);
+
+        // THEN
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+}
