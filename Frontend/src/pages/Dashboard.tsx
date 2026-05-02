@@ -30,6 +30,7 @@ export default function Dashboard() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       userRole = payload.role || 'Parent';
+      console.log('👤 Rol detectat din token:', userRole);
     } catch (error) {
       console.error("Eroare la parsarea JWT-ului:", error);
     }
@@ -37,9 +38,16 @@ export default function Dashboard() {
 
   // THE PIPE: Conexiunea WebSocket care preia datele în timp real
   useEffect(() => {
-    if (userRole === 'Child') return;
+    console.log('🔌 Încercare conectare WebSocket... Rol:', userRole);
+    if (userRole === 'Child') {
+      console.log('🚫 WebSocket ignorat: Utilizatorul este Copil.');
+      return;
+    }
 
     const socket = new WebSocket('ws://localhost:8081/locatie');
+
+    socket.onopen = () => console.log('🟢 WebSocket conectat cu succes la /locatie');
+    socket.onerror = (err) => console.error('🔴 Eroare WebSocket:', err);
 
     socket.onmessage = (event) => {
       try {

@@ -1,12 +1,12 @@
 -- 1. POPULARE LOCATIONS
-INSERT INTO locations (store, city, country, latitude, longitude) VALUES
-                                                                      ('Lidl Iasi', 'Iasi', 'Romania', 47.1585, 27.5852),
-                                                                      ('Kaufland Pacurari', 'Iasi', 'Romania', 47.1720, 27.5500),
-                                                                      ('Uber / Bolt', 'Iasi', 'Romania', 47.1610, 27.5920),
-                                                                      ('Farmacie Catena', 'Iasi', 'Romania', 47.1650, 27.5800),
-                                                                      ('Restaurant Vivo', 'Iasi', 'Romania', 47.1550, 27.6000),
-                                                                      ('Starbucks Palas', 'Iasi', 'Romania', 47.1565, 27.5875),
-                                                                      ('Cinema City', 'Iasi', 'Romania', 47.1540, 27.5890);
+INSERT INTO locations (store, city, country, location) VALUES
+    ('Lidl Iasi', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5852, 47.1585), 4326)::geography),
+    ('Kaufland Pacurari', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5500, 47.1720), 4326)::geography),
+    ('Uber / Bolt', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5920, 47.1610), 4326)::geography),
+    ('Farmacie Catena', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5800, 47.1650), 4326)::geography),
+    ('Restaurant Vivo', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.6000, 47.1550), 4326)::geography),
+    ('Starbucks Palas', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5875, 47.1565), 4326)::geography),
+    ('Cinema City', 'Iasi', 'Romania', ST_SetSRID(ST_MakePoint(27.5890, 47.1540), 4326)::geography);
 
 -- 2 & 3. POPULARE EXPENSES SI EXPENSE_ITEMS
 

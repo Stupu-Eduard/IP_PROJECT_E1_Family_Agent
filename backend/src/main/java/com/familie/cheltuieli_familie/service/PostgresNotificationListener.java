@@ -44,9 +44,38 @@ public class PostgresNotificationListener {
                     for (PGNotification notification : notifications) {
                         String payload = notification.getParameter();
                         System.out.println("🔔 NOTIFICARE POSTGRES DETECTATĂ: " + payload);
-                        log.debug("🔔 Notificare DB primită: {}", payload);
                         
-                        thePipeHandler.broadcast(payload);
+                        try {
+                            // Parsăm JSON-ul primit de la Postgres
+                            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(payload);
+                            Long id = node.get("id").asLong();
+
+                            // Deoarece coloana "location" este binară (WKB), cel mai sigur este să 
+                            // cerem rapid bazei de date coordonatele clare pentru acest ID.
+                            try (Connection conn = dataSource.getConnection();
+                                 Statement stmt = conn.createStatement();
+                                 java.sql.ResultSet rs = stmt.executeQuery(
+                                         "SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng FROM locations WHERE id = " + id)) {
+                                
+                                if (rs.next()) {
+                                    double lat = rs.getDouble("lat");
+                                    double lng = rs.getDouble("lng");
+                                    
+                                    // Construim JSON-ul final pe care îl înțelege Google Maps
+                                    String finalJson = String.format(
+                                        "{\"id\": %d, \"lat\": %f, \"lng\": %f, \"type\": \"LIVE_UPDATE\"}",
+                                        id, lat, lng
+                                    );
+                                    
+                                    log.info("🚀 Redirecționez coordonate clare către hartă: {}", finalJson);
+                                    thePipeHandler.broadcast(finalJson);
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ Eroare la transformarea locației binare: {}", e.getMessage());
+                            // Fallback: trimitem payload-ul original în caz de eroare (deși harta s-ar putea să-l ignore)
+                            thePipeHandler.broadcast(payload);
+                        }
                     }
                 }
             }
