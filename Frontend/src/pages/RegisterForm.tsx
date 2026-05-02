@@ -1,111 +1,242 @@
 import { useState } from 'react';
 import * as yup from 'yup';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
 import type { RegisterDTO } from '../types/AuthDTO';
 
+// ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
 const registerSchema = yup.object().shape({
-    name: yup.string().required('Numele este obligatoriu.').min(2, 'Minim 2 caractere.'),
-    email: yup.string().required('Email obligatoriu.').email('Email invalid.'),
-    password: yup.string().required('Parola este obligatorie.').min(8, 'Minim 8 caractere.'),
-    confirmPassword: yup.string().required('Confirmă parola.').oneOf([yup.ref('password')], 'Parolele nu coincid.')
+    name:            yup.string().required('Numele este obligatoriu.').min(2, 'Minim 2 caractere.'),
+    email:           yup.string().required('Email obligatoriu.').email('Email invalid.'),
+    password:        yup.string().required('Parola este obligatorie.').min(8, 'Minim 8 caractere.'),
+    confirmPassword: yup.string().required('Confirmă parola.').oneOf([yup.ref('password')], 'Parolele nu coincid.'),
 });
+
+// ── Password strength helper ───────────────────────────────────────────────
+function PasswordStrength({ value }: { value: string }) {
+    const score = (() => {
+        let s = 0;
+        if (value.length >= 8) s++;
+        if (/[A-Z]/.test(value)) s++;
+        if (/[0-9]/.test(value)) s++;
+        if (/[^A-Za-z0-9]/.test(value)) s++;
+        return s;
+    })();
+    const labels = ['Prea scurtă', 'Slabă', 'Acceptabilă', 'Bună', 'Puternică'];
+    const colors = ['var(--color-muted-3)', '#D08C5C', 'var(--color-primary-soft)', 'var(--color-primary)', 'var(--color-ink)'];
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                {[0, 1, 2, 3].map((i) => (
+                    <div key={i} style={{
+                        flex: 1, height: 3, borderRadius: 2,
+                        background: i < score ? colors[score] : 'var(--color-border)',
+                        transition: 'background 0.3s ease',
+                    }} />
+                ))}
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--color-muted)', minWidth: 80, textAlign: 'right' }}>
+                {value ? labels[score] : 'Min. 8 caractere'}
+            </span>
+        </div>
+    );
+}
 
 export default function RegisterForm() {
     const navigate = useNavigate();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+
+    // ── State (NEATINS) ────────────────────────────────────────────────────
+    const [name,            setName]            = useState('');
+    const [email,           setEmail]           = useState('');
+    const [password,        setPassword]        = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [error,           setError]           = useState('');
+    const [isLoading,       setIsLoading]       = useState(false);
 
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    const token = useAuthStore((state) => state.token);
+    const token           = useAuthStore((state) => state.token);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-    const login = useAuthStore((state) => state.login);
+    const login           = useAuthStore((state) => state.login);
 
+    // ── Redirect dacă autentificat (NEATINS) ───────────────────────────────
     if (isAuthenticated && token && !isTokenExpired(token)) {
         return <Navigate to="/dashboard" replace />;
     }
 
+    // ── handleRegister (NEATINS) ───────────────────────────────────────────
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-
         try {
             await registerSchema.validate({ name, email, password, confirmPassword });
             setIsLoading(true);
-
             const payload: RegisterDTO = { name, email, password };
-
-            // Simulare API Call
             const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
                 setTimeout(() => {
                     if (payload.email === 'test@example.com' || payload.email === 'copil@example.com') {
-                        reject(new Error("Eroare 409: Acest email este deja asociat unui cont."));
+                        reject(new Error('Eroare 409: Acest email este deja asociat unui cont.'));
                     } else {
                         const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
                         const payloadData = btoa(JSON.stringify({
-                            sub: payload.email,
-                            role: 'Parent',
-                            exp: Math.floor(Date.now() / 1000) + 60 * 60
+                            sub: payload.email, role: 'Parent',
+                            exp: Math.floor(Date.now() / 1000) + 60 * 60,
                         }));
                         resolve({ token: `${header}.${payloadData}.mock_signature` });
                     }
                 }, 1500);
             });
-
             const response = await mockApiCall;
             login(response.token);
             navigate('/dashboard', { replace: true });
-
         } catch (err: unknown) {
-            if (err instanceof yup.ValidationError) {
-                setError(err.message);
-            } else if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('Eroare neașteptată de rețea.');
-            }
+            if (err instanceof yup.ValidationError) setError(err.message);
+            else if (err instanceof Error) setError(err.message);
+            else setError('Eroare neașteptată de rețea.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-3 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors";
-
     return (
-        <div className="flex-1 w-full flex items-center justify-center p-6 bg-[#FAF8F5] min-h-screen">
-            <div className="w-full max-w-md bg-white border border-[#EDE9E3] rounded-[14px] p-8 shadow-sm flex flex-col fade-in-up">
-                <div className="flex flex-col items-center mb-8 text-center">
-                    <div className="w-12 h-12 rounded-[10px] bg-[#2D2926] flex items-center justify-center text-white font-bold text-xl mb-4 shadow-sm">FA</div>
-                    <h1 className="text-[24px] font-medium text-[#2D2926] tracking-tight mb-1">Creează Cont Nou</h1>
-                    <p className="text-[13px] text-[#9A8A7C]">Alătură-te platformei FamilyAgent.</p>
+        <div style={{
+            width: '100%', minHeight: '100vh',
+            background: 'var(--color-bg)',
+            display: 'flex', flexDirection: 'column',
+            padding: '32px 56px 56px', fontFamily: 'inherit',
+        }}>
+
+            {/* Topbar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 56 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                        width: 32, height: 32, borderRadius: 9,
+                        background: 'var(--color-ink)', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: 13,
+                    }}>FA</div>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)' }}>FamilyAgent</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--color-muted)' }}>
+                    Ai deja cont?{' '}
+                    <Link to="/login" style={{ color: 'var(--color-ink)', fontWeight: 600, textDecoration: 'none' }}>
+                        Conectează-te
+                    </Link>
+                </div>
+            </div>
+
+            {/* Grid 2 coloane */}
+            <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr',
+                gap: 80, flex: 1, alignItems: 'center',
+                maxWidth: 1000, margin: '0 auto', width: '100%',
+            }}>
+
+                {/* Stânga — copy */}
+                <div className="fade-up">
+                    <div style={{
+                        fontSize: 11, letterSpacing: 2, fontWeight: 600,
+                        color: 'var(--color-primary)', textTransform: 'uppercase',
+                        marginBottom: 24, display: 'inline-flex', alignItems: 'center', gap: 8,
+                    }}>
+                        <span style={{ width: 24, height: 1, background: 'var(--color-primary)', display: 'inline-block' }} />
+                        Capitolul 1
+                    </div>
+
+                    <h1 style={{
+                        fontSize: 64, fontWeight: 400, letterSpacing: '-2.5px',
+                        lineHeight: 0.98, margin: '0 0 24px', color: 'var(--color-ink)',
+                    }}>
+                        Hai să<br />
+                        <em style={{ color: 'var(--color-primary)', fontStyle: 'italic' }}>începem.</em>
+                    </h1>
+
+                    <p style={{ fontSize: 16, color: 'var(--color-muted)', lineHeight: 1.55, margin: '0 0 32px', maxWidth: 380 }}>
+                        Adaugă primul membru al familiei în mai puțin de un minut. Începe cu tine.
+                    </p>
+
+                    {/* Feature chips */}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {['OCR cu AI', 'Multi-rol', 'Hartă live', 'Buget familiar', 'Export Excel'].map((t) => (
+                            <span key={t} className="chip chip-neutral" style={{ padding: '5px 12px' }}>{t}</span>
+                        ))}
+                    </div>
                 </div>
 
-                {error && (
-                    <div className="bg-[#FFF8F2] border border-[#F0DFD0] text-[#C97B4B] px-4 py-3 rounded-[10px] text-[13px] font-medium mb-6 flex items-start gap-2">
-                        <span className="mt-0.5">⚠️</span><span>{error}</span>
-                    </div>
-                )}
+                {/* Dreapta — form */}
+                <div className="fade-up" style={{ maxWidth: 380, width: '100%', justifySelf: 'end' }}>
 
-                <form onSubmit={handleRegister} className="flex flex-col gap-4">
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputStyle} placeholder="Nume Complet" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputStyle} placeholder="Email" />
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputStyle} placeholder="Parolă (Min. 8 caractere)" />
-                    <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputStyle} placeholder="Confirmare Parolă" />
+                    {error && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            background: '#FEF2F2', border: '1px solid #FECACA',
+                            borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+                            fontSize: 13, color: '#DC2626',
+                        }}>
+                            ⚠ {error}
+                        </div>
+                    )}
 
-                    <button type="submit" disabled={isLoading} className="mt-4 w-full bg-[#2D2926] text-white rounded-[10px] py-3.5 text-[14px] font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50">
-                        {isLoading ? 'Se procesează...' : 'Creează Contul'}
-                    </button>
-                </form>
+                    <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-                <div className="mt-8 text-center border-t border-[#EDE9E3] pt-6">
-                    <p className="text-[13px] text-[#9A8A7C]">
-                        Ai deja un cont? <Link to="/login" className="font-medium text-[#2D2926] hover:text-[#C97B4B] transition-colors">Autentifică-te aici</Link>
-                    </p>
+                        {/* Nume */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>NUME</div>
+                            <input
+                                type="text" value={name} onChange={(e) => setName(e.target.value)}
+                                placeholder="Ana Popescu" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
+                        {/* Email */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>EMAIL</div>
+                            <input
+                                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                                placeholder="username@exemplu.com" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
+                        {/* Parolă */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>PAROLĂ</div>
+                            <input
+                                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}
+                            />
+                            <PasswordStrength value={password} />
+                        </div>
+
+                        {/* Confirmare parolă */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>CONFIRMARE PAROLĂ</div>
+                            <input
+                                type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="••••••••" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}
+                            />
+                        </div>
+
+                        <button
+                            type="submit" disabled={isLoading}
+                            className="btn btn-primary"
+                            style={{ marginTop: 28, padding: '14px 20px', borderRadius: 14, fontSize: 14, justifyContent: 'space-between', opacity: isLoading ? 0.7 : 1 }}
+                        >
+                            <span>{isLoading ? 'Se procesează...' : 'Creează contul'}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 12h14"/><path d="m13 5 7 7-7 7"/>
+                            </svg>
+                        </button>
+
+                        <div style={{ marginTop: 18, fontSize: 11.5, color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 3 4 6v6c0 4.5 3.4 8.4 8 9 4.6-.6 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>
+                            </svg>
+                            Conexiune criptată · Datele rămân la tine.
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
