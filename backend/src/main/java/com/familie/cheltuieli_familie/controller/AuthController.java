@@ -53,15 +53,13 @@ public class AuthController {
             sessionRepository.save(session);
 
             // 3. Creăm Cookie-ul și îl trimitem către browser
-            Cookie cookie = new Cookie("session_id", sessionId);
-            cookie.setHttpOnly(true); // Previne atacurile XSS (JavaScript nu poate citi cookie-ul)
-            cookie.setSecure(false);  // Lasă-l pe false pentru localhost. Setat la true pe HTTPS în producție.
-            cookie.setPath("/");      // Cookie-ul va fi trimis la toate rutele aplicației
-            cookie.setMaxAge(24 * 60 * 60); // 24 de ore în secunde
+            // Folosim un String pentru header pentru a avea control total asupra proprietăților (SameSite)
+            String cookieHeader = String.format(
+                    "session_id=%s; Path=/; HttpOnly; Max-Age=%d; SameSite=Lax",
+                    sessionId, 24 * 60 * 60
+            );
+            response.addHeader("Set-Cookie", cookieHeader);
 
-            response.addCookie(cookie);
-
-            // Optional: returnăm și niște date inofensive (ex: numele user-ului) pentru frontend (NU parola, NU session_id-ul în JSON!)
             return ResponseEntity.ok(Map.of(
                     "message", "Login realizat cu succes!",
                     "userName", user.getName()
