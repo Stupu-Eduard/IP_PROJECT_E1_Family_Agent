@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import com.familie.cheltuieli_familie.service.PdfExtractionService;
@@ -27,6 +26,7 @@ import java.util.List;
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(FileUploadController.class)
 @ActiveProfiles("test")
+@SuppressWarnings("deprecation")
 class FileUploadControllerTest {
 
     @Autowired

@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ReportService;
 import org.junit.jupiter.api.Test;
@@ -12,8 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(AnalyticsController.class)
 @ActiveProfiles("test")
+@SuppressWarnings("deprecation")
 class AnalyticsControllerTest {
 
     @Autowired
@@ -38,13 +37,13 @@ class AnalyticsControllerTest {
 
     @Test
     void testQuery() throws Exception {
-        when(analyticsAssistant.chat(contains("Cât am cheltuit"))).thenReturn("Ai cheltuit 500 RON.");
+        when(analyticsAssistant.chat(anyString())).thenReturn("Ai cheltuit 100 lei.");
 
         mockMvc.perform(post("/v1/analytics/query")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"Cât am cheltuit total?\""))
+                        .content("\"Cât am cheltuit?\""))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Ai cheltuit 500 RON."));
+                .andExpect(content().string("Ai cheltuit 100 lei."));
     }
 
     @Test

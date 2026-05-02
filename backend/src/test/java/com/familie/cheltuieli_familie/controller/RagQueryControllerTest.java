@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.service.RagRetrievalService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(RagQueryController.class)
 @ActiveProfiles("test")
+@SuppressWarnings("deprecation")
 class RagQueryControllerTest {
 
     @Autowired
@@ -31,14 +31,13 @@ class RagQueryControllerTest {
 
     @Test
     void testRagQuery() throws Exception {
-        when(ragRetrievalService.askWithContext("Cât am cheltuit la Mega Image?"))
-                .thenReturn("Ai cheltuit 89 de lei la Mega Image.");
+        when(ragRetrievalService.askWithContext("intrebare")).thenReturn("Raspuns RAG");
 
         mockMvc.perform(post("/v1/rag/query")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"query\": \"Cât am cheltuit la Mega Image?\"}"))
+                        .content("{\"query\": \"intrebare\"}"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Ai cheltuit 89 de lei la Mega Image."));
+                .andExpect(content().string("Raspuns RAG"));
     }
 
     @Test

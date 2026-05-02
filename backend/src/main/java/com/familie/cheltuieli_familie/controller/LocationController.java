@@ -4,7 +4,6 @@ import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.dto.UpdateLocationCoordinatesRequest;
 import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.repository.LocationRepository;
-import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

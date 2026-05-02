@@ -60,7 +60,7 @@ class AuthControllerTest {
 
         // THEN
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertTrue(result.getBody() instanceof Map);
+        assertInstanceOf(Map.class, result.getBody());
         assertEquals("Edi", ((Map<?, ?>) result.getBody()).get("userName"));
         
         // Verificam cookie-ul creat
