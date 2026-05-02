@@ -39,18 +39,14 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
                 Optional<UserSession> sessionOpt = sessionRepository.findById(sessionId);
                 
                 if (sessionOpt.isPresent() && !sessionOpt.get().isExpired()) {
-                    log.debug("🟢 Handshake permis pentru sesiunea: {}", sessionId);
+                    log.info("🟢 Handshake permis pentru sesiunea validă: {}", sessionId);
                     attributes.put("user", sessionOpt.get().getUser());
                     return true;
                 }
-            } else {
-                // FALLBACK PENTRU TESTARE: Permitem fara cookie daca este cerere locala
-                log.info("ℹ️ Handshake permis fara cookie (Test Mode / Localhost)");
-                return true;
             }
         }
 
-        log.warn("🔴 Handshake refuzat: Sesiune invalidă sau inexistentă în DB.");
+        log.warn("🔴 Handshake refuzat: Sesiune invalidă, inexistentă în DB sau cookie lipsă.");
         return false; // Refuzăm conexiunea WebSocket
     }
 
