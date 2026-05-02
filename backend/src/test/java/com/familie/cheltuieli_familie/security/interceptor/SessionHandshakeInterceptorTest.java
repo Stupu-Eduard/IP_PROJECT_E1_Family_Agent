@@ -61,7 +61,7 @@ class SessionHandshakeInterceptorTest {
     }
 
     @Test
-    void beforeHandshake_CandCookieLipseste_ReturneazaFalse() {
+    void beforeHandshake_CandCookieLipseste_ReturneazaTrueInModulDeTest() {
         // GIVEN
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
@@ -70,7 +70,7 @@ class SessionHandshakeInterceptorTest {
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
 
         // THEN
-        assertFalse(result); // Acum trebuie sa fie false, am scos fallback-ul
+        assertTrue(result); // Acum trebuie sa fie true conform fallback-ului pentru local
     }
 
     @Test

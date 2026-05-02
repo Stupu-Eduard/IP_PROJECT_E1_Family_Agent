@@ -35,10 +35,15 @@ class PostgresNotificationListenerTest {
     @InjectMocks
     private PostgresNotificationListener listener;
 
+    @Mock
+    private java.sql.DatabaseMetaData databaseMetaData;
+
     @Test
     void listenToLocationUpdates_ArTrebuiaSaRedirectionezeNotificarileCatreThePipe() throws Exception {
         // GIVEN
         when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getMetaData()).thenReturn(databaseMetaData);
+        when(databaseMetaData.getDriverName()).thenReturn("PostgreSQL Driver");
         when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
         when(connection.createStatement()).thenReturn(statement);
 
