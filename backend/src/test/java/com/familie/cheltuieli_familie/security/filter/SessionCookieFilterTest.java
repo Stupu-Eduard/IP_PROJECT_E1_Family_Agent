@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
@@ -67,23 +68,48 @@ class SessionCookieFilterTest {
     }
 
     @Test
-    void doFilter_CandSesiuneaEsteExpirata_NuSeteazaAutentificarea() throws Exception {
+    void doFilter_CandCookieLipseste_ContinuaLantulFaraAutentificare() throws Exception {
         // GIVEN
-        String sessionId = "expired-session";
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // WHEN
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        // THEN
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilter_CandSesiuneaNuExistaInDB_ContinuaLantulFaraAutentificare() throws Exception {
+        // GIVEN
+        String sessionId = "unknown-session";
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", sessionId));
         
-        UserSession session = UserSession.builder()
-                .id(sessionId)
-                .expiresAt(LocalDateTime.now().minusHours(1))
-                .build();
-
-        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
 
         // WHEN
         sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);
 
         // THEN
         assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void doFilter_CandAutentificareaExistaDeja_NuMaiVerificaInDB() throws Exception {
+        // GIVEN
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("already-auth", null)
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("session_id", "some-id"));
+
+        // WHEN
+        sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);
+
+        // THEN
+        verifyNoInteractions(sessionRepository);
     }
 }
