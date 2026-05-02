@@ -78,34 +78,36 @@ class ThePipeHandlerTest {
     }
 
     @Test
-    void handleTextMessage_LogheazaMesajulPrimit() {
+    void afterConnectionClosed_ShouldRemoveSession() throws Exception {
         // GIVEN
-        TextMessage mockMessage = mock(TextMessage.class);
-        when(mockMessage.getPayload()).thenReturn("Salut de la client");
+        thePipeHandler.afterConnectionEstablished(session1);
         
         // WHEN
-        thePipeHandler.handleTextMessage(session1, mockMessage);
-
+        thePipeHandler.afterConnectionClosed(session1, org.springframework.web.socket.CloseStatus.NORMAL);
+        
         // THEN
-        // Verificam ca s-a interactionat cu mesajul pentru a extrage payload-ul (pentru logare)
-        verify(mockMessage, atLeastOnce()).getPayload();
-        // Verificam ca nu s-a facut nimic neasteptat cu sesiunea
-        verifyNoInteractions(session1);
+        // Verificam ca dupa inchidere, un broadcast nu mai trimite nimic catre session1
+        thePipeHandler.broadcast("test");
+        verify(session1, never()).sendMessage(any());
     }
 
     @Test
-    void broadcast_gestioneazaEroareaDeComunicare() throws IOException {
+    void broadcast_ShouldContinue_WhenOneSessionFails() throws Exception {
         // GIVEN
-        String payload = "error-test";
         when(session1.isOpen()).thenReturn(true);
-        // Simulam o eroare de I/O la trimitere
-        doThrow(new IOException("Network failure")).when(session1).sendMessage(any(TextMessage.class));
-
+        when(session2.isOpen()).thenReturn(true);
+        
         thePipeHandler.afterConnectionEstablished(session1);
-
-        // WHEN & THEN
-        // Metoda nu trebuie sa arunce exceptia mai departe (este prinsa in catch)
-        assertDoesNotThrow(() -> thePipeHandler.broadcast(payload));
-        verify(session1, times(1)).sendMessage(any(TextMessage.class));
+        thePipeHandler.afterConnectionEstablished(session2);
+        
+        // Simulam eroare doar pe prima sesiune
+        doThrow(new IOException("Fail")).when(session1).sendMessage(any());
+        
+        // WHEN
+        assertDoesNotThrow(() -> thePipeHandler.broadcast("payload"));
+        
+        // THEN
+        // A doua sesiune trebuie sa primeasca mesajul chiar daca prima a esuat
+        verify(session2, times(1)).sendMessage(any());
     }
 }
