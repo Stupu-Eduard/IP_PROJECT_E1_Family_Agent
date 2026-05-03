@@ -22,7 +22,7 @@ WHERE NOT EXISTS (
     AND b.category_id = (SELECT id FROM categories WHERE name = 'Transport')
 );
 
--- Buget Sanatate pentru Familia Popa (1000 lei pe luna)
+-- Buget Sanatate pentru Familia Popa (1000 lei pe luna)//
 INSERT INTO budgets (amount, start_date, end_date, family_id, category_id)
 SELECT 1000.00, '2025-01-01', '2025-12-31',
        (SELECT id FROM families WHERE name = 'Familia Popa'),
