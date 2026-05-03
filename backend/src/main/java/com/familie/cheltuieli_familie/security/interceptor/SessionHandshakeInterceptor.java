@@ -43,10 +43,6 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
                     attributes.put("user", sessionOpt.get().getUser());
                     return true;
                 }
-            } else {
-                // FALLBACK TEMPORAR PENTRU DEMO: Permitem fara cookie pe localhost
-                log.info("ℹ️ Handshake permis automat pentru testare locală (fără cookie)");
-                return true;
             }
         }
 

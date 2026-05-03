@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.model.UserSession;
 import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,7 +35,8 @@ class SessionHandshakeInterceptorTest {
     private SessionHandshakeInterceptor interceptor;
 
     @Test
-    void beforeHandshake_CandCookieExistaSiSesiuneValida_ReturneazaTrue() {
+    @DisplayName("🟢 Should allow handshake when valid session cookie exists")
+    void beforeHandshake_WhenValidCookieExists_ReturnsTrue() {
         // GIVEN
         String sessionId = "ws-session-id";
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
@@ -61,7 +63,8 @@ class SessionHandshakeInterceptorTest {
     }
 
     @Test
-    void beforeHandshake_CandCookieLipseste_ReturneazaTrueInModulDeTest() {
+    @DisplayName("❌ Should return false when session cookie is missing")
+    void beforeHandshake_WhenCookieIsMissing_ReturnsFalse() {
         // GIVEN
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
@@ -70,11 +73,12 @@ class SessionHandshakeInterceptorTest {
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
 
         // THEN
-        assertTrue(result); // Acum trebuie sa fie true conform fallback-ului pentru local
+        assertFalse(result); // Trebuie sa fie false pentru securitate maxima
     }
 
     @Test
-    void beforeHandshake_CandSesiuneaNuExistaInDB_ReturneazaFalse() {
+    @DisplayName("❌ Should return false when session does not exist in DB")
+    void beforeHandshake_WhenSessionNotFound_ReturnsFalse() {
         // GIVEN
         String sessionId = "invalid-id";
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
