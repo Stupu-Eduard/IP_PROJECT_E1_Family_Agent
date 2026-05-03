@@ -18,7 +18,7 @@ class HallucinationGuardTest {
 
         // THEN
         assertTrue(result.contains("creștere"), "The word 'scădere' should have been replaced by 'creștere'");
-        assertTrue(result.contains("(Corectat automat)"), "Response should indicate it was corrected");
+        assertTrue(result.contains("(Verificat și corectat automat"), "Response should indicate it was corrected");
         assertFalse(result.contains("scădere"), "The word 'scădere' should not be present anymore");
     }
 
@@ -33,7 +33,7 @@ class HallucinationGuardTest {
 
         // THEN
         assertTrue(result.contains("scăzut"), "The word 'crescut' should have been replaced by 'scăzut'");
-        assertTrue(result.contains("(Corectat automat)"), "Response should indicate it was corrected");
+        assertTrue(result.contains("(Verificat și corectat automat"), "Response should indicate it was corrected");
     }
 
     @Test

@@ -28,6 +28,12 @@ import static dev.langchain4j.store.embedding.filter.MetadataFilterBuilder.metad
 @Slf4j
 public class QdrantVectorService {
 
+    private static final String AMOUNT_KEY = "amount";
+    private static final String CATEGORY_KEY = "category";
+    private static final String PERSON_KEY = "person";
+    private static final String VALUE_CONST = "value";
+    private static final String MATCH_CONST = "match";
+
     private final QdrantEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
 
@@ -46,9 +52,9 @@ public class QdrantVectorService {
 
         Metadata metadata = new Metadata();
         metadata.put("id", expense.getId());
-        metadata.put("amount", expense.getAmount().doubleValue());
-        if (expense.getCategory() != null) metadata.put("category", expense.getCategory());
-        if (expense.getPerson() != null) metadata.put("person", expense.getPerson());
+        metadata.put(AMOUNT_KEY, expense.getAmount().doubleValue());
+        if (expense.getCategory() != null) metadata.put(CATEGORY_KEY, expense.getCategory());
+        if (expense.getPerson() != null) metadata.put(PERSON_KEY, expense.getPerson());
         if (expense.getLocation() != null) metadata.put("location", expense.getLocation());
         if (expense.getDate() != null) metadata.put("date", expense.getDate().toString());
 
@@ -78,10 +84,10 @@ public class QdrantVectorService {
         List<Filter> filters = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            filters.add(metadataKey("category").isEqualTo(category));
+            filters.add(metadataKey(CATEGORY_KEY).isEqualTo(category));
         }
         if (person != null && !person.isEmpty()) {
-            filters.add(metadataKey("person").isEqualTo(person));
+            filters.add(metadataKey(PERSON_KEY).isEqualTo(person));
         }
         if (from != null) {
             filters.add(metadataKey("date").isGreaterThanOrEqualTo(from.toString()));
@@ -112,7 +118,7 @@ public class QdrantVectorService {
 
         return searchResult.matches().stream()
                 .map(this::mapToEmbeddedExpense)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private EmbeddedExpense mapToEmbeddedExpense(EmbeddingMatch<TextSegment> match) {
@@ -121,9 +127,9 @@ public class QdrantVectorService {
 
         return EmbeddedExpense.builder()
                 .id(metadata.getLong("id"))
-                .amount(metadata.getDouble("amount") != null ? BigDecimal.valueOf(metadata.getDouble("amount")) : null)
-                .category(metadata.getString("category"))
-                .person(metadata.getString("person"))
+                .amount(metadata.getDouble(AMOUNT_KEY) != null ? BigDecimal.valueOf(metadata.getDouble(AMOUNT_KEY)) : null)
+                .category(metadata.getString(CATEGORY_KEY))
+                .person(metadata.getString(PERSON_KEY))
                 .location(metadata.getString("location"))
                 .date(parseLocalDate(metadata.getString("date")))
                 .rawInput(segment.text())
@@ -131,13 +137,15 @@ public class QdrantVectorService {
                 .build();
     }
 
-    private LocalDate parseLocalDate(String value) {
-        if (value == null) return null;
-        try {
-            return LocalDate.parse(value);
-        } catch (Exception e) {
-            return null;
+    private LocalDate parseLocalDate(Object obj) {
+        if (obj instanceof String s) {
+            try {
+                return LocalDate.parse(s);
+            } catch (Exception e) {
+                return null;
+            }
         }
+        return null;
     }
 
     public boolean existsInVectorStore(Long id) {

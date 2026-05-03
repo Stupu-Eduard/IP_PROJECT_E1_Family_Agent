@@ -1,6 +1,7 @@
 package com.proiect.controller;
 
 import com.proiect.service.AnalyticsAssistant;
+import com.proiect.service.ReportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +24,9 @@ class AnalyticsControllerTest {
 
     @MockBean
     private AnalyticsAssistant analyticsAssistant;
+
+    @MockBean
+    private ReportService reportService;
 
     @Test
     void testQuery() throws Exception {

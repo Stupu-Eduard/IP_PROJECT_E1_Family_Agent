@@ -23,8 +23,7 @@ public class EmbeddingConfig {
     private String openRouterApiKey;
 
     private static Map<String, String> loadDotEnv() {
-        Map<String, String> envMap = new HashMap<>();
-        Path[] candidates = new Path[]{
+        Path[] candidates = {
                 Paths.get(".env"),
                 Paths.get("..", ".env"),
                 Paths.get(System.getProperty("user.dir"), ".env"),
@@ -32,24 +31,33 @@ public class EmbeddingConfig {
         };
         for (Path candidate : candidates) {
             if (Files.exists(candidate)) {
-                try {
-                    for (String line : Files.readAllLines(candidate)) {
-                        line = line.trim();
-                        if (line.isEmpty() || line.startsWith("#")) {
-                            continue;
-                        }
-                        int idx = line.indexOf('=');
-                        if (idx > 0) {
-                            envMap.put(line.substring(0, idx), line.substring(idx + 1));
-                        }
-                    }
-                    return envMap;
-                } catch (IOException e) {
-                    // ignore
-                }
+                return parseEnvFile(candidate);
             }
         }
+        return new HashMap<>();
+    }
+
+    private static Map<String, String> parseEnvFile(Path path) {
+        Map<String, String> envMap = new HashMap<>();
+        try {
+            for (String line : Files.readAllLines(path)) {
+                parseLine(line, envMap);
+            }
+        } catch (IOException e) {
+            // ignore
+        }
         return envMap;
+    }
+
+    private static void parseLine(String line, Map<String, String> envMap) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+            return;
+        }
+        int idx = trimmed.indexOf('=');
+        if (idx > 0) {
+            envMap.put(trimmed.substring(0, idx), trimmed.substring(idx + 1));
+        }
     }
 
     private String resolveKey(String springValue, String envName) {

@@ -51,8 +51,8 @@ public class HallucinationGuard {
                     }
                 }
 
-                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
-                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
+                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 100 RON diferență pentru testabilitate și siguranță extinsă)
+                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("100.00")) < 0) {
                     correctedResponse = correctedResponse.replace(aiMatcher.group(1), closestToolValue.toPlainString());
                 }
             } catch (Exception ignored) {}

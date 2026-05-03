@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@org.springframework.test.context.ActiveProfiles("test")
 class LlmRouterServiceTest {
 
     @Mock
@@ -46,8 +47,7 @@ class LlmRouterServiceTest {
         try {
             llmRouterService.routeAndChat("Cat am cheltuit ieri?");
         } catch (Exception e) {
-            // AiServices.builder might fail in unit test if not fully mocked, 
-            // but we verify the logic flow
+            // AiServices.builder might fail in unit test
         }
 
         verify(routerAssistant).classify("Cat am cheltuit ieri?");

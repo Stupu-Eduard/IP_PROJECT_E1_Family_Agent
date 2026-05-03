@@ -51,16 +51,15 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void testGenericException() throws Exception {
-        when(extractionService.process(any())).thenThrow(new RuntimeException("Unexpected error"));
+        when(extractionService.process(any())).thenThrow(new RuntimeException("Simulated internal error for testing"));
 
         mockMvc.perform(post("/v1/extract")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"test\"}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.message").value("Eroare internă: Unexpected error"));
+                .andExpect(jsonPath("$.message").value("Eroare internă: Simulated internal error for testing"));
     }
-
     @Test
     void testValidationException() throws Exception {
         mockMvc.perform(post("/v1/extract")

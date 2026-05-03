@@ -5,8 +5,6 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-
 /**
  * Service for generating embeddings from text.
  */

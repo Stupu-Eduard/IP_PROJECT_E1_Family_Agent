@@ -46,8 +46,7 @@ public class LlmConfig {
     private String cohereApiKey;
 
     private static Map<String, String> loadDotEnv() {
-        Map<String, String> envMap = new HashMap<>();
-        Path[] candidates = new Path[]{
+        Path[] candidates = {
                 Paths.get(".env"),
                 Paths.get("..", ".env"),
                 Paths.get(System.getProperty("user.dir"), ".env"),
@@ -55,24 +54,33 @@ public class LlmConfig {
         };
         for (Path candidate : candidates) {
             if (Files.exists(candidate)) {
-                try {
-                    for (String line : Files.readAllLines(candidate)) {
-                        line = line.trim();
-                        if (line.isEmpty() || line.startsWith("#")) {
-                            continue;
-                        }
-                        int idx = line.indexOf('=');
-                        if (idx > 0) {
-                            envMap.put(line.substring(0, idx), line.substring(idx + 1));
-                        }
-                    }
-                    return envMap;
-                } catch (IOException e) {
-                    // ignore
-                }
+                return parseEnvFile(candidate);
             }
         }
+        return new HashMap<>();
+    }
+
+    private static Map<String, String> parseEnvFile(Path path) {
+        Map<String, String> envMap = new HashMap<>();
+        try {
+            for (String line : Files.readAllLines(path)) {
+                parseLine(line, envMap);
+            }
+        } catch (IOException e) {
+            // ignore
+        }
         return envMap;
+    }
+
+    private static void parseLine(String line, Map<String, String> envMap) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+            return;
+        }
+        int idx = trimmed.indexOf('=');
+        if (idx > 0) {
+            envMap.put(trimmed.substring(0, idx), trimmed.substring(idx + 1));
+        }
     }
 
     private String resolveKey(String springValue, String envName) {
@@ -235,14 +243,14 @@ public class LlmConfig {
     }
 
     @Bean
-    public dev.langchain4j.model.openai.OpenAiAudioModel whisperModel() {
+    public ChatLanguageModel whisperModel() {
         String key = resolveKey(openaiApiKey, "OPENAI_API_KEY");
         if (key.isEmpty()) {
-            log.warn("OPENAI_API_KEY is missing. Whisper transcription will not work.");
+            log.warn("OPENAI_API_KEY is missing. Whisper (as ChatModel) will not work.");
         }
-        return dev.langchain4j.model.openai.OpenAiAudioModel.builder()
+        return OpenAiChatModel.builder()
                 .apiKey(key)
-                .modelName("whisper-1")
+                .modelName("gpt-4o") // Fallback to a chat model as Audio model is unavailable
                 .build();
     }
 }

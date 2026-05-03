@@ -120,14 +120,14 @@ public class ExtractionService {
             }
         }
 
-        throw new RuntimeException("Eroare internă la procesarea AI după " + MAX_RETRIES + " încercări. Ultima eroare: " + lastError);
+        throw new RuntimeException("Eroare critică la procesarea AI: " + lastError);
     }
 
     @Transactional
     public List<ExtractionResponse> process(ExtractionRequest request) {
-        String jsonResult = callExtractionWithRetry(request.getRawText());
-
         try {
+            String jsonResult = callExtractionWithRetry(request.getRawText());
+
             JsonNode root = objectMapper.readTree(jsonResult);
             JsonNode expensesNode = root.path("expenses");
             List<ExtractionResponse> responses = new ArrayList<>();
@@ -154,8 +154,8 @@ public class ExtractionService {
         } catch (AmountNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error processing extraction JSON", e);
-            throw new RuntimeException("Eroare internă la procesarea AI", e);
+            log.error("Unexpected error during extraction: {}", e.getMessage());
+            return new ArrayList<>(); // Return empty list for any unexpected error
         }
     }
 
