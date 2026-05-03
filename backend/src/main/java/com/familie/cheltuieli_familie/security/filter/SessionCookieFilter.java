@@ -33,7 +33,8 @@ public class SessionCookieFilter extends OncePerRequestFilter {
 
         // 1. Extragem session_id din Cookie
         String sessionId = null;
-        if (request.getCookies() != null) {
+
+         if (request.getCookies() != null) {
             sessionId = Arrays.stream(request.getCookies())
                     .filter(cookie -> "session_id".equals(cookie.getName()))
                     .map(Cookie::getValue)
