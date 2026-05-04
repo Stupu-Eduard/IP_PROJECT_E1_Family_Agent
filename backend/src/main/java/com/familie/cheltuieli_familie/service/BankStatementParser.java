@@ -17,7 +17,6 @@ public class BankStatementParser {
 
     private static final Logger logger = LoggerFactory.getLogger(BankStatementParser.class);
 
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d++(?:[.,]\\d++)?)\\s*+$");
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public List<Transaction> parseText(String ocrText) {
@@ -45,13 +44,16 @@ public class BankStatementParser {
                 String dateStr = line.substring(0, 10);
                 LocalDate date = LocalDate.parse(dateStr, FORMATTER);
 
-                Matcher matcher = AMOUNT_PATTERN.matcher(line);
+                String[] tokens = line.split("\\s+");
 
-                if (!matcher.find()) {
+                if (tokens.length < 3) continue;
+
+                String amountStr = tokens[tokens.length - 1];
+
+                if (!amountStr.matches("\\d++(?:[.,]\\d++)?")) {
                     continue;
                 }
 
-                String amountStr = matcher.group(1);
                 double amount = Double.parseDouble(amountStr.replace(",", "."));
 
                 if (amount <= 0) continue;
