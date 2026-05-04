@@ -25,25 +25,24 @@ class GeofenceControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Inițializăm componentele mockuite înainte de fiecare test
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void checkUserLocation_ValidData_ReturnsOk() {
-        // 1. Arrange (Pregătirea datelor folosind noul DTO)
+        // 1. Arrange
         GeofenceController.LocationDto testLocation = new GeofenceController.LocationDto();
-        testLocation.lat = 44.4268; // Latitudine (ex: București)
-        testLocation.lng = 26.1025; // Longitudine
+        // Folosim settere pentru a accesa datele, acum că sunt private
+        testLocation.setLat(44.4268);
+        testLocation.setLng(26.1025);
 
-        // 2. Act (Apelarea metodei din Controller)
+        // 2. Act
         ResponseEntity<String> response = geofenceController.checkUserLocation(testLocation);
 
-        // 3. Assert (Verificarea rezultatului)
+        // 3. Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Locația a fost recepționată și procesată.", response.getBody());
 
-        // Verificăm dacă serviciul de Geofencing a fost apelat în spate cu un obiect Point
         verify(geofencingService).processLocationUpdate(eq(1L), eq(2L), any(Point.class));
     }
 

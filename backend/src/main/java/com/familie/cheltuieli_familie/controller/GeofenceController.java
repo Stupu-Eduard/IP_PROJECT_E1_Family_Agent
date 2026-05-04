@@ -4,12 +4,16 @@ import com.familie.cheltuieli_familie.security.service.GeofencingService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/geofencing")
 public class GeofenceController {
+
+    private static final Logger log = LoggerFactory.getLogger(GeofenceController.class);
 
     private final GeofencingService geofencingService;
     private final GeometryFactory geometryFactory = new GeometryFactory();
@@ -18,30 +22,45 @@ public class GeofenceController {
         this.geofencingService = geofencingService;
     }
 
-    // Creăm un DTO intern simplu (sau îl poți pune într-un fișier separat LocationDto.java)
     public static class LocationDto {
-        public double lat; // Latitudinea (Y)
-        public double lng; // Longitudinea (X)
+        private double lat; // Latitudinea (Y)
+        private double lng; // Longitudinea (X)
+
+        public double getLat() {
+            return lat;
+        }
+
+        public void setLat(double lat) {
+            this.lat = lat;
+        }
+
+        public double getLng() {
+            return lng;
+        }
+
+        public void setLng(double lng) {
+            this.lng = lng;
+        }
     }
 
     @PostMapping("/check-location")
     public ResponseEntity<String> checkUserLocation(@RequestBody LocationDto locationDto) {
         if (locationDto == null) {
+            log.warn("Eroare: Datele de locație lipsesc.");
             return ResponseEntity.badRequest().body("Eroare: Datele de locație lipsesc.");
         }
 
         try {
-            // Transformăm DTO-ul primit din JSON într-un Point matematic
-            // Atenție la JTS: ordinea este (X = Longitudine, Y = Latitudine)
-            Coordinate coord = new Coordinate(locationDto.lng, locationDto.lat);
+            Coordinate coord = new Coordinate(locationDto.getLng(), locationDto.getLat());
             Point locationPoint = geometryFactory.createPoint(coord);
 
-            // Apelăm serviciul (am lăsat ID-urile hardcodate cum le aveai tu)
             geofencingService.processLocationUpdate(1L, 2L, locationPoint);
+            log.info("Locația a fost recepționată și procesată cu succes.");
 
             return ResponseEntity.ok("Locația a fost recepționată și procesată.");
 
         } catch (Exception e) {
+            log.error("Eroare internă la procesarea coordonatelor", e);
             return ResponseEntity.internalServerError().body("Eroare internă la procesarea coordonatelor.");
         }
     }
