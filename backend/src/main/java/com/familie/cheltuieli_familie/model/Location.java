@@ -15,10 +15,4 @@ public class Location {
     private String city;
     private String country;
 
-    @Column(name = "latitude")
-    private Double latitude;
-
-    @Column(name = "longitude")
-    private Double longitude;
-
 }
