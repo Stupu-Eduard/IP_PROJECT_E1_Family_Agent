@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 @RestController
@@ -35,6 +38,12 @@ public class ExtractionController {
         return ResponseEntity.ok(validationResult);
     }
 
+    private File createSecureTempFile(String prefix, String suffix) throws IOException {
+        Path secureDir = Files.createTempDirectory("secure-upload-dir");
+        Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
+        return secureFile.toFile();
+    }
+
     @PostMapping("/process")
     public ResponseEntity<List<Transaction>> processDocument(
             @RequestParam("file") MultipartFile multipartFile,
@@ -43,7 +52,7 @@ public class ExtractionController {
         File tempFile = null;
 
         try {
-            tempFile = File.createTempFile("upload_", ".pdf");
+            tempFile = createSecureTempFile("upload_", ".pdf");
             multipartFile.transferTo(tempFile);
 
             List<Transaction> transactions = orchestrator.processDocument(tempFile, bank);
@@ -54,7 +63,11 @@ public class ExtractionController {
             throw new RuntimeException("Eroare la procesarea documentului: " + e.getMessage());
         } finally {
             if (tempFile != null && tempFile.exists()) {
+                File parentDir = tempFile.getParentFile();
                 tempFile.delete();
+                if(parentDir != null){
+                    parentDir.delete();
+                }
             }
         }
     }

@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Service
 public class BankOcrService {
@@ -18,6 +21,12 @@ public class BankOcrService {
     public BankOcrService(OCRPreProcessor preProcessor, BankingDictionaryCorrector corrector) {
         this.preProcessor = preProcessor;
         this.corrector = corrector;
+    }
+
+    private File createSecureTempFile(String prefix, String suffix) throws IOException {
+        Path secureDir = Files.createTempDirectory("secure-temp-agent");
+        Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
+        return secureFile.toFile();
     }
 
     public String extractText(File pdfFile, String bank) throws Exception {
@@ -33,12 +42,13 @@ public class BankOcrService {
 
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-                File tempFile = File.createTempFile("page_" + page, ".png");
+                File tempFile = createSecureTempFile("page_" + page, ".png");
                 javax.imageio.ImageIO.write(image, "png", tempFile);
                 BufferedImage processed = preProcessor.processImage(tempFile, bank);
                 String pageText = tesseract.doOCR(processed);
                 String correctedText = corrector.correctText(pageText);
                 result.append(correctedText).append("\n");
+                File parentDir = tempFile.getParentFile();
                 tempFile.delete();
                 System.out.println("Processed page: " + page);
             }

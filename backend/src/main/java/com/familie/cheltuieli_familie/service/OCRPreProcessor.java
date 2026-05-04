@@ -15,6 +15,9 @@ import java.io.ByteArrayInputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -113,16 +116,26 @@ public class OCRPreProcessor {
         return result;
     }
 
+    private File createSecureTempFile(String prefix, String suffix) throws IOException {
+        Path secureDir = Files.createTempDirectory("secure-temp-agent");
+        Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
+        return secureFile.toFile();
+    }
+
     public List<BufferedImage> processPdf(File pdfFile, String bank) throws Exception {
         try (PDDocument document = Loader.loadPDF(pdfFile)) {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             List<BufferedImage> results = new ArrayList<>();
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-                File tempFile = File.createTempFile("page_" + page, ".png");
+                File tempFile = createSecureTempFile("page_" + page, ".png");
                 javax.imageio.ImageIO.write(image, "png", tempFile);
                 BufferedImage processed = processImage(tempFile, bank);
+                File parentDir = tempFile.getParentFile();
                 tempFile.delete();
+                if(parentDir != null){
+                    parentDir.delete();
+                }
                 results.add(processed);
                 System.out.println("Preprocessed page: " + (page + 1));
             }
