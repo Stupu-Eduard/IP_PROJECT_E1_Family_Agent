@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import lombok.extern.slf4j.Slf4j;
 import nu.pattern.OpenCV;
 import org.opencv.core.*;
 import org.opencv.imgproc.CLAHE;
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class OCRPreProcessor {
     static {
@@ -133,9 +135,15 @@ public class OCRPreProcessor {
                 javax.imageio.ImageIO.write(image, "png", tempFile);
                 BufferedImage processed = processImage(tempFile, bank);
                 File parentDir = tempFile.getParentFile();
-                tempFile.delete();
+                boolean isFileDeleted = tempFile.delete();
+                if (!isFileDeleted) {
+                    log.warn("Atenție: Nu s-a putut șterge fișierul temporar {}", tempFile.getAbsolutePath());
+                }
                 if(parentDir != null){
-                    parentDir.delete();
+                    boolean isDirDeleted = parentDir.delete();
+                    if (!isDirDeleted) {
+                        log.warn("Atenție: Nu s-a putut șterge directorul temporar {}", parentDir.getAbsolutePath());
+                    }
                 }
                 results.add(processed);
                 System.out.println("Preprocessed page: " + (page + 1));

@@ -6,6 +6,7 @@ import com.familie.cheltuieli_familie.model.Transaction;
 import com.familie.cheltuieli_familie.service.ExtractionPipelineService;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/v1/extract")
 @RequiredArgsConstructor
@@ -61,14 +63,20 @@ public class ExtractionController {
             return ResponseEntity.ok(transactions);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Eroare la procesarea documentului: {}", e.getMessage(), e);
             throw new RuntimeException("Eroare la procesarea documentului: " + e.getMessage());
         } finally {
             if (tempFile != null && tempFile.exists()) {
                 File parentDir = tempFile.getParentFile();
-                tempFile.delete();
+                boolean isFileDeleted = tempFile.delete();
+                if (!isFileDeleted) {
+                    log.warn("Atenție: Nu s-a putut șterge fișierul temporar {}", tempFile.getAbsolutePath());
+                }
                 if(parentDir != null){
-                    parentDir.delete();
+                    boolean isDirDeleted = parentDir.delete();
+                    if (!isDirDeleted) {
+                        log.warn("Atenție: Nu s-a putut șterge directorul temporar {}", parentDir.getAbsolutePath());
+                    }
                 }
             }
         }

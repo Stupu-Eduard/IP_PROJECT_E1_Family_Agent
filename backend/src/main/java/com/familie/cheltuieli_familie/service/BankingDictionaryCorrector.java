@@ -68,7 +68,7 @@ public class BankingDictionaryCorrector {
     private String correctWord(String word) {
         if (word == null || word.isEmpty()) return word;
 
-        if (word.matches("[0-9]+([.,][0-9]+)*")) return word;
+        if (word.matches("[0-9]++(?:[.,][0-9]++)*+")) return word;
         if (word.matches("[0-9]{2}/[0-9]{2}/[0-9]{4}")) return word;
         if (word.matches("[A-Z]{2}[0-9]{2}[A-Z0-9]+")) return word;
         if (word.length() <= 2) return word;

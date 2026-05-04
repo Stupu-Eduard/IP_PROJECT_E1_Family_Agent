@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import lombok.extern.slf4j.Slf4j;
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import org.apache.pdfbox.Loader;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Slf4j
 @Service
 public class BankOcrService {
     private final OCRPreProcessor preProcessor;
@@ -51,9 +53,15 @@ public class BankOcrService {
                 String correctedText = corrector.correctText(pageText);
                 result.append(correctedText).append("\n");
                 File parentDir = tempFile.getParentFile();
-                tempFile.delete();
+                boolean isFileDeleted = tempFile.delete();
+                if(!isFileDeleted){
+                    log.warn("Atentie: Nu s-a putut sterge fisierul temporar {}", tempFile.getAbsolutePath());
+                }
                 if(parentDir != null){
-                    parentDir.delete();
+                    boolean isDirDeleted = parentDir.delete();
+                    if (!isDirDeleted) {
+                        log.warn("Atentie: Nu s-a putut sterge directorul temporar {}", parentDir.getAbsolutePath());
+                    }
                 }
                 System.out.println("Processed page: " + page);
             }
