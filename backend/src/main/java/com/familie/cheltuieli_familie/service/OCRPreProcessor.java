@@ -117,7 +117,8 @@ public class OCRPreProcessor {
     }
 
     private File createSecureTempFile(String prefix, String suffix) throws IOException {
-        Path secureDir = Files.createTempDirectory("secure-temp-agent");
+        Path projectRoot = java.nio.file.Paths.get(System.getProperty("user.dir"));
+        Path secureDir = Files.createTempDirectory(projectRoot, "secure-temp");
         Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
         return secureFile.toFile();
     }

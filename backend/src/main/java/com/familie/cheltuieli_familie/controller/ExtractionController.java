@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -39,8 +40,9 @@ public class ExtractionController {
     }
 
     private File createSecureTempFile(String prefix, String suffix) throws IOException {
-        Path secureDir = Files.createTempDirectory("secure-upload-dir");
-        Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
+        Path tempDir = Paths.get(System.getProperty("user.dir"), "secure-temp");
+        Files.createDirectories(tempDir);
+        Path secureFile = Files.createTempFile(tempDir, prefix, suffix);
         return secureFile.toFile();
     }
 
