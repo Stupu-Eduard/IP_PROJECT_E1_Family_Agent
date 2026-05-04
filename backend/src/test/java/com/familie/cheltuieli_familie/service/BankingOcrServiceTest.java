@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -32,5 +35,23 @@ class BankOcrServiceTest {
         assertThrows(Exception.class, () -> {
             bankOcrService.extractText(nonExistentFile, "revolut");
         });
+    }
+
+    @Test
+    void extractText_ShouldThrowException_WhenFileIsNull() {
+        assertThrows(Exception.class, () -> {
+            bankOcrService.extractText(null, "revolut");
+        });
+    }
+
+    @Test
+    void extractText_ShouldThrowException_WhenFileIsInvalid() throws IOException {
+        Path invalidFile = Files.createTempFile("test_invalid", ".pdf");
+
+        assertThrows(Exception.class, () -> {
+            bankOcrService.extractText(invalidFile.toFile(), "revolut");
+        });
+
+        Files.deleteIfExists(invalidFile);
     }
 }

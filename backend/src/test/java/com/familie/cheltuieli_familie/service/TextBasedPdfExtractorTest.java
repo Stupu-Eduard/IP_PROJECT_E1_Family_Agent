@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,5 +39,17 @@ class TextBasedPdfExtractorTest {
         assertThrows(Exception.class, () -> {
             extractor.isTextBased(nonExistentFile);
         });
+    }
+
+    @Test
+    void extractText_ShouldThrowException_WhenFileIsNotValidPdf() throws IOException {
+        Path invalidPdfPath = Files.createTempFile("test_invalid", ".pdf");
+        File invalidPdfFile = invalidPdfPath.toFile();
+
+        assertThrows(Exception.class, () -> {
+            extractor.extractText(invalidPdfFile);
+        });
+
+        Files.deleteIfExists(invalidPdfPath);
     }
 }
