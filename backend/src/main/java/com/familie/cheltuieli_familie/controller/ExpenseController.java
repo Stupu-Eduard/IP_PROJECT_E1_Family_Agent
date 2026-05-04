@@ -46,26 +46,26 @@ public class ExpenseController {
 
     private ExpenseListDto toDto(ExpenseRepository.ExpenseWithLocationProjection row) {
         LocationDto locationDto = null;
-        if (row.locationId() != null) {
+        if (row.getLocationId() != null) {
             locationDto = new LocationDto(
-                    row.locationId(),
-                    row.store(),
-                    row.address(),
-                    row.city(),
-                    row.country(),
-                    row.lat(),
-                    row.lng()
+                    row.getLocationId(),
+                    row.getStore(),
+                    row.getAddress(),
+                    row.getCity(),
+                    row.getCountry(),
+                    row.getLat(),
+                    row.getLng()
             );
         }
 
         return new ExpenseListDto(
-                row.id(),
-                row.amount(),
-                row.currency(),
-                row.description(),
-                row.expenseDate(),
-                row.category(),
-                row.person(),
+                row.getId(),
+                row.getAmount(),
+                row.getCurrency(),
+                row.getDescription(),
+                row.getExpenseDate(),
+                row.getCategory(),
+                row.getPerson(),
                 locationDto
         );
     }

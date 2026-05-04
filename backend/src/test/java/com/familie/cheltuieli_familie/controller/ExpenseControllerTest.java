@@ -19,6 +19,76 @@ class ExpenseControllerTest {
                               LocalDateTime expenseDate, String category, String person, Long locationId, String store,
                               String address, String city, String country, Double lat,
                               Double lng) implements ExpenseRepository.ExpenseWithLocationProjection {
+
+        @Override
+        public Long getId() {
+            return id;
+        }
+
+        @Override
+        public BigDecimal getAmount() {
+            return amount;
+        }
+
+        @Override
+        public String getCurrency() {
+            return currency;
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
+        }
+
+        @Override
+        public LocalDateTime getExpenseDate() {
+            return expenseDate;
+        }
+
+        @Override
+        public String getCategory() {
+            return category;
+        }
+
+        @Override
+        public String getPerson() {
+            return person;
+        }
+
+        @Override
+        public Long getLocationId() {
+            return locationId;
+        }
+
+        @Override
+        public String getStore() {
+            return store;
+        }
+
+        @Override
+        public String getAddress() {
+            return address;
+        }
+
+        @Override
+        public String getCity() {
+            return city;
+        }
+
+        @Override
+        public String getCountry() {
+            return country;
+        }
+
+        @Override
+        public Double getLat() {
+            return lat;
+        }
+
+        @Override
+        public Double getLng() {
+            return lng;
+        }
     }
 
     @Test

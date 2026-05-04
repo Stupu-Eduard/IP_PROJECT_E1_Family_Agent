@@ -15,33 +15,33 @@ import java.util.List;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     interface ExpenseWithLocationProjection {
-        Long id();
+        Long getId();
 
-        BigDecimal amount();
+        BigDecimal getAmount();
 
-        String currency();
+        String getCurrency();
 
-        String description();
+        String getDescription();
 
-        LocalDateTime expenseDate();
+        LocalDateTime getExpenseDate();
 
-        String category();
+        String getCategory();
 
-        String person();
+        String getPerson();
 
-        Long locationId();
+        Long getLocationId();
 
-        String store();
+        String getStore();
 
-        String address();
+        String getAddress();
 
-        String city();
+        String getCity();
 
-        String country();
+        String getCountry();
 
-        Double lat();
+        Double getLat();
 
-        Double lng();
+        Double getLng();
     }
 
     @Query(value = """
