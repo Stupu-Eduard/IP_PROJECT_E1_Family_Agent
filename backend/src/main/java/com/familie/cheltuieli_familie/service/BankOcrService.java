@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 public class BankOcrService {
@@ -24,7 +25,8 @@ public class BankOcrService {
     }
 
     private File createSecureTempFile(String prefix, String suffix) throws IOException {
-        Path secureDir = Files.createTempDirectory("secure-temp-agent");
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+        Path secureDir = Files.createTempDirectory(projectRoot, "secure-temp");
         Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
         return secureFile.toFile();
     }
@@ -50,6 +52,9 @@ public class BankOcrService {
                 result.append(correctedText).append("\n");
                 File parentDir = tempFile.getParentFile();
                 tempFile.delete();
+                if(parentDir != null){
+                    parentDir.delete();
+                }
                 System.out.println("Processed page: " + page);
             }
             return result.toString();

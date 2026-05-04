@@ -17,7 +17,7 @@ public class BankStatementParser {
 
     private static final Logger logger = LoggerFactory.getLogger(BankStatementParser.class);
 
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+[.,]?\\d*)\\s*$");
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("(\\d+(?:[.,]\\d+)?)\\s*$");
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public List<Transaction> parseText(String ocrText) {
