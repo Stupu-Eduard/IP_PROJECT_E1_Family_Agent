@@ -20,6 +20,12 @@ vi.mock('../store/authStore', () => ({
 
 vi.mock('./KidDashboard', () => ({
     default: () => <div data-testid="kid-dashboard">Kid Dashboard Mock</div>,
+}))
+
+vi.mock('../components/BudgetWidget', () => ({
+    default: ({ userRole }: { userRole: string }) => (
+        <div data-testid="budget-widget-mock">Budget Widget Mock – rol: {userRole}</div>
+    ),
 }));
 
 vi.mock('@react-google-maps/api', () => ({

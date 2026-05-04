@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
 import KidDashboard from './KidDashboard'
+import BudgetWidget from '../components/BudgetWidget'
 
 // ─── Google Maps container style ────────────────────────────────────────────
 const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
@@ -174,6 +175,14 @@ export default function Dashboard() {
                 </div>
               </div>
           ))}
+        </div>
+
+        {/* ── Buget Lunar ───────────────────────────────────────────────────── */}
+        <div style={{ marginBottom: 32 }}>
+          <BudgetWidget
+              currentMonthExpenses={1248}
+              userRole={userRole}
+          />
         </div>
 
         {/* ── Bottom row: Hartă + Grafic ────────────────────────────────────── */}
