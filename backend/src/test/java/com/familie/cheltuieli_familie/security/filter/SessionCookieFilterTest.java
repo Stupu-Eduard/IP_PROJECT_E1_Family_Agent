@@ -49,7 +49,7 @@ class SessionCookieFilterTest {
 
         User user = new User();
         user.setEmail("test@familie.com");
-        
+
         UserSession session = UserSession.builder()
                 .id(1L)
                 .sessionToken(sessionId)
@@ -88,7 +88,7 @@ class SessionCookieFilterTest {
         String sessionId = "unknown-session";
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", sessionId));
-        
+
         when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
 
         // WHEN
