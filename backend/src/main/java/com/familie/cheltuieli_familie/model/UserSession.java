@@ -23,6 +23,10 @@ public class UserSession {
     @Column(name = "session_token", length = 255)
     private String sessionToken;
 
+    // NOU: Coloana creată de colegul tău în baza de date
+    @Column(name = "csrf_token", length = 255)
+    private String csrfToken;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -30,8 +34,6 @@ public class UserSession {
     @Column(name = "last_active")
     private LocalDateTime lastActive;
 
-    // Adăugăm un câmp virtual sau calculat pentru expirare dacă este nevoie, 
-    // dar momentan ne bazăm pe structura lor oficială.
     public boolean isValid() {
         return lastActive != null && lastActive.isAfter(LocalDateTime.now().minusDays(1));
     }

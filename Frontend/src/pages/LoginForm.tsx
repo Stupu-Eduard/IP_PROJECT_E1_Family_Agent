@@ -39,21 +39,38 @@ export default function Login() {
     return `${header}.${payload}.mock_signature`;
   };
 
-  // ── handleLogin (NEATINS) ─────────────────────────────────────────────────
+  // ── handleLogin (MODIFICAT PENTRU ANTI-CSRF) ──────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
       await loginSchema.validate({ email, password });
       setIsLoading(true);
-      const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
-        setTimeout(() => {
-          if (email && password) resolve({ token: createMockJwt() });
-          else reject(new Error('Eroare de la server: Date incorecte.'));
-        }, 1500);
+
+      // 1. Facem cererea REALĂ către backend-ul tău Spring Boot
+      const apiResponse = await fetch('http://localhost:8080/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
-      const response = await mockApiCall;
-      login(response.token);
+
+      const data = await apiResponse.json();
+
+      if (!apiResponse.ok) {
+        throw new Error(data.error || 'Eroare de la server: Date incorecte.');
+      }
+
+      // 2. SALVĂM PAROLA SECRETĂ (CSRF) în localStorage
+      if (data.csrfToken) {
+        localStorage.setItem('csrfToken', data.csrfToken);
+      }
+
+      // 3. Păstrăm logica lui Dimir pentru frontend (îi dăm mock JWT-ul ca să nu se strice rutele)
+      const tokenForFrontend = createMockJwt();
+
+      login(tokenForFrontend);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err instanceof yup.ValidationError) setError(err.message);
@@ -64,7 +81,7 @@ export default function Login() {
     }
   };
 
-  // ── UI — Variation C (editorial / typography-first) ───────────────────────
+  // ── UI — Variation C (editorial / typography-first) (NEATINS) ─────────────
   return (
       <div style={{
         width: '100%', minHeight: '100vh',

@@ -33,8 +33,7 @@ public class SessionCookieFilter extends OncePerRequestFilter {
 
         // 1. Extragem session_id din Cookie
         String sessionId = null;
-
-         if (request.getCookies() != null) {
+        if (request.getCookies() != null) {
             sessionId = Arrays.stream(request.getCookies())
                     .filter(cookie -> "session_id".equals(cookie.getName()))
                     .map(Cookie::getValue)
@@ -50,16 +49,37 @@ public class SessionCookieFilter extends OncePerRequestFilter {
                 UserSession session = sessionOpt.get();
 
                 if (session.isValid()) {
-                    // Sesiune validă -> Setăm autentificarea în contextul Spring Security
+
+                    // ---  ANTI-CSRF ---
+                    String method = request.getMethod();
+                    // Verificăm DOAR cererile care modifică date (POST, PUT, DELETE, PATCH)
+                    if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) ||
+                            "DELETE".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) {
+
+                        // Extragem parola secretă trimisă de React în Header
+                        String requestCsrfToken = request.getHeader("X-XSRF-TOKEN");
+
+                        // Dacă header-ul lipsește sau nu coincide cu cel din baza de date, blocăm accesul!
+                        if (requestCsrfToken == null || !requestCsrfToken.equals(session.getCsrfToken())) {
+                            log.error("🛑 ATAC CSRF DETECTAT! Token invalid sau lipsă pentru sesiunea: {}", sessionId);
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Invalid or missing CSRF Token\"}");
+                            return; // OPRIM cererea aici.
+                        }
+                    }
+                    // ---------------------------------
+
+                    // Sesiune validă (și validată CSRF) -> Setăm autentificarea în contextul Spring Security
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             session.getUser(),
                             null,
-                            Collections.emptyList() // Aici poți adăuga rolurile din User dacă este nevoie
+                            Collections.emptyList()
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    
-                    log.debug("✅ Sesiuine validă găsită în DB pentru user: {}", session.getUser().getEmail());
+
+                    log.debug("✅ Sesiune validă găsită în DB pentru user: {}", session.getUser().getEmail());
                 } else {
                     log.warn("⚠️ Sesiune expirată în DB: {}", sessionId);
                 }

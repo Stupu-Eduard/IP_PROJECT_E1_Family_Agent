@@ -5,7 +5,6 @@ import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.model.UserSession;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.repository.UserSessionRepository;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,33 +35,37 @@ public class AuthController {
         Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
 
         // Verificare utilizator și parolă
-        // NOTĂ: Momentan verificăm parola în mod simplu (fără criptare complexă, folosim doar un match pe câmpul passwordH)
-        // Dacă proiectul are un sistem de hash (ex. BCrypt), ar trebui folosit BCryptPasswordEncoder.matches() aici.
         if (userOpt.isPresent() && userOpt.get().getPasswordH().equals(loginRequest.getPassword())) {
             User user = userOpt.get();
 
-            // 1. Generăm un Session ID unic
+            // 1. Generăm un Session ID unic (pentru Cookie)
             String sessionId = UUID.randomUUID().toString();
 
-            // 2. Salvăm sesiunea în baza de date
+            // 2. GENERĂM TOKEN-UL ANTI-CSRF (Task 1 - Parola secretă)
+            String csrfToken = UUID.randomUUID().toString();
+
+            // 3. Salvăm ambele token-uri în baza de date
             UserSession session = UserSession.builder()
                     .sessionToken(sessionId)
+                    .csrfToken(csrfToken) // Salvăm token-ul în noua coloană creată de colegul tău
                     .user(user)
                     .lastActive(LocalDateTime.now())
                     .build();
             sessionRepository.save(session);
 
-            // 3. Creăm Cookie-ul și îl trimitem către browser
-            // Folosim un String pentru header pentru a avea control total asupra proprietăților (SameSite)
+            // 4. Creăm Cookie-ul și îl trimitem către browser
             String cookieHeader = String.format(
                     "session_id=%s; Path=/; HttpOnly; Max-Age=%d; SameSite=Lax",
                     sessionId, 24 * 60 * 60
             );
             response.addHeader("Set-Cookie", cookieHeader);
 
+            // IMPORTANT: Trimitem csrfToken în corpul răspunsului JSON
+            // pentru ca aplicația de React să îl poată memora și folosi la următoarele request-uri
             return ResponseEntity.ok(Map.of(
                     "message", "Login realizat cu succes!",
-                    "userName", user.getName()
+                    "userName", user.getName(),
+                    "csrfToken", csrfToken
             ));
         }
 

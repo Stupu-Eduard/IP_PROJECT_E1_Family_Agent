@@ -2,8 +2,8 @@ package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.model.Alert;
 import com.familie.cheltuieli_familie.model.GeofenceZone;
-import com.familie.cheltuieli_familie.repository.AlertRepository; // Asigură-te că ai acest repository
-// import com.familie.cheltuieli_familie.repository.GeofenceRepository; // Va trebui creat dacă nu există
+import com.familie.cheltuieli_familie.repository.AlertRepository;
+import com.familie.cheltuieli_familie.repository.GeofenceRepository; // <-- Decomentat
 import com.familie.cheltuieli_familie.service.FirebaseNotificationService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
@@ -21,27 +21,25 @@ public class GeofencingService {
 
     private final FirebaseNotificationService firebaseNotificationService;
     private final AlertRepository alertRepository;
-    // private final GeofenceRepository geofenceRepository;
+    private final GeofenceRepository geofenceRepository; // <-- Decomentat
 
-    // Injectăm Repository-urile necesare
+    // Injectăm toate Repository-urile necesare, inclusiv cel de Geofence
     public GeofencingService(FirebaseNotificationService firebaseNotificationService,
-                             AlertRepository alertRepository/*, GeofenceRepository geofenceRepository*/) {
+                             AlertRepository alertRepository,
+                             GeofenceRepository geofenceRepository) { // <-- Decomentat
         this.firebaseNotificationService = firebaseNotificationService;
         this.alertRepository = alertRepository;
-        // this.geofenceRepository = geofenceRepository;
+        this.geofenceRepository = geofenceRepository; // <-- Decomentat
     }
 
-    // 1. Metoda apelată din Controller (Fostul tău TODO)
+    // 1. Metoda apelată din Controller
     public void processLocationUpdate(Long childId, Long parentId, Point locationData) {
         if (locationData == null) return;
 
         long startTime = System.currentTimeMillis();
 
-        // Extragem toate zonele active din Baza de Date Reală
-        // List<GeofenceZone> activeZones = geofenceRepository.findAllByIsActiveTrue();
-
-        // Simulare pentru exemplificare (scoate asta după ce injectezi GeofenceRepository)
-        List<GeofenceZone> activeZones = List.of();
+        // Extragem toate zonele active direct din Baza de Date Reală
+        List<GeofenceZone> activeZones = geofenceRepository.findAllByIsActiveTrue(); // <-- Activata! (Simularea a fost ștearsă)
 
         for (GeofenceZone zone : activeZones) {
             // Aplicăm algoritmul PIP de mare viteză
@@ -95,14 +93,14 @@ public class GeofencingService {
         auditLog.setChildId(childId);
         auditLog.setParentId(parentId);
         auditLog.setMessage(alertMessage);
-        auditLog.setRestrictedCategory("GEOFENCE_VIOLATION"); // Reciclăm câmpul tău pentru a marca tipul
+        auditLog.setRestrictedCategory("GEOFENCE_VIOLATION");
         auditLog.setTimestamp(LocalDateTime.now());
         auditLog.setRead(false);
 
-        // Dacă baza de date pică, execuția se oprește aici și nu trimite notificare falsă
+        // Salvăm dovada în DB
         alertRepository.save(auditLog);
 
-        // PASUL B: Trimiterea notificării externe (doar după ce a fost salvată dovada în DB)
+        // PASUL B: Trimiterea notificării externe
         if (parentDeviceToken != null && !parentDeviceToken.isEmpty()) {
             firebaseNotificationService.sendPushNotification(parentDeviceToken, "Alertă Securitate", alertMessage);
         }
