@@ -1,64 +1,152 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import ChatAI from './ChatAi'
 
-window.HTMLElement.prototype.scrollIntoView = vi.fn()
+vi.mock('../api/api', () => ({
+    default: {
+        post: vi.fn(),
+    },
+}))
 
-describe('ChatAI Component (Task 3.1)', () => {
-    it('ar trebui să se deschidă fereastra de chat la click pe butonul FAB', () => {
+import api from '../api/api'
+
+describe('ChatAI Component', () => {
+    let scrollIntoViewMock: any
+
+    beforeEach(() => {
+        scrollIntoViewMock = vi.fn()
+        window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+        vi.mocked(api.post).mockReset()
+    })
+
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
+
+    it('1. Randează doar butonul FAB inițial și rulează auto-scroll la deschidere', () => {
         render(<ChatAI />)
-
-        // Inițial, fereastra e închisă, vedem doar butonul FAB (are un SVG, dar nu are text, așa că selectăm butonul global)
-        const fabButton = screen.getByRole('button')
+        const fabButton = screen.getByRole('button', { name: /deschide asistentul ai/i })
+        expect(fabButton).toBeInTheDocument()
+        expect(screen.queryByText('FamilyAgent AI')).not.toBeInTheDocument()
         fireEvent.click(fabButton)
-
-        // După click, trebuie să apară interfața de chat
-        expect(screen.getByText('FamilyAgent AI')).toBeInTheDocument()
-        expect(screen.getByText('Salut! Sunt asistentul tău FamilyAgent. Cum te pot ajuta cu bugetul astăzi?')).toBeInTheDocument()
+        expect(scrollIntoViewMock).toHaveBeenCalled()
     })
 
-    it('ar trebui să afișeze mesajul utilizatorului și starea de typing după trimitere', async () => {
+    it('2. Închide fereastra de chat la click pe X', () => {
         render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+        const closeBtn = screen.getAllByRole('button')[0]
+        fireEvent.click(closeBtn)
+        expect(screen.queryByText('FamilyAgent AI')).not.toBeInTheDocument()
+    })
 
-        // Deschidem chat-ul
-        fireEvent.click(screen.getByRole('button'))
+    it('3. Trimite un mesaj și primește răspuns de la API', async () => {
+        vi.mocked(api.post).mockResolvedValueOnce({
+            data: { reply: 'Ai cheltuit 1248 de lei luna aceasta.' },
+        })
 
-        // Tastăm un mesaj
-        const input = screen.getByPlaceholderText('Întreabă ceva...')
-        fireEvent.change(input, { target: { value: 'Vreau un raport' } })
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
 
-        // Trimitem mesajul
-        const form = screen.getByRole('textbox').closest('form')
-        if(form) {
-            fireEvent.submit(form)
-        }
+        const input = screen.getByRole('textbox')
+        fireEvent.change(input, { target: { value: 'Cat am cheltuit luna aceasta?' } })
 
-        // Verificăm dacă mesajul utilizatorului a apărut pe ecran
-        expect(screen.getByText('Vreau un raport')).toBeInTheDocument()
+        await act(async () => {
+            fireEvent.submit(input)
+        })
 
-        // Verificăm dacă inputul este dezactivat și textul s-a schimbat în 'Agentul scrie...'
-        expect(screen.getByPlaceholderText('Agentul scrie...')).toBeDisabled()
+        expect(screen.getByText('Cat am cheltuit luna aceasta?')).toBeInTheDocument()
 
-        // Așteptăm să primim răspunsul simulat (durează 1.5 secunde conform logicii din ChatAi.tsx)
         await waitFor(() => {
-            expect(screen.getByText('Analizez datele tale financiare... (Simulare)')).toBeInTheDocument()
-        }, { timeout: 2000 })
+            expect(screen.getByText('Ai cheltuit 1248 de lei luna aceasta.')).toBeInTheDocument()
+        })
+
+        expect(screen.getByPlaceholderText('Întreabă ceva...')).toBeInTheDocument()
     })
 
-    it('nu ar trebui să permită trimiterea unui mesaj gol', () => {
+    it('4. Nu permite trimiterea de mesaje goale', () => {
         render(<ChatAI />)
-
-        fireEvent.click(screen.getByRole('button')) // Deschide chat
-
-        const input = screen.getByPlaceholderText('Întreabă ceva...')
-
-        // Asigură-te că inputul e gol
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+        const input = screen.getByRole('textbox')
+        const form = input.closest('form')!
         fireEvent.change(input, { target: { value: '   ' } })
+        fireEvent.submit(form)
+        expect(screen.queryAllByText('   ')).toHaveLength(0)
+    })
 
-        // Butonul de trimitere ar trebui să fie dezactivat (fiindcă inputul e gol)
-        // Căutăm butonul de Send (ultimul buton din formular)
-        const sendButton = screen.getAllByRole('button').pop()
-        expect(sendButton).toBeDisabled()
+    it('5. Tratează evenimentele de hover pe butonul FAB', () => {
+        render(<ChatAI />)
+        const fab = screen.getByRole('button', { name: /deschide asistentul ai/i })
+        fireEvent.mouseEnter(fab)
+        expect(fab).toHaveStyle({ transform: 'scale(1.08)', background: 'var(--color-primary)' })
+        fireEvent.mouseLeave(fab)
+        expect(fab).toHaveStyle({ transform: 'scale(1)', background: 'var(--color-ink)' })
+    })
+
+    it('6. Tratează evenimentele de hover pe butonul de închidere (X)', () => {
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+        const closeBtn = screen.getAllByRole('button')[0]
+        fireEvent.mouseEnter(closeBtn)
+        expect(closeBtn).toHaveStyle({ background: 'rgba(255,255,255,0.16)' })
+        fireEvent.mouseLeave(closeBtn)
+        expect(closeBtn).toHaveStyle({ background: 'rgba(255,255,255,0.08)' })
+    })
+
+    it('7. Tratează evenimentele de hover pe butonul Send', () => {
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+        const input = screen.getByRole('textbox')
+        const sendBtn = screen.getAllByRole('button')[1]
+        fireEvent.mouseEnter(sendBtn)
+        expect(sendBtn).not.toHaveStyle({ background: 'var(--color-primary)' })
+        fireEvent.change(input, { target: { value: 'Test' } })
+        fireEvent.mouseEnter(sendBtn)
+        expect(sendBtn).toHaveStyle({ background: 'var(--color-primary)' })
+        fireEvent.mouseLeave(sendBtn)
+        expect(sendBtn).toHaveStyle({ background: 'var(--color-ink)' })
+    })
+
+    it('8. Previne trimiterea formularului în timp ce botul scrie (isTyping)', async () => {
+        vi.mocked(api.post).mockResolvedValueOnce({
+            data: { reply: 'Răspuns de la AI.' },
+        })
+
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+
+        const input = screen.getByRole('textbox')
+        const form = input.closest('form')!
+
+        fireEvent.change(input, { target: { value: 'Mesaj 1' } })
+        fireEvent.submit(form)
+
+        fireEvent.change(input, { target: { value: 'Mesaj 2' } })
+        fireEvent.submit(form)
+
+        expect(screen.queryByText('Mesaj 2')).not.toBeInTheDocument()
+
+        await waitFor(() => {
+            expect(screen.getByPlaceholderText('Întreabă ceva...')).toBeInTheDocument()
+        })
+    })
+
+    it('9. Afișează mesaj de eroare când API-ul eșuează', async () => {
+        vi.mocked(api.post).mockRejectedValueOnce(new Error('Network Error'))
+
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+
+        const input = screen.getByRole('textbox')
+        fireEvent.change(input, { target: { value: 'Test eroare' } })
+
+        await act(async () => {
+            fireEvent.submit(input)
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('Eroare la conectarea cu asistentul. Încearcă din nou.')).toBeInTheDocument()
+        })
     })
 })

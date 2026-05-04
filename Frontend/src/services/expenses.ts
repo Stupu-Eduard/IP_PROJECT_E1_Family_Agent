@@ -1,3 +1,4 @@
+import type { OcrResponseDTO } from '../types/OcrResponseDTO';
 import { api } from './api'
 
 export interface ApiLocationDto {
@@ -35,4 +36,13 @@ export async function fetchExpenses(filters?: ExpenseFilters, signal?: AbortSign
 
   const response = await api.get<ApiExpenseListDto[]>('/api/v1/expenses', { params, signal })
   return response.data
+}
+
+export async function processReceiptOCR(file: File): Promise<OcrResponseDTO> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post<OcrResponseDTO>('/api/v1/ocr/process', formData);
+
+  return response.data;
 }

@@ -1,0 +1,82 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Trage codul de pe GitHub
+        uses: actions/checkout@v4
+
+      - name: Instaleaza Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Tesseract OCR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev
+      
+      - name: Ruleaza Testele JUnit
+        if: github.ref != 'refs/heads/main'
+        run: mvn test
+
+      - name: Scaneaza codul cu SonarCloud
+        if: github.ref != 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
+
+      - name: Compileaza aplicatia (Creeaza .jar)
+        if: github.ref == 'refs/heads/main'
+        run: mvn clean package -DskipTests
+
+      - name: Trimite doar fisierul .jar pe server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "backend/target/cheltuieli-familie-0.0.1-SNAPSHOT.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
+          target: "/root/FamilyAgent/target/" # Il punem unde Dockerfile-ul de pe server îl asteapta
+          strip_components: 2
+
+      - name: Reconstruieste și Restarteaza Docker pe Server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /root/FamilyAgent/
+            # Folosim Dockerfile-ul existent pe server pentru a crea noua imagine
+            docker compose up -d --build backend
+      - name: Trimite notificare pe Discord
+        uses: Ilshidur/action-discord@master
+        if: always() 
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USERNAME: "GitHub Actions"
+          DISCORD_AVATAR: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+        with:
+          args: |
+            Avem un nou update de la **${{ github.actor }}** pe branch-ul `${{ github.ref_name }}`!
+            Statusul verificării: **${{ job.status }}** 🚀 

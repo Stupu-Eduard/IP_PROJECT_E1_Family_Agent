@@ -1,70 +1,120 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
+import { processReceiptOCR } from '../services/expenses'
 
-vi.mock('../store/authStore', () => ({
-    useAuthStore: () => ({
-        logout: vi.fn(),
-    }),
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return { ...actual, useNavigate: () => mockNavigate }
+})
+
+vi.mock('../services/expenses', () => ({
+    processReceiptOCR: vi.fn()
 }))
 
-describe('ExpenseForm Component (Task 2.2)', () => {
-    it('ar trebui să randeze toate elementele formularului', () => {
-        render(
-            <BrowserRouter>
-                <ExpenseForm />
-            </BrowserRouter>
-        )
+vi.mock('./ImageUploader', () => ({
+    ImageUploader: ({ onImageSelect }: any) => (
+        <button onClick={() => onImageSelect(new File([''], 'test.jpg'))}>
+            Simulare Încărcare OCR
+        </button>
+    )
+}))
 
-        expect(screen.getByText('Sumă (RON)')).toBeInTheDocument()
-        expect(screen.getByText('Categorie')).toBeInTheDocument()
-        expect(screen.getByText('Dată')).toBeInTheDocument()
-        expect(screen.getByText('Salvează Cheltuiala')).toBeInTheDocument()
+describe('ExpenseForm Component', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
     })
 
-    it('ar trebui să arate o eroare dacă se încearcă submit cu sumă 0 sau mai mică', () => {
-        render(
-            <BrowserRouter>
-                <ExpenseForm />
-            </BrowserRouter>
-        )
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
 
-        // 1. Selectăm o categorie pentru a trece de atributul 'required'
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'mancare' } })
+    const renderComponent = () => render(<MemoryRouter><ExpenseForm /></MemoryRouter>)
 
-        // 2. Setăm suma la 0
-        const amountInput = screen.getByPlaceholderText('Ex: 50.50')
+    it('1. Randează formularul și câmpurile obligatorii', () => {
+        renderComponent()
+        expect(screen.getByText('Adaugă o cheltuială nouă')).toBeInTheDocument()
+        expect(screen.getByLabelText(/Sumă \(RON\)/i)).toBeInTheDocument()
+        expect(screen.getByLabelText(/Categorie/i)).toBeInTheDocument()
+    })
+
+    it('2. Navighează la dashboard la click pe butonul de înapoi', () => {
+        renderComponent()
+        const backBtn = screen.getByLabelText('Înapoi')
+        fireEvent.click(backBtn)
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+    })
+
+    it('3. Arată eroare dacă se încearcă trimiterea unei sume <= 0', async () => {
+        renderComponent()
+        const amountInput = screen.getByLabelText(/Sumă \(RON\)/i)
+        const categorySelect = screen.getByLabelText(/Categorie/i)
+        const submitBtn = screen.getByRole('button', { name: /Salvează cheltuiala/i })
+
+        fireEvent.change(categorySelect, { target: { value: 'mancare' } })
         fireEvent.change(amountInput, { target: { value: '0' } })
+        fireEvent.click(submitBtn)
 
-        // 3. Trimitem formularul
-        const submitButton = screen.getByText('Salvează Cheltuiala')
-        fireEvent.click(submitButton)
-
-        // Acum eroarea va apărea pe ecran
-        expect(screen.getByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument()
+        expect(await screen.findByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument()
     })
 
-    it('ar trebui să simuleze adăugarea cu succes a unei cheltuieli', async () => {
-        render(
-            <BrowserRouter>
-                <ExpenseForm />
-            </BrowserRouter>
-        )
+    it('4. Salvează o cheltuială cu succes și resetează formularul', () => {
+        vi.useFakeTimers()
+        renderComponent()
+        const amountInput = screen.getByLabelText(/Sumă \(RON\)/i)
+        const categorySelect = screen.getByLabelText(/Categorie/i)
+        const form = amountInput.closest('form')!
 
-        // Completăm formularul
-        fireEvent.change(screen.getByPlaceholderText('Ex: 50.50'), { target: { value: '150' } })
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'mancare' } })
+        fireEvent.change(amountInput, { target: { value: '150.5' } })
+        fireEvent.change(categorySelect, { target: { value: 'mancare' } })
+        fireEvent.submit(form)
 
-        // Trimitem formularul
-        fireEvent.click(screen.getByText('Salvează Cheltuiala'))
-
-        // Așteptăm să apară starea de încărcare, apoi mesajul de succes
         expect(screen.getByText('Se salvează...')).toBeInTheDocument()
 
+        act(() => {
+            vi.advanceTimersByTime(1000)
+        })
+
+        expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
+        expect(amountInput).toHaveValue(null)
+
+        act(() => {
+            vi.advanceTimersByTime(3000)
+        })
+
+        vi.runOnlyPendingTimers()
+        vi.useRealTimers()
+    })
+
+    it('5. Completează datele prin OCR la selectarea unei imagini', async () => {
+        vi.mocked(processReceiptOCR).mockResolvedValueOnce({
+            amount: 250,
+            category: 'facturi',
+            date: '2026-04-30T12:00:00'
+        }as any
+        )
+        renderComponent()
+        fireEvent.click(screen.getByText('Simulare Încărcare OCR'))
+        expect(screen.getByText('Procesăm bonul tău…')).toBeInTheDocument()
+
         await waitFor(() => {
-            expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
-        }, { timeout: 1500 }) // Așteptăm să treacă setTimeout-ul de 1 secundă din componentă
+            const amountInput = screen.getByLabelText(/Sumă \(RON\)/i) as HTMLInputElement
+            expect(amountInput.value).toBe('250')
+            const categorySelect = screen.getByLabelText(/Categorie/i) as HTMLSelectElement
+            expect(categorySelect.value).toBe('facturi')
+        })
+    })
+
+    it('6. Afișează eroare OCR dacă procesarea eșuează', async () => {
+        vi.mocked(processReceiptOCR).mockRejectedValueOnce(new Error('OCR Failed'))
+        renderComponent()
+        fireEvent.click(screen.getByText('Simulare Încărcare OCR'))
+
+        await waitFor(() => {
+            expect(screen.getByText(/Nu am putut citi automat toate datele/i)).toBeInTheDocument()
+        })
     })
 })

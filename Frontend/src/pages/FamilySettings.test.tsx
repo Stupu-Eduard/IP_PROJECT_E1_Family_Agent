@@ -1,89 +1,193 @@
-import '@testing-library/jest-dom'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Reports from './Reports' // <--- VERIFICĂ ACEST IMPORT!
+import '@testing-library/jest-dom';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import FamilySettings from './FamilySettings';
+import { useAuthStore } from '../store/authStore';
+import { decodeJwtPayload } from '../utils/jwt';
 
-// Mock pentru navigare
-const mockNavigate = vi.fn()
+// ─── MOCKS ────────────────────────────────────────────────────────────
+
+const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual('react-router-dom')
-    return { ...actual, useNavigate: () => mockNavigate, MemoryRouter: actual.MemoryRouter }
-})
+    const actual = await vi.importActual('react-router-dom');
+    return { ...actual, useNavigate: () => mockNavigate };
+});
 
-const mockLogout = vi.fn()
 vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector({ logout: mockLogout }),
-}))
+    useAuthStore: vi.fn(),
+}));
 
-vi.mock('recharts', async () => {
-    const actual = await vi.importActual('recharts')
-    return { ...actual, ResponsiveContainer: ({ children }: any) => <div>{children}</div> }
-})
+vi.mock('../utils/jwt', () => ({
+    decodeJwtPayload: vi.fn(),
+}));
 
-describe('Reports Component - Final Corrected Version', () => {
+// ─── SUITA DE TESTE ───────────────────────────────────────────────────
+
+describe('FamilySettings Component', () => {
+    let confirmSpy: any;
+
     beforeEach(() => {
-        vi.clearAllMocks()
-        vi.useFakeTimers()
-    })
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        confirmSpy = vi.spyOn(window, 'confirm');
+    });
 
     afterEach(() => {
-        vi.useRealTimers()
-    })
+        vi.useRealTimers();
+        confirmSpy.mockRestore();
+    });
 
-    const renderComponent = () => render(
-        <MemoryRouter>
-            <Reports />
-        </MemoryRouter>
-    )
+    const renderComponent = () => render(<MemoryRouter><FamilySettings /></MemoryRouter>);
 
-    it('1. Ar trebui să afișeze titlul corect și butoanele de timp', () => {
-        renderComponent()
-        expect(screen.getByText('Evoluție Cheltuieli')).toBeInTheDocument()
-        expect(screen.getByText('1M')).toBeInTheDocument()
-    })
+    // ─── 1. ROLURI ȘI RANDARE CONDIȚIONATĂ ───
 
-    it('2. Ar trebui să deschidă selectorul custom', () => {
-        renderComponent()
-        const customBtn = screen.getByText('Interval Custom')
-        fireEvent.click(customBtn)
-        expect(screen.getByPlaceholderText('ex: 12/04/2026')).toBeInTheDocument()
-    })
+    it('randează vizualizarea limitată pentru rolul Child (fără formular de invitare)', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child' }as any);
 
-    it('3. Ar trebui să valideze cronologia datelor (Start > End)', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('Interval Custom'))
-        const inputs = screen.getAllByPlaceholderText(/2026/)
+        renderComponent();
 
-        fireEvent.change(inputs[0], { target: { value: '20/04/2026' } })
-        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } })
+        expect(screen.getByText('Membrii Familiei Mele')).toBeInTheDocument();
+        expect(screen.queryByText('Adaugă un membru nou')).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Elimină membru')).not.toBeInTheDocument();
+    });
 
-        expect(screen.getByText(/Eroare: Data de început trebuie să fie înainte/i)).toBeInTheDocument()
-    })
+    it('randează vizualizarea completă pentru rolul Parent', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
 
-    it('4. Ar trebui să aplice intervalul și să arate loading (Fără Timeout)', () => {
-        const { container } = renderComponent()
-        fireEvent.click(screen.getByText('Interval Custom'))
+        renderComponent();
 
-        const inputs = screen.getAllByPlaceholderText(/2026/)
-        fireEvent.change(inputs[0], { target: { value: '01/04/2026' } })
-        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } })
+        expect(screen.getByText('Gestionare Familie')).toBeInTheDocument();
+        expect(screen.getByText('Adaugă un membru nou')).toBeInTheDocument();
 
-        fireEvent.click(screen.getByText('Aplică'))
+        const deleteButtons = screen.getAllByTitle('Elimină membru');
+        expect(deleteButtons.length).toBeGreaterThan(0);
+    });
 
-        // Verificăm spinner-ul prin clasă (lucide-react generează SVG-uri)
-        expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+    it('randează vizualizarea completă pentru rolul Co-Parent', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Co-Parent' }as any);
+
+        renderComponent();
+        expect(screen.getByText('Gestionare Familie')).toBeInTheDocument();
+    });
+
+    it('funcționează corect dacă token-ul lipsește', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: null }));
+
+        renderComponent();
+
+        expect(screen.getByText('Membrii Familiei Mele')).toBeInTheDocument();
+        expect(decodeJwtPayload).not.toHaveBeenCalled();
+    });
+
+    // ─── 2. INTERACȚIUNI ȘI FORMULAR INVITARE ───
+
+    it('navighează spre dashboard la click pe back', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' } as any);
+
+        const { container } = renderComponent();
+
+        const backBtn = container.querySelector('.btn-alive-secondary');
+        if (backBtn) fireEvent.click(backBtn);
+
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    });
+
+    it('nu trimite invitația dacă emailul este gol sau conține doar spații (early return)', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+
+        renderComponent();
+
+        const emailInput = screen.getByPlaceholderText('email@familie.com');
+        const submitBtn = screen.getByText('Trimite Invitație');
+
+        fireEvent.change(emailInput, { target: { value: '   ' } });
+        fireEvent.click(submitBtn);
+
+        expect(screen.queryByText('Se trimite...')).not.toBeInTheDocument();
+    });
+
+    it('trimite invitația și adaugă un nou membru în listă după delay (setTimeout)', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+
+        renderComponent();
+
+        const emailInput = screen.getByPlaceholderText('email@familie.com');
+        const roleSelect = screen.getByRole('combobox');
+        const submitBtn = screen.getByText('Trimite Invitație');
+
+        fireEvent.change(emailInput, { target: { value: 'test@familie.com' } });
+        fireEvent.change(roleSelect, { target: { value: 'Co-Parent' } });
+
+        fireEvent.click(submitBtn);
+
+        expect(screen.getByText('Se trimite...')).toBeInTheDocument();
 
         act(() => {
-            vi.advanceTimersByTime(800)
-        })
+            vi.advanceTimersByTime(1000);
+        });
 
-        expect(container.querySelector('.animate-spin')).not.toBeInTheDocument()
-    })
+        expect(screen.getByText('Trimite Invitație')).toBeInTheDocument();
 
-    it('5. Navigare înapoi la Dashboard', () => {
-        renderComponent()
-        fireEvent.click(screen.getByText('FamilyAgent'))
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-    })
-})
+        expect(screen.getAllByText('test@familie.com').length).toBeGreaterThan(0);
+        expect((emailInput as HTMLInputElement).value).toBe('');
+    });
+
+    // ─── 3. ȘTERGEREA MEMBRILOR (WINDOW.CONFIRM) ───
+
+    it('șterge un membru cu nume valid dacă se acceptă confirmarea', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+        confirmSpy.mockReturnValue(true);
+
+        renderComponent();
+
+        // Folosim getAllByText pentru a evita conflictul dintre "Mihaela" și "mihaela@partner.com"
+        expect(screen.getAllByText(/Mihaela/i).length).toBeGreaterThan(0);
+
+        const deleteButtons = screen.getAllByTitle('Elimină membru');
+        fireEvent.click(deleteButtons[0]);
+
+        expect(confirmSpy).toHaveBeenCalledWith('Ești sigur că dorești să elimini membrul Mihaela ?');
+
+        // După ștergere, lungimea array-ului returnat de queryAllByText ar trebui să fie 0
+        expect(screen.queryAllByText(/Mihaela/i).length).toBe(0);
+    });
+
+    it('șterge un membru fără nume (invitat) dacă se acceptă confirmarea', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+        confirmSpy.mockReturnValue(true);
+
+        renderComponent();
+
+        expect(screen.getAllByText('invitat@exemplu.com').length).toBeGreaterThan(0);
+
+        const deleteButtons = screen.getAllByTitle('Elimină membru');
+        fireEvent.click(deleteButtons[2]);
+
+        expect(confirmSpy).toHaveBeenCalledWith('Ești sigur că dorești să elimini membrul invitat?');
+
+        expect(screen.queryAllByText('invitat@exemplu.com').length).toBe(0);
+    });
+
+    it('NU șterge membrul dacă se apasă Cancel pe confirmare', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+        confirmSpy.mockReturnValue(false); // Simulăm click pe "Cancel"
+
+        renderComponent();
+
+        const deleteButtons = screen.getAllByTitle('Elimină membru');
+        fireEvent.click(deleteButtons[1]); // Dăm click pe delete la Andrei
+
+        // Andrei (nume) și andrei@kid.com (email) ar trebui să fie în continuare în DOM
+        expect(screen.getAllByText(/Andrei/i).length).toBeGreaterThan(0);
+    });
+});
