@@ -298,10 +298,7 @@ export default function ExpenseMap() {
     }
 
     void run().catch((err) => {
-      if (err?.name === 'AbortError') return
-      console.error('❌ HARTA: Eroare la inițializarea hărții', err)
-      setMessage('A apărut o eroare la încărcarea hărții. Reîncearcă sau dă refresh.')
-      setMarker(null)
+      if (err?.name !== 'AbortError') throw err;
     });
     return () => controller.abort();
   }, [geocodingApiKey, isLoaded, label, loadError, mapsApiKey, state.lat, state.lng, state.locationId])

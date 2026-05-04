@@ -13,7 +13,6 @@ import ExpenseMap from './pages/ExpenseMap'
 import ExpensesMapAll from './pages/ExpensesMapAll'
 import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
-import AppErrorBoundary from './components/AppErrorBoundary'
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
 
@@ -22,29 +21,27 @@ function App() {
     PUBLIC_PATHS.includes(location.pathname.toLowerCase());
     return (
         <div style={{ width: '100%' }}>
-            <AppErrorBoundary>
-                <Routes>
-                    {/* Public */}
-                    <Route path="/" element={<LandingPage />} />
-                    <Route path="/login" element={<LoginForm />} />
-                    <Route path="/register" element={<RegisterForm />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Routes>
+                {/* Public */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/register" element={<RegisterForm />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                    {/* Protected — sidebar layout */}
-                    <Route element={<PrivateRoute><ProtectedLayout /></PrivateRoute>}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/kid-dashboard" element={<KidDashboard />} />
-                        <Route path="/add-expense" element={<ExpenseForm />} />
-                        <Route path="/expenses" element={<Expenses />} />
-                        <Route path="/expenses/map" element={<ExpenseMap />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
-                        <Route path="/family" element={<FamilySettings />} />
-                    </Route>
+                {/* Protected — sidebar layout */}
+                <Route element={<PrivateRoute><ProtectedLayout /></PrivateRoute>}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/kid-dashboard" element={<KidDashboard />} />
+                    <Route path="/add-expense" element={<ExpenseForm />} />
+                    <Route path="/expenses" element={<Expenses />} />
+                    <Route path="/expenses/map" element={<ExpenseMap />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
+                    <Route path="/family" element={<FamilySettings />} />
+                </Route>
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </AppErrorBoundary>
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
 
         </div>
     )
