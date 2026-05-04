@@ -55,27 +55,48 @@ export default function Dashboard() {
 
   // ── Google Maps SDK (NEATINS) ──────────────────────────────────────────────
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: mapsApiKey ?? '' })
+  const { isLoaded } = useJsApiLoader({
+    id: 'family-agent-google-maps',
+    googleMapsApiKey: mapsApiKey ?? '',
+    libraries: ['drawing', 'geometry'],
+  })
 
   // ── RBAC — decodare token (NEATINS) ───────────────────────────────────────
   let userRole = 'Parent'
   if (token) {
     try {
-      const p = JSON.parse(atob(token.split('.')[1]))
-      userRole = p.role || 'Parent'
-    } catch {}
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userRole = payload.role || 'Parent';
+      console.log('👤 Rol detectat din token:', userRole);
+    } catch (error) {
+      console.error("Eroare la parsarea JWT-ului:", error);
+    }
   }
 
   // ── WebSocket conexiune (LOGICĂ NEATINSĂ) ─────────────────────────────────
   useEffect(() => {
-    if (userRole === 'Child') return
-    const socket = new WebSocket('ws://localhost:8081/locatie')
-    socket.onmessage = (e) => {
-      try { setLiveLocation(JSON.parse(e.data)) }
-      catch { setLiveLocation({ raw: e.data }) }
+    console.log('🔌 Încercare conectare WebSocket... Rol:', userRole);
+    if (userRole === 'Child') {
+      console.log('🚫 WebSocket ignorat: Utilizatorul este Copil.');
+      return;
     }
-    return () => socket.close()
-  }, [userRole])
+
+    const socket = new WebSocket('ws://localhost:8081/locatie');
+
+    socket.onopen = () => console.log('🟢 WebSocket conectat cu succes la /locatie');
+    socket.onerror = (err) => console.error('🔴 Eroare WebSocket:', err);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setLiveLocation(data);
+      } catch (e) {
+        setLiveLocation({ raw: event.data });
+      }
+    };
+
+    return () => socket.close();
+  }, [userRole]);
 
   // ── KPI mouse-glow ref ─────────────────────────────────────────────────────
   const handleKpiMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

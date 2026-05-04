@@ -19,7 +19,6 @@ class EmbeddingConfigTest {
     @Test
     void testLoadDotEnvReturnsMap() {
         EmbeddingConfig config = new EmbeddingConfig();
-        @SuppressWarnings("unchecked")
         Map<String, String> result = ReflectionTestUtils.invokeMethod(config, "loadDotEnv");
         assertNotNull(result);
     }

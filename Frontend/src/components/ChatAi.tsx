@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, X, MessageSquare } from 'lucide-react';
+import api from '../api/api';
 
 const ChatAI: React.FC = () => {
 
-    // ── State (NEATINS) ────────────────────────────────────────────────────
+    // ── State ────────────────────────────────────────────────────────────
     const [isOpen,   setIsOpen]   = useState(false);
     const [messages, setMessages] = useState([
         { id: 1, text: 'Salut! Sunt asistentul tău FamilyAgent. Cum te pot ajuta cu bugetul astăzi?', sender: 'bot' }
@@ -11,24 +12,37 @@ const ChatAI: React.FC = () => {
     const [input,    setInput]    = useState('');
     const [isTyping, setIsTyping] = useState(false);
 
-    // ── Auto-scroll (NEATINS) ──────────────────────────────────────────────
+    // ── Auto-scroll ───────────────────────────────────────────────────────
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); };
     useEffect(() => { if (isOpen) scrollToBottom(); }, [messages, isTyping, isOpen]);
 
-    // ── handleSend (NEATINS) ───────────────────────────────────────────────
-    const handleSend = (e: React.FormEvent) => {
+    // ── handleSend ────────────────────────────────────────────────────────
+    const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isTyping) return;
+
         const userMsg = { id: Date.now(), text: input, sender: 'user' };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
-        setTimeout(() => {
-            const botMsg = { id: Date.now() + 1, text: 'Analizez datele tale financiare... (Simulare)', sender: 'bot' };
-            setMessages(prev => [...prev, botMsg]);
+
+        try {
+            const { data } = await api.post('/v1/chat', { message: input });
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                text: data.reply,
+                sender: 'bot',
+            }]);
+        } catch (err) {
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                text: 'Eroare la conectarea cu asistentul. Încearcă din nou.',
+                sender: 'bot',
+            }]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     return (
@@ -136,7 +150,7 @@ const ChatAI: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Messages (NEATINS) */}
+                    {/* Messages */}
                     <div style={{
                         flex: 1,
                         overflowY: 'auto',
@@ -171,7 +185,7 @@ const ChatAI: React.FC = () => {
                             </div>
                         ))}
 
-                        {/* Typing indicator (NEATINS) */}
+                        {/* Typing indicator */}
                         {isTyping && (
                             <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                                 <div style={{
@@ -199,7 +213,7 @@ const ChatAI: React.FC = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input (NEATINS) */}
+                    {/* Input */}
                     <form
                         onSubmit={handleSend}
                         style={{
