@@ -5,7 +5,7 @@ import com.proiect.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,39 +21,39 @@ import static org.mockito.Mockito.when;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
-public class AnalyticsIntegrationTest {
+class AnalyticsIntegrationTest {
 
-    @MockBean
+    @MockitoBean
     private ExpenseTools expenseTools;
 
-    @MockBean
+    @MockitoBean
     private HallucinationGuard hallucinationGuard;
 
-    @MockBean
+    @MockitoBean
     private ExpenseJpaRepository repository;
 
-    @MockBean(name = "claudeModel")
+    @MockitoBean(name = "claudeModel")
     private dev.langchain4j.model.chat.ChatLanguageModel claudeModel;
 
-    @MockBean(name = "deepseekModel")
+    @MockitoBean(name = "deepseekModel")
     private dev.langchain4j.model.chat.ChatLanguageModel deepseekModel;
 
-    @MockBean(name = "whisperModel")
+    @MockitoBean(name = "whisperModel")
     private dev.langchain4j.model.chat.ChatLanguageModel whisperModel;
 
-    @MockBean
+    @MockitoBean
     private dev.langchain4j.model.embedding.EmbeddingModel embeddingModel;
 
-    @MockBean
+    @MockitoBean
     private dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore qdrantEmbeddingStore;
 
-    @MockBean
+    @MockitoBean
     private dev.langchain4j.model.scoring.ScoringModel scoringModel;
 
-    @MockBean
+    @MockitoBean
     private ExtractionService extractionService;
 
-    @MockBean
+    @MockitoBean
     private AnalyticsAssistant analyticsAssistant;
 
     @Test

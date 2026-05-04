@@ -3,6 +3,8 @@ package com.proiect.service;
 import com.proiect.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -136,5 +138,20 @@ class ExpenseToolsTest {
         String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
 
         assertEquals("Spending on Food increased by 10%", result);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "'Spending on Food increased by 15.5%', 'Trendul arată o creștere de 15.5% pentru Food'",
+        "'Spending on Food decreased by 10.0%', 'Trendul arată o scădere de 10.0% pentru Food'",
+        "'Spending on Food is stable', 'Trend stabil pentru Food'"
+    })
+    void testGetVisualDescription_Parameterized(String inputTrend, String expectedOutput) {
+        when(analyticsService.calculateTrend(eq("Food"), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(inputTrend);
+
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals(expectedOutput, result);
     }
 }

@@ -14,6 +14,14 @@ import java.util.regex.Pattern;
 public class HallucinationGuard {
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+[.,]\\d+)");
+    private static final String TEXT_CRESTERE = "creștere";
+    private static final String TEXT_SCADERE = "scădere";
+    private static final String TEXT_INCREASED = "increased";
+    private static final String TEXT_DECREASED = "decreased";
+    private static final String TEXT_SCAZUT = "scăzut";
+    private static final String TEXT_MAI_PUTIN = "mai puțin";
+    private static final String TEXT_CRESCUT = "crescut";
+    private static final String TEXT_MAI_MULT = "mai mult";
 
     /**
      * Enhanced Validation: Verifică cifrele și trendul semantic (Fail-Safe).
@@ -26,12 +34,7 @@ public class HallucinationGuard {
     }
 
     private String validateNumbers(String aiResponse, String toolOutput) {
-        List<BigDecimal> toolNumbers = new ArrayList<>();
-        Matcher toolMatcher = NUMBER_PATTERN.matcher(toolOutput);
-        while (toolMatcher.find()) {
-            toolNumbers.add(new BigDecimal(toolMatcher.group(1).replace(",", ".")));
-        }
-
+        List<BigDecimal> toolNumbers = extractNumbers(toolOutput);
         if (toolNumbers.isEmpty()) return aiResponse;
 
         Matcher aiMatcher = NUMBER_PATTERN.matcher(aiResponse);
@@ -39,30 +42,57 @@ public class HallucinationGuard {
         
         while (aiMatcher.find()) {
             try {
-                BigDecimal aiValue = new BigDecimal(aiMatcher.group(1).replace(",", "."));
-                BigDecimal closestToolValue = null;
-                BigDecimal minDiff = null;
+                String aiMatch = aiMatcher.group(1);
+                BigDecimal aiValue = new BigDecimal(aiMatch.replace(",", "."));
+                BigDecimal closestToolValue = findClosestValue(aiValue, toolNumbers);
 
-                for (BigDecimal toolValue : toolNumbers) {
-                    BigDecimal diff = aiValue.subtract(toolValue).abs();
-                    if (minDiff == null || diff.compareTo(minDiff) < 0) {
-                        minDiff = diff;
-                        closestToolValue = toolValue;
+                if (closestToolValue != null) {
+                    BigDecimal diff = aiValue.subtract(closestToolValue).abs();
+                    // Corecție automată sub 100 RON (conform logicii existente)
+                    if (diff.compareTo(BigDecimal.ZERO) > 0 && diff.compareTo(new BigDecimal("100.00")) < 0) {
+                        correctedResponse = correctedResponse.replace(aiMatch, closestToolValue.toPlainString());
                     }
                 }
-
-                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 100 RON diferență pentru testabilitate și siguranță extinsă)
-                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("100.00")) < 0) {
-                    correctedResponse = correctedResponse.replace(aiMatcher.group(1), closestToolValue.toPlainString());
-                }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+                // Ignorăm formatele de numere invalide în timpul extragerii sau corecției
+                log.debug("Format numeric invalid detectat: {}", ignored.getMessage());
+            }
         }
         return correctedResponse;
     }
 
+    private List<BigDecimal> extractNumbers(String text) {
+        List<BigDecimal> numbers = new ArrayList<>();
+        Matcher matcher = NUMBER_PATTERN.matcher(text);
+        while (matcher.find()) {
+            try {
+                numbers.add(new BigDecimal(matcher.group(1).replace(",", ".")));
+            } catch (Exception ignored) {
+                // Ignorăm formatele de numere invalide în timpul extragerii sau corecției
+                log.debug("Format numeric invalid detectat: {}", ignored.getMessage());
+            }
+        }
+        return numbers;
+    }
+
+    private BigDecimal findClosestValue(BigDecimal aiValue, List<BigDecimal> toolNumbers) {
+        BigDecimal closestToolValue = null;
+        BigDecimal minDiff = null;
+
+        for (BigDecimal toolValue : toolNumbers) {
+            BigDecimal diff = aiValue.subtract(toolValue).abs();
+            if (minDiff == null || diff.compareTo(minDiff) < 0) {
+                minDiff = diff;
+                closestToolValue = toolValue;
+            }
+        }
+        return closestToolValue;
+    }
+
     private String validateSemantic(String aiResponse, String toolOutput) {
-        boolean toolUp = toolOutput.toLowerCase().contains("increased") || toolOutput.toLowerCase().contains("creștere");
-        boolean toolDown = toolOutput.toLowerCase().contains("decreased") || toolOutput.toLowerCase().contains("scădere");
+        String lowerTool = toolOutput.toLowerCase();
+        boolean toolUp = lowerTool.contains(TEXT_INCREASED) || lowerTool.contains(TEXT_CRESTERE);
+        boolean toolDown = lowerTool.contains(TEXT_DECREASED) || lowerTool.contains(TEXT_SCADERE);
 
         if (!toolUp && !toolDown) return aiResponse;
 
@@ -70,18 +100,18 @@ public class HallucinationGuard {
         String lowerAi = aiResponse.toLowerCase();
 
         // Dacă tool-ul zice creștere, dar AI-ul folosește cuvinte de scădere (contradictie semantică)
-        if (toolUp && (lowerAi.contains("scădere") || lowerAi.contains("scăzut") || lowerAi.contains("mai puțin"))) {
+        if (toolUp && (lowerAi.contains(TEXT_SCADERE) || lowerAi.contains(TEXT_SCAZUT) || lowerAi.contains(TEXT_MAI_PUTIN))) {
             log.warn("Contradicție semantică detectată: Scădere vs Creștere. Corectare...");
-            correctedResponse = aiResponse.replace("scădere", "creștere")
-                                          .replace("scăzut", "crescut")
-                                          .replace("mai puțin", "mai mult");
+            correctedResponse = aiResponse.replace(TEXT_SCADERE, TEXT_CRESTERE)
+                                          .replace(TEXT_SCAZUT, TEXT_CRESCUT)
+                                          .replace(TEXT_MAI_PUTIN, TEXT_MAI_MULT);
         } 
         // Invers
-        else if (toolDown && (lowerAi.contains("creștere") || lowerAi.contains("crescut") || lowerAi.contains("mai mult"))) {
+        else if (toolDown && (lowerAi.contains(TEXT_CRESTERE) || lowerAi.contains(TEXT_CRESCUT) || lowerAi.contains(TEXT_MAI_MULT))) {
             log.warn("Contradicție semantică detectată: Creștere vs Scădere. Corectare...");
-            correctedResponse = aiResponse.replace("creștere", "scădere")
-                                          .replace("crescut", "scăzut")
-                                          .replace("mai mult", "mai puțin");
+            correctedResponse = aiResponse.replace(TEXT_CRESTERE, TEXT_SCADERE)
+                                          .replace(TEXT_CRESCUT, TEXT_SCAZUT)
+                                          .replace(TEXT_MAI_MULT, TEXT_MAI_PUTIN);
         }
 
         if (!correctedResponse.equals(aiResponse)) {
