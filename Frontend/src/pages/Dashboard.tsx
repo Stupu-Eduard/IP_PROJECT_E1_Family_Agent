@@ -55,7 +55,11 @@ export default function Dashboard() {
 
   // ── Google Maps SDK (NEATINS) ──────────────────────────────────────────────
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: mapsApiKey ?? '' })
+  const { isLoaded } = useJsApiLoader({
+    id: 'family-agent-google-maps',
+    googleMapsApiKey: mapsApiKey ?? '',
+    libraries: ['drawing', 'geometry'],
+  })
 
   // ── RBAC — decodare token (NEATINS) ───────────────────────────────────────
   let userRole = 'Parent'
