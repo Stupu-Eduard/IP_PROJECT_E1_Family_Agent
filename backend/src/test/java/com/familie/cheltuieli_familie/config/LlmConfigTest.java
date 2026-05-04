@@ -27,6 +27,7 @@ class LlmConfigTest {
     @Test
     void testLoadDotEnvReturnsMap() {
         LlmConfig config = new LlmConfig();
+        @SuppressWarnings("unchecked")
         Map<String, String> result = ReflectionTestUtils.invokeMethod(config, "loadDotEnv");
         assertNotNull(result);
     }

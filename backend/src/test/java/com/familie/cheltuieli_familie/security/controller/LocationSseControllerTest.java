@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = LocationSseController.class)
+@WebMvcTest(controllers = LocationSseController.class) //
 @AutoConfigureMockMvc(addFilters = false)
 class LocationSseControllerTest {
 
@@ -23,16 +23,16 @@ class LocationSseControllerTest {
     @MockitoBean
     private LocationStreamService locationStreamService;
 
-    @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
-
     @Test
     void testStreamLocation() throws Exception {
         Long parentId = 1L;
+
+        // Mock-uim raspunsul serviciului
         when(locationStreamService.subscribeParent(parentId)).thenReturn(new SseEmitter());
 
+        // EXECUTIA: Folosim ruta exacta si parametrul cerut de @RequestParam
         mockMvc.perform(get("/api/v1/parent/location-stream")
-                        .param("parentId", parentId.toString()))
+                        .param("parentId", parentId.toString())) // Adaugam ?parentId=1
                 .andExpect(status().isOk());
     }
 }
