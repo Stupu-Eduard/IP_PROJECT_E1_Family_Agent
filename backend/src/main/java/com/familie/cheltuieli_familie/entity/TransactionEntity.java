@@ -1,4 +1,4 @@
-package com.familie.cheltuieli_familie.model;
+package com.familie.cheltuieli_familie.entity;
 
 import jakarta.persistence.*;
 

@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.TransactionEntity;
+import com.familie.cheltuieli_familie.entity.TransactionEntity;
 import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
 import com.familie.cheltuieli_familie.repository.TransactionRepository;
