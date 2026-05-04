@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+
+    <!-- Appender-ul Loki se activează DOAR pe profilul de producție/hosting -->
+    <springProfile name="prod">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <http>
+                <url>http://my-loki:3100/loki/api/v1/push</url>
+            </http>
+            <format>
+                <label>
+                    <pattern>app=cheltuieli-familie,host=${HOSTNAME},level=%level</pattern>
+                </label>
+                <message>
+                    <pattern>l=%level c=%logger{20} t=%thread | %msg %ex</pattern>
+                </message>
+                <sortByTime>true</sortByTime>
+            </format>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <!-- Adăugăm referința la Loki doar dacă profilul 'prod' este activ -->
+        <springProfile name="prod">
+            <appender-ref ref="LOKI" />
+        </springProfile>
+    </root>
+</configuration>
