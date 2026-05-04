@@ -60,7 +60,7 @@ public class BankStatementParser {
 
                 logger.debug("Tranzactie gasita: {} | {} | {}", date, description, amount);
 
-                transactions.add(new Transaction(date, description, amount));
+                transactions.add(new Transaction(date.toString(), amount, description, "expense", "RON"));
 
             } catch (Exception e) {
                 logger.warn("Linie ignorata (eroare format): {} | Eroare: {}", line, e.getMessage());

@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.model.Transaction;
+import com.familie.cheltuieli_familie.model.StorageResult;
 import org.springframework.stereotype.Service;
 import java.io.File;
 import java.util.List;
@@ -11,11 +12,13 @@ public class ExtractionPipelineService {
     private final TextBasedPdfExtractor textExtractor;
     private final BankOcrService ocrProcessor;
     private final BankStatementParser bankParser;
+    private final StorageService storageService;
 
-    public ExtractionPipelineService(TextBasedPdfExtractor textExtractor, BankOcrService ocrProcessor, BankStatementParser bankParser) {
+    public ExtractionPipelineService(TextBasedPdfExtractor textExtractor, BankOcrService ocrProcessor, BankStatementParser bankParser, StorageService storageService) {
         this.textExtractor = textExtractor;
         this.ocrProcessor = ocrProcessor;
         this.bankParser = bankParser;
+        this.storageService = storageService;
     }
 
     private String runOcrPipeline(File file, String bank) throws Exception {
@@ -36,6 +39,9 @@ public class ExtractionPipelineService {
             rawText = ocrProcessor.extractText(file, bank);
         }
 
-        return bankParser.parseText(rawText);
+        List<Transaction> transactions = bankParser.parseText(rawText);
+        StorageResult result = storageService.save(transactions);
+        System.out.println("Salveaza: " + result.toString());
+        return transactions;
     }
 }
