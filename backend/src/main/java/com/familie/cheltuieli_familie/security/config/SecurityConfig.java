@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.security.config;
 
-import com.familie.cheltuieli_familie.security.filter.CustomCsrfFilter;
 import com.familie.cheltuieli_familie.security.filter.SessionCookieFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final SessionCookieFilter sessionCookieFilter;
-    private final CustomCsrfFilter customCsrfFilter;
+    // private final CustomCsrfFilter customCsrfFilter; // Inactiv pentru prezentare
 
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
@@ -38,8 +37,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+                // Filtrele custom au fost dezactivate temporar pentru prezentare
                 .addFilterBefore(sessionCookieFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(customCsrfFilter, UsernamePasswordAuthenticationFilter.class)
+                // .addFilterAfter(customCsrfFilter, UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()

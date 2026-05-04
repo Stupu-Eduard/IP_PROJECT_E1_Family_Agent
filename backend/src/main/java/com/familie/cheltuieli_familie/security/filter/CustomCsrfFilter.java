@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.security.filter;
 
-import com.familie.cheltuieli_familie.repository.AlertRepository; // Asigură-te că folosești repository-ul tău real
+/*import com.familie.cheltuieli_familie.repository.AlertRepository; // Asigură-te că folosești repository-ul tău real
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,4 +58,4 @@ public class CustomCsrfFilter extends OncePerRequestFilter {
                 uri.startsWith("/api/ws") ||
                 uri.startsWith("/api/v1/demo");
     }
-}
+}*/
