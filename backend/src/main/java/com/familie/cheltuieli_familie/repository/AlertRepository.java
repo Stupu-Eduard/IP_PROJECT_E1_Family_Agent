@@ -10,4 +10,7 @@ import java.util.List;
 public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByParentIdOrderByTimestampDesc(Long parentId);
     List<Alert> findByParentIdAndReadFalseOrderByTimestampDesc(Long parentId);
+
+    // Metoda nouă pentru validarea CSRF
+    boolean existsByRestrictedCategory(String restrictedCategory);
 }
