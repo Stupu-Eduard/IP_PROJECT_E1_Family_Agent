@@ -1,189 +1,255 @@
 import { useState } from 'react';
 import * as yup from 'yup';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
 
-
+// ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
 const loginSchema = yup.object().shape({
-  email: yup
-      .string()
-      .required('Adresa de email este obligatorie.')
-      .email('Te rugăm să introduci o adresă de email validă.'),
-  password: yup
-      .string()
-      .required('Parola este obligatorie.')
-      .min(6, 'Parola trebuie să aibă minimum 6 caractere.')
+  email: yup.string().required('Adresa de email este obligatorie.').email('Te rugăm să introduci o adresă de email validă.'),
+  password: yup.string().required('Parola este obligatorie.').min(6, 'Parola trebuie să aibă minimum 6 caractere.'),
 });
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+
+  // ── State (NEATINS) ──────────────────────────────────────────────────────
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
+  const [error,     setError]     = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const token = useAuthStore((state) => state.token);
+  const token           = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const login = useAuthStore((state) => state.login);
+  const login           = useAuthStore((state) => state.login);
 
+  // ── Redirect dacă deja autentificat (NEATINS) ────────────────────────────
   if (isAuthenticated && token && !isTokenExpired(token)) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // ── Mock JWT (NEATINS) ────────────────────────────────────────────────────
   const createMockJwt = () => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-
-    // Alocăm rolul de 'Child' strict pentru credențialele copilului
     const assignedRole = email.toLowerCase() === 'copil@example.com' ? 'Child' : 'Parent';
-
-    const payload = btoa(
-        JSON.stringify({
-          sub: email,
-          role: assignedRole,
-          exp: Math.floor(Date.now() / 1000) + 60 * 60,
-        }),
-    );
-
+    const payload = btoa(JSON.stringify({
+      sub: email, role: assignedRole,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+    }));
     return `${header}.${payload}.mock_signature`;
   };
 
+  // ── handleLogin (NEATINS) ─────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     try {
       await loginSchema.validate({ email, password });
       setIsLoading(true);
-
       const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
         setTimeout(() => {
-          if (email && password) {
-            resolve({ token: createMockJwt() });
-          } else {
-            reject(new Error("Eroare de la server: Date incorecte."));
-          }
+          if (email && password) resolve({ token: createMockJwt() });
+          else reject(new Error('Eroare de la server: Date incorecte.'));
         }, 1500);
       });
-
       const response = await mockApiCall;
       login(response.token);
       navigate('/dashboard', { replace: true });
-
     } catch (err: unknown) {
-      if (err instanceof yup.ValidationError) {
-        setError(err.message);
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('A apărut o eroare neașteptată.');
-      }
+      if (err instanceof yup.ValidationError) setError(err.message);
+      else if (err instanceof Error) setError(err.message);
+      else setError('A apărut o eroare neașteptată.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Clasă reutilizabilă pentru a menține codul curat
-  const inputStyle = "w-full bg-white border border-brand-border rounded-[10px] px-4 py-3 text-sm text-brand-dark placeholder:text-brand-muted focus:outline-none focus:border-brand-muted transition-colors";
-
+  // ── UI — Variation C (editorial / typography-first) ───────────────────────
   return (
-      <div className="flex-1 w-full flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white border border-brand-border rounded-[14px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col fade-in-up">
+      <div style={{
+        width: '100%', minHeight: '100vh',
+        background: 'var(--color-bg)',
+        display: 'flex', flexDirection: 'column',
+        padding: '32px 56px 56px',
+        fontFamily: 'inherit',
+      }}>
 
-          {/* Header Section */}
-          <div className="flex flex-col items-center mb-8 text-center">
-            <div className="w-12 h-12 rounded-[10px] bg-brand-dark flex items-center justify-center text-white font-bold text-xl mb-4 shadow-sm">
-              FA
+        {/* Topbar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 56 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: 'var(--color-ink)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13,
+            }}>FA</div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', letterSpacing: '-0.2px' }}>FamilyAgent</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--color-muted)' }}>
+            Cont nou?{' '}
+            <Link to="/register" style={{ color: 'var(--color-ink)', fontWeight: 600, textDecoration: 'none' }}>
+              Înregistrează-te
+            </Link>
+          </div>
+        </div>
+
+        {/* Grid 2 coloane */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 80, flex: 1, alignItems: 'center',
+          maxWidth: 1000, margin: '0 auto', width: '100%',
+        }}>
+
+          {/* Stânga — copy editorial */}
+          <div className="fade-up">
+            <div style={{
+              fontSize: 11, letterSpacing: 2, fontWeight: 600,
+              color: 'var(--color-primary)', textTransform: 'uppercase',
+              marginBottom: 24, display: 'inline-flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ width: 24, height: 1, background: 'var(--color-primary)', display: 'inline-block' }} />
+              Capitolul 12
             </div>
-            <h1 className="text-2xl font-medium text-brand-dark tracking-tight mb-1">FamilyAgent</h1>
-            <p className="text-[13px] text-brand-muted">Gestionează cheltuielile familiei eficient.</p>
+
+            <h1 style={{
+              fontSize: 64, fontWeight: 400, letterSpacing: '-2.5px',
+              lineHeight: 0.98, margin: '0 0 24px', color: 'var(--color-ink)',
+            }}>
+              Bună,<br />
+              <em style={{ color: 'var(--color-primary)', fontStyle: 'italic', fontWeight: 400 }}>Ana.</em>
+            </h1>
+
+            <p style={{ fontSize: 16, color: 'var(--color-muted)', lineHeight: 1.55, margin: '0 0 32px', maxWidth: 380 }}>
+              Săptămâna trecută familia ta a economisit 312 RON față de luna anterioară. Continuă tendința.
+            </p>
+
+            {/* Card hint */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '14px 18px', background: '#fff',
+              border: '1px solid var(--color-border)', borderRadius: 14, maxWidth: 360,
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: 'var(--color-primary-tint)', color: 'var(--color-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 3h14v18l-3-2-3 2-3-2-3 2-2-2V3z"/><path d="M9 8h6"/><path d="M9 12h6"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>3 bonuri noi</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>Te așteaptă din ultima vizită</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-muted-3)' }}>
+                <path d="M5 12h14"/><path d="m13 5 7 7-7 7"/>
+              </svg>
+            </div>
           </div>
 
-          {/* Error Display */}
-          {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-[10px] text-sm mb-6 flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{error}</span>
+          {/* Dreapta — form editorial fără borduri pe inputs */}
+          <div className="fade-up" style={{ maxWidth: 380, width: '100%', justifySelf: 'end' }}>
+
+            {/* Error */}
+            {error && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: '#FEF2F2', border: '1px solid #FECACA',
+                  borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+                  fontSize: 13, color: '#DC2626',
+                }}>
+                  ⚠ {error}
+                </div>
+            )}
+
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+              {/* Email */}
+              <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>EMAIL</div>
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="username@exemplu.com"
+                    disabled={isLoading}
+                    style={{
+                      width: '100%', border: 'none', outline: 'none',
+                      background: 'transparent', fontFamily: 'inherit',
+                      fontSize: 18, color: 'var(--color-ink)', padding: 0,
+                      opacity: isLoading ? 0.6 : 1,
+                    }}
+                />
               </div>
-          )}
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-5">
-            {/* Email Field */}
-            <div>
-              <label className="block text-[11px] tracking-[1px] text-brand-muted font-medium mb-2 uppercase">Email</label>
-              <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputStyle}
-                  placeholder="username@exemplu.com"
-              />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-[11px] tracking-[1px] text-brand-muted font-medium uppercase">Parolă</label>
-                <Link to="/forgot-password" className="text-xs font-medium text-brand-muted hover:text-brand-dark transition-colors">
-                  Ai uitat?
-                </Link>
+              {/* Parolă */}
+              <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span className="label" style={{ fontSize: 10 }}>PAROLĂ</span>
+                  <Link to="/forgot-password" style={{
+                    fontSize: 10, letterSpacing: 1, fontWeight: 600,
+                    color: 'var(--color-primary)', textDecoration: 'none',
+                  }}>
+                    AI UITAT?
+                  </Link>
+                </div>
+                <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={isLoading}
+                    style={{
+                      width: '100%', border: 'none', outline: 'none',
+                      background: 'transparent', fontFamily: 'inherit',
+                      fontSize: 18, color: 'var(--color-ink)', padding: 0,
+                      letterSpacing: '0.1em', opacity: isLoading ? 0.6 : 1,
+                    }}
+                />
               </div>
-              <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputStyle}
-                  placeholder="••••••••"
-              />
+
+              {/* Submit */}
+              <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn btn-primary"
+                  style={{ marginTop: 28, padding: '14px 20px', borderRadius: 14, fontSize: 14, justifyContent: 'space-between', opacity: isLoading ? 0.7 : 1 }}
+              >
+                <span>{isLoading ? 'Se procesează...' : 'Intră în cont'}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"/><path d="m13 5 7 7-7 7"/>
+                </svg>
+              </button>
+
+              {/* Securitate */}
+              <div style={{ marginTop: 18, fontSize: 11.5, color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3 4 6v6c0 4.5 3.4 8.4 8 9 4.6-.6 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>
+                </svg>
+                Conexiune criptată · Datele rămân la tine.
+              </div>
+            </form>
+
+            {/* Date demo */}
+            <div style={{
+              marginTop: 28,
+              background: 'var(--color-primary-tint)',
+              border: '1px solid var(--color-primary-edge)',
+              borderRadius: 12, padding: 14,
+              fontSize: 12, lineHeight: 1.7, color: '#7A4A2A',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>💡 Date de test</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                <span>Cont Părinte</span><code style={{ fontFamily: 'inherit' }}>test@example.com</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                <span>Cont Copil</span><code style={{ fontFamily: 'inherit' }}>copil@example.com</code>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                <span>Parolă</span><code style={{ fontFamily: 'inherit' }}>password123</code>
+              </div>
             </div>
-
-            {/* Login Button */}
-            <button
-                type="submit"
-                disabled={isLoading}
-                className="mt-2 w-full bg-brand-dark text-white rounded-[10px] py-3.5 text-sm font-medium flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-
-              {isLoading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Se procesează...
-                  </>
-              ) : 'Intră în cont'}
-            </button>
-
-            <div className="mt-8 text-center border-t border-[#EDE9E3] pt-6">
-              <p className="text-[13px] text-[#9A8A7C]">
-                Nu ai un cont?{' '}
-                <Link
-                    to="/register"
-                    className="font-medium text-[#2D2926] hover:text-[#C97B4B] transition-colors"
-                >
-                  Înregistrează-te aici
-                </Link>
-              </p>
-            </div>
-
-          </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 bg-[#FFF8F2] border border-[#F0DFD0] rounded-[10px] p-4 text-sm text-[#7A5C44]">
-            <p className="font-medium mb-1 flex items-center gap-1.5">
-              <span>💡</span> Date de test:
-            </p>
-            <p className="text-[13px] opacity-90">Cont Părinte: test@example.com</p>
-            <p className="text-[13px] opacity-90">Cont Copil: copil@example.com</p>
-            <p className="text-[13px] opacity-90">Parola: password123</p>
-          </div>
-
-          {/* Divider */}
-          <div className="mt-6 text-center">
-            <p className="text-[11px] text-brand-muted">
-              Aceasta este o versiune demo. Autentificarea este simulată.
-            </p>
           </div>
         </div>
       </div>

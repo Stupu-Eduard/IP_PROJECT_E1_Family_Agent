@@ -1,16 +1,15 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.service.ExtractionService;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -20,6 +19,8 @@ public class ExpensePipelineService {
     private final ExtractionService extractionService;
     private final SyncService syncService;
     private final PipelineValidationService validationService;
+    private final ThePipeHandler thePipeHandler;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public List<Long> processRawInput(String rawText) {
@@ -47,8 +48,17 @@ public class ExpensePipelineService {
 
             // validate Persistence
             validationService.validatePersistence(entity.getId());
+
+            // --- THE PIPE: Trimitem notificarea în timp real ---
+            try {
+                String payload = objectMapper.writeValueAsString(entity);
+                thePipeHandler.broadcast(payload);
+            } catch (Exception e) {
+                log.error("Failed to broadcast expense to The Pipe", e);
+            }
+            // --------------------------------------------------
             
             return entity.getId();
-        }).collect(Collectors.toList());
+        }).toList();
     }
 }

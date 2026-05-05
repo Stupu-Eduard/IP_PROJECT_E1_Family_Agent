@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/locations")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 public class LocationController {
 
     private final LocationRepository locationRepository;
@@ -27,7 +27,6 @@ public class LocationController {
         Location location = locationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Location not found"));
 
-        // We don't read geography back here; list endpoint will project lat/lng.
         return new LocationDto(location.getId(), location.getStore(), null, location.getCity(), location.getCountry(), body.lat(), body.lng());
     }
 }
