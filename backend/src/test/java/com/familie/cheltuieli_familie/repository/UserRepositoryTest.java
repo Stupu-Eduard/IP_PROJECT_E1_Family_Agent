@@ -25,7 +25,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("Alex");
         user.setEmail("alex@test.com");
-        user.setPassword_h("pass123");
+        user.setPasswordH("pass123");
         user.setCreatedAt(LocalDate.now());
 
         User saved = userRepository.save(user);
@@ -40,7 +40,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("Maria");
         user.setEmail("maria@test.com");
-        user.setPassword_h("pass123");
+        user.setPasswordH("pass123");
         user.setCreatedAt(LocalDate.now());
 
         User saved = userRepository.save(user);
@@ -60,7 +60,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("OldName");
         user.setEmail("update@test.com");
-        user.setPassword_h("pass");
+        user.setPasswordH("pass");
         user.setCreatedAt(LocalDate.now());
 
         User saved = userRepository.save(user);
@@ -78,7 +78,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("ToDelete");
         user.setEmail("delete@test.com");
-        user.setPassword_h("pass");
+        user.setPasswordH("pass");
         user.setCreatedAt(LocalDate.now());
 
         User saved = userRepository.save(user);
@@ -97,13 +97,13 @@ class UserRepositoryTest {
         User u1 = new User();
         u1.setName("User1");
         u1.setEmail("unique@test.com");
-        u1.setPassword_h("pass1");
+        u1.setPasswordH("pass1");
         u1.setCreatedAt(LocalDate.now());
 
         User u2 = new User();
         u2.setName("User2");
         u2.setEmail("unique@test.com");
-        u2.setPassword_h("pass2");
+        u2.setPasswordH("pass2");
         u2.setCreatedAt(LocalDate.now());
 
         userRepository.save(u1);
@@ -119,7 +119,7 @@ class UserRepositoryTest {
     void shouldFailWhenEmailIsNull() {
         User user = new User();
         user.setName("Invalid");
-        user.setPassword_h("pass");
+        user.setPasswordH("pass");
         user.setCreatedAt(LocalDate.now());
 
         assertThrows(Exception.class, () -> {
@@ -147,7 +147,7 @@ class UserRepositoryTest {
         User user = new User();
         user.setName("Exists");
         user.setEmail("exists@test.com");
-        user.setPassword_h("pass");
+        user.setPasswordH("pass");
 
         User saved = userRepository.save(user);
 

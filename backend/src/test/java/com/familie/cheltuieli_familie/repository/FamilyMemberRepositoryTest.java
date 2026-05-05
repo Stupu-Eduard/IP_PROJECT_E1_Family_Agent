@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.repository;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional
 class FamilyMemberRepositoryTest {
 
     @Autowired
@@ -36,7 +38,7 @@ class FamilyMemberRepositoryTest {
         u.setName("User_" + nameSuffix);
         // UUID previne coliziunile de email între teste
         u.setEmail("fm_" + UUID.randomUUID() + "@test.com");
-        u.setPassword_h("pass");
+        u.setPasswordH("pass");
         u.setCreatedAt(LocalDate.now());
         return userRepository.save(u);
     }

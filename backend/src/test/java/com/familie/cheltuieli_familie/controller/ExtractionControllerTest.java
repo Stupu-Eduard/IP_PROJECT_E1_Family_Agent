@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.service.ExtractionService;
@@ -11,17 +10,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.util.List;
 
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(ExtractionController.class)
@@ -39,6 +39,8 @@ class ExtractionControllerTest {
 
     @MockitoBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
 
     @Test
     void testExtractDetails() throws Exception {
@@ -63,11 +65,11 @@ class ExtractionControllerTest {
 
     @Test
     void testValidateOcr() throws Exception {
-        when(extractionService.validateOcrContent("raw ocr text")).thenReturn("VALID");
+        when(extractionService.validateOcrContent(anyString())).thenReturn("VALID");
 
         mockMvc.perform(post("/v1/extract/validate-ocr")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("raw ocr text"))
+                        .content("\"raw ocr text\""))
                 .andExpect(status().isOk())
                 .andExpect(content().string("VALID"));
     }
