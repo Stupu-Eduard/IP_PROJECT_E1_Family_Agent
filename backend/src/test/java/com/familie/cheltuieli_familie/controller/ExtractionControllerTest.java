@@ -10,11 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
-
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,7 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc(addFilters = false)
-@WebMvcTest(controllers = ExtractionController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@WebMvcTest(ExtractionController.class)
 @ActiveProfiles("test")
 class ExtractionControllerTest {
 
@@ -70,7 +66,7 @@ class ExtractionControllerTest {
 
         mockMvc.perform(post("/v1/extract/validate-ocr")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"raw ocr text\""))
+                        .content("raw ocr text"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("VALID"));
     }
