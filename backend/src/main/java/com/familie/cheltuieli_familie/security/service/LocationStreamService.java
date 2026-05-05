@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
 import com.familie.cheltuieli_familie.service.LocationAdapterService;
+import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.stereotype.Service;
@@ -26,13 +27,16 @@ public class LocationStreamService {
 
     private final Map<Long, SseEmitter> parentEmitters = new ConcurrentHashMap<>();
     private final LocationAdapterService locationAdapterService;
+    private final ThePipeHandler thePipeHandler;
 
     // ObjectMapper = unealta Jackson care transforma obiecte Java in JSON
     // JavaTimeModule = modul care stie sa serializeze LocalDateTime corect
     private final ObjectMapper objectMapper;
 
-    public LocationStreamService(LocationAdapterService locationAdapterService) {
+    public LocationStreamService(LocationAdapterService locationAdapterService, 
+                                 ThePipeHandler thePipeHandler) {
         this.locationAdapterService = locationAdapterService;
+        this.thePipeHandler = thePipeHandler;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -71,36 +75,28 @@ public class LocationStreamService {
     public void sendLocationToParent(Long childId, Long parentId,
                                      double latitude, double longitude,
                                      List<String> placeTypes) {
-        SseEmitter emitter = parentEmitters.get(parentId);
-
-        if (emitter == null) {
-            // Parintele nu e conectat momentan, ignoram
-            return;
-        }
+        
+        // Transformam datele brute intr-un DTO structurat prin adaptor
+        LocationMapDto dto = locationAdapterService.adapt(
+                childId, parentId, latitude, longitude, placeTypes
+        );
 
         try {
-            // Transformam datele brute intr-un DTO structurat prin adaptor
-            LocationMapDto dto = locationAdapterService.adapt(
-                    childId, parentId, latitude, longitude, placeTypes
-            );
-
-            // Serializam DTO-ul in JSON si il trimitem prin SSE
-            // Rezultat JSON pentru frontend:
-            //   "childId": 2,
-            //   "parentId": 1,
-            //   "lat": 47.1585,
-            //   "lng": 27.6014,
-            //   "isRestricted": true,
-            //   "timestamp": "2026-04-26T10:30:00"
-
             String payload = objectMapper.writeValueAsString(dto);
 
-            emitter.send(SseEmitter.event()
-                    .name("location-update")
-                    .data(payload));
+            // 1. Trimitem prin THE PIPE (WebSockets) - noua implementare
+            thePipeHandler.broadcast(payload);
+
+            // 2. Trimitem prin SSE (vechea implementare, pentru compatibilitate)
+            SseEmitter emitter = parentEmitters.get(parentId);
+            if (emitter != null) {
+                emitter.send(SseEmitter.event()
+                        .name("location-update")
+                        .data(payload));
+            }
 
         } catch (IOException e) {
-            // Conexiunea s-a inchis neasteptat
+            // Conexiunea SSE s-a inchis neasteptat
             parentEmitters.remove(parentId);
         }
     }

@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.repository;
 
 import com.familie.cheltuieli_familie.model.Family;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional
 class FamilyRepositoryTest {
 
     @Autowired

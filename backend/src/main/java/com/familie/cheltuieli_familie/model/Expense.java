@@ -3,7 +3,6 @@ package com.familie.cheltuieli_familie.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.util.List;
 
 @Entity
 @Table(name = "expenses")
@@ -17,7 +16,7 @@ public class Expense {
     private String description;
 
     @Column(name = "expense_date")
-    private java.time.LocalDateTime expense_date; // Task: expense_date, rename
+    private java.time.LocalDateTime expenseDate; // Task: expense_date, rename
 
     @Column(length = 10)
     private String currency = "RON"; // Task: currency, se pune ron default dar se poate schimba
