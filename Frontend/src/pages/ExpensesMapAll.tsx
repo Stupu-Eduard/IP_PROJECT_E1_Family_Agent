@@ -56,7 +56,7 @@ export default function ExpensesMapAll() {
 
   // polygon drawing state
   const polygonRef = useRef<any>(null);
-  const [polygonPath, setPolygonPath] = useState<any[] | null>(null);
+  const [, setPolygonPath] = useState<any[] | null>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
 
   // selected expense / place details for left panel

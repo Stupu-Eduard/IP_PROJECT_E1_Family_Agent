@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
 import KidDashboard from './KidDashboard'
+import { decodeJwtPayload } from '../utils/jwt'
 
 // ─── Google Maps container style ────────────────────────────────────────────
 const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
@@ -45,7 +46,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   // ── State WebSocket locație live (LOGICĂ NEATINSĂ) ─────────────────────────
-  const [liveLocation, setLiveLocation] = useState<any>(null)
+  const [liveLocation, setLiveLocation] = useState<{ lat?: number; lng?: number; isRestricted?: boolean; raw?: string } | null>(null)
   // Counter pentru "actualizat acum Xs" în preview hartă
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -65,8 +66,8 @@ export default function Dashboard() {
   let userRole = 'Parent'
   if (token) {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      userRole = payload.role || 'Parent';
+      const payload = decodeJwtPayload(token)
+      userRole = payload?.role || 'Parent'
       console.log('👤 Rol detectat din token:', userRole);
     } catch (error) {
       console.error("Eroare la parsarea JWT-ului:", error);
@@ -90,7 +91,7 @@ export default function Dashboard() {
       try {
         const data = JSON.parse(event.data);
         setLiveLocation(data);
-      } catch (e) {
+      } catch {
         setLiveLocation({ raw: event.data });
       }
     };

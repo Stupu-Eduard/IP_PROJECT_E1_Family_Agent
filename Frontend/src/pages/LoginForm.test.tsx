@@ -17,14 +17,14 @@ vi.mock('react-router-dom', async () => {
 })
 
 // State-ul mock-uit pentru Store
-let mockAuthData = {
+const mockAuthData = {
     login: vi.fn(),
     isAuthenticated: false,
-    token: null
+    token: null as string | null,
 }
 
 vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector(mockAuthData),
+    useAuthStore: (selector: (state: typeof mockAuthData) => unknown) => selector(mockAuthData),
 }))
 
 vi.mock('../utils/jwt', () => ({

@@ -1,5 +1,11 @@
-interface JwtPayload {
+export interface JwtPayload {
   exp?: number
+  sub?: string
+  email?: string
+  name?: string
+  id?: string | number
+  userId?: string | number
+  role?: string
 }
 
 function decodeBase64Url(value: string): string {

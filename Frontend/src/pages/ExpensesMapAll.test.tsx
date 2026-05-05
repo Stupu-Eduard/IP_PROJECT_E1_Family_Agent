@@ -21,7 +21,7 @@ vi.mock('@react-google-maps/api', () => ({
                 { lat: () => 44.4, lng: () => 26.1 },
                 { lat: () => 44.5, lng: () => 26.2 },
               ],
-              addListener: (_: string, cb: any) => ({ remove: vi.fn() }),
+              addListener: (_: string, _cb: unknown) => ({ remove: vi.fn() }),
             }),
             __listeners: null,
           };
@@ -145,7 +145,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 9. Click pe marker afișează panoul lateral ───────────────────────
   it('9. clicking a marker shows the side panel with location info', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({}),
     }) as any;
@@ -161,7 +161,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 10. Click pe marker + Places API răspunde cu date ────────────────
   it('10. clicking marker fetches place details from Places API', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
@@ -200,7 +200,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 11. Click marker + website link vizibil ──────────────────────────
   it('11. shows website and google maps links after marker click', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ places: [{ id: 'place123', googleMapsUri: 'https://maps.google.com/place123' }] }),
@@ -291,7 +291,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 19. geocodeAddress — expenses fără coords, cu API key ────────────
   it('19. geocodes expenses without coordinates when API key exists', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         results: [{ geometry: { location: { lat: 44.5, lng: 26.2 } } }],
@@ -311,7 +311,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 20. geocodeAddress — fetch eșuează ──────────────────────────────
   it('20. handles geocode fetch failure gracefully', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error')) as any;
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error')) as any;
 
     const expenseNoCoords = [
       { id: 6, amount: 20, category: 'Fun', person: 'Bob', description: 'Parc', date: '2026-04-23' },
@@ -323,7 +323,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 21. Places API — primul fetch eșuează ───────────────────────────
   it('21. handles Places API first fetch failure gracefully', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }) as any;
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }) as any;
 
     await renderComponent();
     await act(async () => { fireEvent.click(screen.getAllByTestId('marker')[0]); });
@@ -335,7 +335,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 22. Places API — al doilea fetch (detalii) eșuează ──────────────
   it('22. handles Places API details fetch failure gracefully', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ places: [{ id: 'place123', googleMapsUri: null }] }),
@@ -352,7 +352,7 @@ describe('ExpensesMapAll', () => {
 
   // ── 23. Marker cu place închis ───────────────────────────────────────
   it('23. shows Inchis when place is closed', async () => {
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ places: [{ id: 'place456', googleMapsUri: 'https://maps.google.com/p456' }] }),

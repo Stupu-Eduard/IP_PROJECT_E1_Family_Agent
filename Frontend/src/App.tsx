@@ -35,6 +35,7 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/kid-dashboard" element={<KidDashboard />} />
                         <Route path="/add-expense" element={<ExpenseForm />} />
+                        <Route path="/expenses/:id/edit" element={<ExpenseForm />} />
                         <Route path="/expenses" element={<Expenses />} />
                         <Route path="/expenses/map" element={<ExpenseMap />} />
                         <Route path="/reports" element={<Reports />} />

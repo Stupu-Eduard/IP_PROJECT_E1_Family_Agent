@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { decodeJwtPayload } from '../utils/jwt'
 
 // ── Nav items Părinte ──────────────────────────────────────────────────────
 const parentNavItems = [
@@ -52,9 +53,9 @@ export default function Sidebar() {
 
     if (token) {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            userRole = payload.role || 'Parent'
-            if (payload.sub) {
+            const payload = decodeJwtPayload(token)
+            userRole = payload?.role || 'Parent'
+            if (payload?.sub) {
                 const email = payload.sub as string
                 userInitials = email.slice(0, 2).toUpperCase()
                 if (userRole === 'Child') {
@@ -63,7 +64,9 @@ export default function Sidebar() {
                     userInitials = 'AN'
                 }
             }
-        } catch {}
+        } catch {
+            userRole = 'Parent'
+        }
     }
 
     const isChild  = userRole === 'Child'

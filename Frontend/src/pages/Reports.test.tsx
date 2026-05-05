@@ -1,154 +1,157 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import Reports from './Reports'
+import * as summaryService from '../services/summary'
 
-// ── 1. Mock Recharts ──
-vi.mock('recharts', async () => {
-    const actual = await vi.importActual('recharts');
-    return {
-        ...actual,
-        ResponsiveContainer: ({ children }: any) => <div style={{ width: 800, height: 300 }}>{children}</div>,
-    };
-});
+vi.mock('../services/summary', () => ({
+  fetchCategorySummary: vi.fn(),
+  fetchMemberSummary: vi.fn(),
+}))
 
-// ── 2. Mock Navigation ──
-const mockNavigate = vi.fn();
+vi.mock('recharts', () => ({
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  PieChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  CartesianGrid: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  Tooltip: () => null,
+  Legend: () => null,
+  Cell: () => null,
+  Bar: () => null,
+  Pie: ({ data, onClick }: { data?: Array<{ category: string }>; onClick?: (entry: unknown) => void }) => (
+    <div>
+      {(data ?? []).map((entry) => (
+        <button key={entry.category} type="button" onClick={() => onClick?.(entry)}>
+          {entry.category}
+        </button>
+      ))}
+    </div>
+  ),
+}))
+
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual('react-router-dom');
-    return { ...actual, useNavigate: () => mockNavigate };
-});
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return { ...actual, useNavigate: () => mockNavigate }
+})
 
-describe('Reports Component - 100% Coverage', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.useFakeTimers();
-    });
+const categoryResponse = [
+  { category: 'Alimentare', totalAmount: 500, percentage: 50 },
+  { category: 'Transport', totalAmount: 500, percentage: 50 },
+]
 
-    afterEach(() => {
-        vi.runAllTimers();
-        vi.useRealTimers();
-    });
+const memberResponse = [
+  { memberName: 'Eduard', totalAmount: 700, transactionCount: 4 },
+  { memberName: 'Mihaela', totalAmount: 300, transactionCount: 2 },
+]
 
-    const renderComponent = () => {
-        let result: ReturnType<typeof render>;
-        act(() => {
-            result = render(
-                <MemoryRouter>
-                    <Reports />
-                </MemoryRouter>
-            );
-            // Consumăm loading-ul inițial din useEffect imediat după render
-            vi.advanceTimersByTime(800);
-        });
-        return result!;
-    };
+const toExpectedIsoFromCustomInput = (value: string) => {
+  const [day, month, year] = value.split('/')
+  return new Date(`${year}-${month}-${day}T00:00:00`).toISOString().slice(0, 10)
+}
 
-    it('1. Verifică randarea inițială și navigarea înapoi', () => {
-        renderComponent();
+describe('Reports', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(summaryService.fetchCategorySummary).mockResolvedValue(categoryResponse)
+    vi.mocked(summaryService.fetchMemberSummary).mockResolvedValue(memberResponse)
+  })
 
-        expect(screen.getByRole('heading', { name: /Evoluție cheltuieli/i })).toBeInTheDocument();
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
 
-        // Butonul ArrowLeft are aria-hidden pe SVG → îl găsim prin clasa CSS
-        const backBtn = document.querySelector('button.btn-icon') as HTMLElement;
-        expect(backBtn).not.toBeNull();
-        fireEvent.click(backBtn);
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
-    });
+  const renderComponent = () => render(
+    <MemoryRouter>
+      <Reports />
+    </MemoryRouter>,
+  )
 
-    it('2. Gestionează schimbarea tab-urilor de timp și starea de loading', () => {
-        renderComponent();
+  it('afișează cele două grafice și totalul perioadei din summary API', async () => {
+    renderComponent()
 
-        fireEvent.click(screen.getByRole('button', { name: '3M' }));
+    expect(await screen.findByText(/DISTRIBUȚIE PE CATEGORII/i)).toBeInTheDocument()
+    expect(screen.getByText(/COMPARAȚIE PE MEMBRI/i)).toBeInTheDocument()
+    expect(screen.getByText('1000.00')).toBeInTheDocument()
+  })
 
-        // Imediat după click loading trebuie să fie vizibil
-        expect(document.querySelector('.lucide-refresh-cw')).toBeInTheDocument();
+  it('click pe o felie setează categoria activă și trimite filtrul către istoric', async () => {
+    renderComponent()
 
-        // Avansăm timers — loading dispare
-        act(() => { vi.advanceTimersByTime(800); });
+    await screen.findByText(/DISTRIBUȚIE PE CATEGORII/i)
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentare' }))
 
-        expect(document.querySelector('.lucide-refresh-cw')).not.toBeInTheDocument();
-    });
+    let lastMemberCall: { from?: string; to?: string; category?: string } | undefined
+    await waitFor(() => {
+      const args = vi.mocked(summaryService.fetchMemberSummary).mock.calls.at(-1)?.[0] as { from?: string; to?: string; category?: string } | undefined
+      expect(args?.category).toBe('Alimentare')
+      expect(args?.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(args?.to).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      lastMemberCall = args
+    })
 
-    it('3. Deschide și închide panoul de date custom', () => {
-        renderComponent();
+    expect(mockNavigate).toHaveBeenCalledWith('/expenses', {
+      state: {
+        initialFilters: {
+          selectedCategory: 'Alimentare',
+          startDate: lastMemberCall?.from,
+          endDate: lastMemberCall?.to,
+        },
+      },
+    })
+  })
 
-        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
-        expect(screen.getByPlaceholderText(/ex: 12\/04\/2026/i)).toBeInTheDocument();
+  it('actualizează sincronizat ambele API-uri când se schimbă perioada presetată', async () => {
+    renderComponent()
+    await screen.findByText(/DISTRIBUȚIE PE CATEGORII/i)
 
-        // Butonul X — găsit prin SVG cu clasa lucide-x
-        const closeBtn = document.querySelector('.lucide-x')?.closest('button') as HTMLElement;
-        expect(closeBtn).not.toBeNull();
-        fireEvent.click(closeBtn);
+    const initialCategoryCall = vi.mocked(summaryService.fetchCategorySummary).mock.calls.at(-1)?.[0] as { from?: string; to?: string } | undefined
 
-        expect(screen.queryByPlaceholderText(/ex: 12\/04\/2026/i)).not.toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: '3M' }))
 
-    it('4. Validare: Format dată invalid (Regex)', () => {
-        renderComponent();
+    await waitFor(() => {
+      const categoryArgs = vi.mocked(summaryService.fetchCategorySummary).mock.calls.at(-1)?.[0] as { from?: string; to?: string } | undefined
+      const memberArgs = vi.mocked(summaryService.fetchMemberSummary).mock.calls.at(-1)?.[0] as { from?: string; to?: string; category?: string } | undefined
 
-        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+      expect(categoryArgs?.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(categoryArgs?.to).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(categoryArgs?.from).not.toBe(initialCategoryCall?.from)
+      expect(memberArgs?.from).toBe(categoryArgs?.from)
+      expect(memberArgs?.to).toBe(categoryArgs?.to)
+      expect(memberArgs?.category).toBeUndefined()
+    })
+  })
 
-        const startInput = screen.getByPlaceholderText(/ex: 12\/04\/2026/i);
-        fireEvent.change(startInput, { target: { value: '32/13/2026' } });
+  it('trimite intervalul custom la API după aplicare', async () => {
+    renderComponent()
+    await screen.findByText(/DISTRIBUȚIE PE CATEGORII/i)
 
-        // Validarea e sincronă (nu async) — starea se actualizează imediat
-        expect(screen.getByText(/Te rugăm să introduci datele conform formatului/i)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }))
+    const inputs = screen.getAllByPlaceholderText(/ex: [0-9/]+/i)
+    fireEvent.change(inputs[0], { target: { value: '01/04/2026' } })
+    fireEvent.change(inputs[1], { target: { value: '20/04/2026' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Aplică' }))
 
-    it('5. Validare: Eroare cronologică (Start > End)', () => {
-        renderComponent();
+    const expectedFrom = toExpectedIsoFromCustomInput('01/04/2026')
+    const expectedTo = toExpectedIsoFromCustomInput('20/04/2026')
 
-        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
+    await waitFor(() => {
+      expect(summaryService.fetchCategorySummary).toHaveBeenLastCalledWith(
+        { from: expectedFrom, to: expectedTo },
+        expect.any(AbortSignal),
+      )
+    })
+  })
 
-        const inputs = screen.getAllByPlaceholderText(/ex: [0-9/]+/i);
-        fireEvent.change(inputs[0], { target: { value: '20/04/2026' } });
-        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } });
+  it('afișează mesaj de eroare dacă API-ul de summary eșuează', async () => {
+    vi.mocked(summaryService.fetchCategorySummary).mockRejectedValueOnce(new Error('boom'))
 
-        expect(screen.getByText(/Data de început trebuie să fie înainte de data de sfârșit/i)).toBeInTheDocument();
+    renderComponent()
 
-        const applyBtn = screen.getByRole('button', { name: 'Aplică' });
-        expect(applyBtn).toBeDisabled();
-    });
-
-    it('6. Aplică un interval valid (Success Path)', () => {
-        renderComponent();
-
-        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
-
-        const inputs = screen.getAllByPlaceholderText(/ex: [0-9/]+/i);
-        fireEvent.change(inputs[0], { target: { value: '01/04/2026' } });
-        fireEvent.change(inputs[1], { target: { value: '10/04/2026' } });
-
-        const applyBtn = screen.getByRole('button', { name: 'Aplică' });
-        expect(applyBtn).not.toBeDisabled();
-
-        fireEvent.click(applyBtn);
-
-        // Loading apare imediat după click
-        expect(document.querySelector('.lucide-refresh-cw')).toBeInTheDocument();
-
-        // Loading dispare după 800ms
-        act(() => { vi.advanceTimersByTime(800); });
-        expect(document.querySelector('.lucide-refresh-cw')).not.toBeInTheDocument();
-    });
-
-    it('7. Verifică calculul sumei totale', () => {
-        renderComponent();
-        // 120+450+300+800+200+550+400 = 2820
-        expect(screen.getByText('2820.00')).toBeInTheDocument();
-    });
-
-    it('8. Testează parseDate pentru date inexistente (ex: 31 Aprilie)', () => {
-        renderComponent();
-
-        fireEvent.click(screen.getByRole('button', { name: /Interval Custom/i }));
-
-        const startInput = screen.getByPlaceholderText(/ex: 12\/04\/2026/i);
-        // Aprilie are doar 30 zile → parsedDate.getDate() !== Number(day) → parseDate returnează null
-        fireEvent.change(startInput, { target: { value: '31/04/2026' } });
-
-        expect(screen.getByText(/Te rugăm să introduci datele conform formatului/i)).toBeInTheDocument();
-    });
-});
+    expect(await screen.findByText(/Nu am putut încărca sumarul cheltuielilor din API/i)).toBeInTheDocument()
+  })
+})

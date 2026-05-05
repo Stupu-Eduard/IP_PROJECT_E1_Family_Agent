@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar.tsx'
 import ChatAI from './ChatAi'
 import { useAuthStore } from '../store/authStore'
+import { decodeJwtPayload } from '../utils/jwt'
 
 export default function ProtectedLayout() {
 	const token = useAuthStore((s) => s.token)
@@ -9,8 +10,8 @@ export default function ProtectedLayout() {
 	let isChild = false
 	if (token) {
 		try {
-			const payload = JSON.parse(atob(token.split('.')[1]))
-			isChild = payload.role === 'Child'
+			const payload = decodeJwtPayload(token)
+			isChild = payload?.role === 'Child'
 		} catch { /* empty */ }
 	}
 
