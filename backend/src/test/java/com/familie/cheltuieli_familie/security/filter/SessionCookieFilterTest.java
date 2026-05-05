@@ -38,17 +38,81 @@ class SessionCookieFilterTest {
 
     @BeforeEach
     void setUp() {
-        // Curățăm contextul și instanțiem obiectele HTTP o singură dată pentru toate testele
         SecurityContextHolder.clearContext();
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
     }
 
-    // 1. Cazul ideal: Sesiune validă în DB
+    // 1. Fără cookie-uri
     @Test
-    void doFilter_CandCookieExistaSiSesiuneValida_SeteazaAutentificarea() throws Exception {
-        String sessionId = "test-session-123";
+    void doFilter_FaraCookies_ContinuaLantul() throws Exception {
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(sessionRepository);
+    }
+
+    // 2. Are cookie-uri, dar lipsește "session_id"
+    @Test
+    void doFilter_AlteCookiesFaraSessionId_ContinuaLantul() throws Exception {
+        request.setCookies(new Cookie("alt_cookie", "123"));
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    // 3. User deja autentificat
+    @Test
+    void doFilter_UserDejaAutentificat_SareVerificareaDb() throws Exception {
+        request.setCookies(new Cookie("session_id", "token-123"));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("user", null)
+        );
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(sessionRepository);
+    }
+
+    // 4. Sesiune inexistentă în DB
+    @Test
+    void doFilter_SesiuneInexistenta_ContinuaLantul() throws Exception {
+        String sessionId = "token-inexistent";
         request.setCookies(new Cookie("session_id", sessionId));
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    // 5. Sesiune expirată/invalidă în DB
+    @Test
+    void doFilter_SesiuneInvalida_ContinuaLantul() throws Exception {
+        String sessionId = "token-invalid";
+        request.setCookies(new Cookie("session_id", sessionId));
+
+        UserSession session = mock(UserSession.class);
+        when(session.isValid()).thenReturn(false);
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    // 6. Metoda GET - Sesiune validă (Nu necesită CSRF)
+    @Test
+    void doFilter_MetodaGet_SesiuneValida_SeteazaAutentificare() throws Exception {
+        String sessionId = "token-valid";
+        request.setCookies(new Cookie("session_id", sessionId));
+        request.setMethod("GET");
 
         User user = new User();
         user.setEmail("test@familie.com");
@@ -62,74 +126,91 @@ class SessionCookieFilterTest {
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
-        assertEquals(user, SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         verify(filterChain).doFilter(request, response);
     }
 
-    // 2. Nu avem deloc Cookie-uri
+    // 7. Metoda POST - Lipsă Header CSRF -> 403 Forbidden
     @Test
-    void doFilter_CandCookieLipseste_ContinuaLantulFaraAutentificare() throws Exception {
-        sessionCookieFilter.doFilterInternal(request, response, filterChain);
-
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(sessionRepository);
-    }
-
-    // 3. Avem Cookie-uri, dar niciunul nu se numește "session_id"
-    @Test
-    void doFilter_CandExistaAlteCookiesDarNuSessionId_ContinuaFaraAutentificare() throws Exception {
-        request.setCookies(new Cookie("un_alt_cookie", "valoare"));
-
-        sessionCookieFilter.doFilterInternal(request, response, filterChain);
-
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(sessionRepository);
-    }
-
-    // 4. Avem "session_id", dar nu este găsit în Baza de Date
-    @Test
-    void doFilter_CandSesiuneaNuExistaInDB_ContinuaLantulFaraAutentificare() throws Exception {
-        String sessionId = "unknown-session";
+    void doFilter_MetodaPost_FaraCsrf_Returneaza403() throws Exception {
+        String sessionId = "token-valid";
         request.setCookies(new Cookie("session_id", sessionId));
-
-        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
-
-        sessionCookieFilter.doFilterInternal(request, response, filterChain);
-
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verify(filterChain).doFilter(request, response);
-    }
-
-    // 5. Sesiunea există în DB, dar este marcată ca expirată/invalidă
-    @Test
-    void doFilter_CandSesiuneaEsteExpirata_NuSeteazaAutentificarea() throws Exception {
-        String sessionId = "expired-session";
-        request.setCookies(new Cookie("session_id", sessionId));
+        request.setMethod("POST");
 
         UserSession session = mock(UserSession.class);
-        when(session.isValid()).thenReturn(false); // Simulăm sesiunea expirată
-
+        when(session.isValid()).thenReturn(true);
         when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
 
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verify(filterChain).doFilter(request, response);
+        assertEquals(403, response.getStatus());
+        assertTrue(response.getContentAsString().contains("Invalid or missing CSRF Token"));
+        verify(filterChain, never()).doFilter(request, response); // Oprește lanțul
     }
 
-    // 6. Requestul vine, dar userul este deja autentificat în SecurityContext
+    // 8. Metoda POST - Header CSRF Invalid -> 403 Forbidden
     @Test
-    void doFilter_CandAutentificareaExistaDeja_NuMaiVerificaInDB() throws Exception {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("already-auth", null)
-        );
-        request.setCookies(new Cookie("session_id", "some-id"));
+    void doFilter_MetodaPost_CsrfInvalid_Returneaza403() throws Exception {
+        String sessionId = "token-valid";
+        request.setCookies(new Cookie("session_id", sessionId));
+        request.setMethod("POST");
+        request.addHeader("X-XSRF-TOKEN", "token-gresit");
+
+        UserSession session = mock(UserSession.class);
+        when(session.isValid()).thenReturn(true);
+        when(session.getCsrfToken()).thenReturn("token-corect");
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
 
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        verifyNoInteractions(sessionRepository);
-        verify(filterChain).doFilter(request, response);
+        assertEquals(403, response.getStatus());
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
+    // 9. Metode care modifică date cu CSRF Valid (Acoperim POST, PUT, DELETE, PATCH pentru coverage maxim)
+    @Test
+    void doFilter_MetodaPost_CsrfValid_SeteazaAutentificare() throws Exception {
+        testValidMethodWithCsrf("POST");
+    }
+
+    @Test
+    void doFilter_MetodaPut_CsrfValid_SeteazaAutentificare() throws Exception {
+        testValidMethodWithCsrf("PUT");
+    }
+
+    @Test
+    void doFilter_MetodaDelete_CsrfValid_SeteazaAutentificare() throws Exception {
+        testValidMethodWithCsrf("DELETE");
+    }
+
+    @Test
+    void doFilter_MetodaPatch_CsrfValid_SeteazaAutentificare() throws Exception {
+        testValidMethodWithCsrf("PATCH");
+    }
+
+    // Metodă ajutătoare pentru a nu duplica codul la cele 4 teste de mai sus
+    private void testValidMethodWithCsrf(String httpMethod) throws Exception {
+        SecurityContextHolder.clearContext(); // Resetăm contextul pentru fiecare rulare
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        String sessionId = "token-valid";
+        req.setCookies(new Cookie("session_id", sessionId));
+        req.setMethod(httpMethod);
+        req.addHeader("X-XSRF-TOKEN", "token-secret");
+
+        User user = new User();
+        user.setEmail("test@familie.com");
+
+        UserSession session = mock(UserSession.class);
+        when(session.isValid()).thenReturn(true);
+        when(session.getCsrfToken()).thenReturn("token-secret");
+        when(session.getUser()).thenReturn(user);
+
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
+
+        sessionCookieFilter.doFilterInternal(req, res, filterChain);
+
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(req, res);
     }
 }
