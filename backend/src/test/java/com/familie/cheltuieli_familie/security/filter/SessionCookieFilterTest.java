@@ -16,7 +16,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,83 +33,103 @@ class SessionCookieFilterTest {
     @InjectMocks
     private SessionCookieFilter sessionCookieFilter;
 
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+
     @BeforeEach
     void setUp() {
+        // Curățăm contextul și instanțiem obiectele HTTP o singură dată pentru toate testele
         SecurityContextHolder.clearContext();
+        request = new MockHttpServletRequest();
+        response = new MockHttpServletResponse();
     }
 
+    // 1. Cazul ideal: Sesiune validă în DB
     @Test
     void doFilter_CandCookieExistaSiSesiuneValida_SeteazaAutentificarea() throws Exception {
-        // GIVEN
         String sessionId = "test-session-123";
-        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", sessionId));
-        MockHttpServletResponse response = new MockHttpServletResponse();
 
         User user = new User();
         user.setEmail("test@familie.com");
 
-        UserSession session = UserSession.builder()
-                .id(1L)
-                .sessionToken(sessionId)
-                .user(user)
-                .lastActive(LocalDateTime.now())
-                .build();
+        UserSession session = mock(UserSession.class);
+        when(session.isValid()).thenReturn(true);
+        when(session.getUser()).thenReturn(user);
 
         when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
 
-        // WHEN
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        // THEN
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
         assertEquals(user, SecurityContextHolder.getContext().getAuthentication().getPrincipal());
         verify(filterChain).doFilter(request, response);
     }
 
+    // 2. Nu avem deloc Cookie-uri
     @Test
     void doFilter_CandCookieLipseste_ContinuaLantulFaraAutentificare() throws Exception {
-        // GIVEN
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        MockHttpServletResponse response = new MockHttpServletResponse();
-
-        // WHEN
         sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        // THEN
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(sessionRepository);
     }
 
+    // 3. Avem Cookie-uri, dar niciunul nu se numește "session_id"
+    @Test
+    void doFilter_CandExistaAlteCookiesDarNuSessionId_ContinuaFaraAutentificare() throws Exception {
+        request.setCookies(new Cookie("un_alt_cookie", "valoare"));
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(sessionRepository);
+    }
+
+    // 4. Avem "session_id", dar nu este găsit în Baza de Date
     @Test
     void doFilter_CandSesiuneaNuExistaInDB_ContinuaLantulFaraAutentificare() throws Exception {
-        // GIVEN
         String sessionId = "unknown-session";
-        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", sessionId));
 
         when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
 
-        // WHEN
-        sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        // THEN
         assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
     }
 
+    // 5. Sesiunea există în DB, dar este marcată ca expirată/invalidă
+    @Test
+    void doFilter_CandSesiuneaEsteExpirata_NuSeteazaAutentificarea() throws Exception {
+        String sessionId = "expired-session";
+        request.setCookies(new Cookie("session_id", sessionId));
+
+        UserSession session = mock(UserSession.class);
+        when(session.isValid()).thenReturn(false); // Simulăm sesiunea expirată
+
+        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
+
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    // 6. Requestul vine, dar userul este deja autentificat în SecurityContext
     @Test
     void doFilter_CandAutentificareaExistaDeja_NuMaiVerificaInDB() throws Exception {
-        // GIVEN
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("already-auth", null)
         );
-        MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie("session_id", "some-id"));
 
-        // WHEN
-        sessionCookieFilter.doFilterInternal(request, new MockHttpServletResponse(), filterChain);
+        sessionCookieFilter.doFilterInternal(request, response, filterChain);
 
-        // THEN
         verifyNoInteractions(sessionRepository);
+        verify(filterChain).doFilter(request, response);
     }
 }
