@@ -1,18 +1,17 @@
 package com.familie.cheltuieli_familie.exception;
 
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.familie.cheltuieli_familie.controller.ExtractionController;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,17 +28,26 @@ class GlobalExceptionHandlerTest {
 
     @MockitoBean
     private ExtractionService extractionService;
-
     @MockitoBean
     private com.familie.cheltuieli_familie.service.StorageService storageService;
-
     @MockitoBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
+    @MockitoBean
+    private dev.langchain4j.model.chat.ChatLanguageModel chatLanguageModel;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.service.SyncService syncService;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.service.TextBasedPdfExtractor textExtractor;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.service.BankOcrService bankOcrService;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
+    @MockitoBean
+    private com.familie.cheltuieli_familie.repository.UserSessionRepository userSessionRepository;
 
     @Test
     void testAmountNotFoundException() throws Exception {
         when(extractionService.process(any())).thenThrow(new RuntimeException("AI processing failed"));
-
         mockMvc.perform(post("/v1/extract")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"text\"}"))
@@ -51,7 +59,6 @@ class GlobalExceptionHandlerTest {
     @Test
     void testGenericException() throws Exception {
         when(extractionService.process(any())).thenThrow(new RuntimeException("Generic error"));
-
         mockMvc.perform(post("/v1/extract")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"text\"}"))
@@ -62,7 +69,6 @@ class GlobalExceptionHandlerTest {
     @Test
     void testPipelineException() throws Exception {
         when(extractionService.process(any())).thenThrow(new RuntimeException("Pipeline error"));
-
         mockMvc.perform(post("/v1/extract")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"text\"}"))
