@@ -3,6 +3,7 @@ import * as yup from 'yup';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
+import { getLoginErrorMessage, loginWithEmailPassword } from '../services/auth';
 
 // ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
 const loginSchema = yup.object().shape({
@@ -46,19 +47,12 @@ export default function Login() {
     try {
       await loginSchema.validate({ email, password });
       setIsLoading(true);
-      const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
-        setTimeout(() => {
-          if (email && password) resolve({ token: createMockJwt() });
-          else reject(new Error('Eroare de la server: Date incorecte.'));
-        }, 1500);
-      });
-      const response = await mockApiCall;
-      login(response.token);
+      await loginWithEmailPassword(email, password);
+      login(createMockJwt());
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err instanceof yup.ValidationError) setError(err.message);
-      else if (err instanceof Error) setError(err.message);
-      else setError('A apărut o eroare neașteptată.');
+      else setError(getLoginErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
