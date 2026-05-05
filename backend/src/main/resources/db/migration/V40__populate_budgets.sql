@@ -43,3 +43,4 @@ WHERE NOT EXISTS (
     WHERE b.family_id = (SELECT id FROM families WHERE name = 'Familia Popescu')
     AND b.category_id = (SELECT id FROM categories WHERE name = 'Divertisment')
 );
+-- fix format
