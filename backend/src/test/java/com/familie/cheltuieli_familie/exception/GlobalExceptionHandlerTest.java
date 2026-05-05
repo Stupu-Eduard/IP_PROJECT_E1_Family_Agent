@@ -10,7 +10,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -19,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc(addFilters = false)
-@WebMvcTest(ExtractionController.class)
+@WebMvcTest(controllers = ExtractionController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @ActiveProfiles("test")
 class GlobalExceptionHandlerTest {
 
@@ -34,8 +35,6 @@ class GlobalExceptionHandlerTest {
 
     @MockitoBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
-    @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
 
     @Test
     void testAmountNotFoundException() throws Exception {
