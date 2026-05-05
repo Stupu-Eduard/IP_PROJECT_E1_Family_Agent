@@ -34,12 +34,6 @@ class ExtractionControllerTest {
     @MockBean
     private ExtractionService extractionService;
 
-    @MockBean
-    private com.familie.cheltuieli_familie.service.StorageService storageService;
-
-    @MockBean
-    private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
-
     @Test
     void testExtractDetails() throws Exception {
         ExtractionResponse response = ExtractionResponse.builder()
