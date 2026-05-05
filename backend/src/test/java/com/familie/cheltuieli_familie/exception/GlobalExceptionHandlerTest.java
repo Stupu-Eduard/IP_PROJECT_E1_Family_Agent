@@ -28,6 +28,12 @@ class GlobalExceptionHandlerTest {
     @MockBean
     private ExtractionService extractionService;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.service.StorageService storageService;
+
+    @MockBean
+    private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
+
     @Test
     void testAmountNotFoundException() throws Exception {
         when(extractionService.process(any())).thenThrow(new AmountNotFoundException("Suma nu a fost găsită"));
