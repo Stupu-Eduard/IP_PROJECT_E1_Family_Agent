@@ -83,7 +83,8 @@ export default function ExpenseMap() {
   // --- THE PIPE: Conexiunea pentru actualizare LIVE ---
   useEffect(() => {
     console.log('⏳ HARTA: Se inițializează fluxul live prin THE PIPE...');
-    const socket = new WebSocket('ws://localhost:8081/locatie');
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
+    const socket = new WebSocket(`${wsUrl}/locatie`);
 
     socket.onopen = () => console.log('🟢 HARTA: Conectat la fluxul live!');
 
