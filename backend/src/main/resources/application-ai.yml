@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/family_agent
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://db:5432/main_db
+    username: FamilyDB
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
