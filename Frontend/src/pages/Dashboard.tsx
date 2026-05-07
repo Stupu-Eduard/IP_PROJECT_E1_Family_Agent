@@ -81,7 +81,8 @@ export default function Dashboard() {
       return;
     }
 
-    const socket = new WebSocket('ws://localhost:8081/locatie');
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
+    const socket = new WebSocket(`${wsUrl}/locatie`);
 
     socket.onopen = () => console.log('🟢 WebSocket conectat cu succes la /locatie');
     socket.onerror = (err) => console.error('🔴 Eroare WebSocket:', err);
