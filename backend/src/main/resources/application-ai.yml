@@ -10,7 +10,7 @@ spring:
     show-sql: true
 
 qdrant:
-  host: localhost
+  host: qdrant
   port: 6333
   collection-name: expenses
 
