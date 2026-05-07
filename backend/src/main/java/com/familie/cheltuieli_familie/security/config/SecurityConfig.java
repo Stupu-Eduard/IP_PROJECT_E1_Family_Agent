@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.security.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -18,8 +19,10 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
 
@@ -31,9 +34,10 @@ public class SecurityConfig {
                 // Dezactivăm CSRF deoarece folosim JWT (stateless), nu sesiuni bazate pe cookie-uri.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(sessionCookieFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Rute publice
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/actuator/**").permitAll()
 
                         // 2. THE PIPE - WebSockets & SSE (Rezolvă eroarea 403 Forbidden)
                         // Am adăugat rutele din pozele tale anterioare
@@ -41,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/parent/stream/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
                         .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+                        .requestMatchers("/v1/chat/**").permitAll()      // <-- AI CHAT
 
                         // Swagger UI
                         .requestMatchers("/swagger-ui/**").permitAll()
@@ -81,7 +86,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
-                "http://localhost:8080"  // Swagger / Altele
+                "https://family-agent.me",
+                "https://api.family-agent.me",
+                "http://localhost:4173" // vite preview
         ));
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
