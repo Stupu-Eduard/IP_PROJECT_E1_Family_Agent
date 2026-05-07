@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .addFilterBefore(sessionCookieFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Rute publice
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/actuator/**").permitAll()
 
                         // 2. THE PIPE - WebSockets & SSE (Rezolvă eroarea 403 Forbidden)
                         // Am adăugat rutele din pozele tale anterioare
