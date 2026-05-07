@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.security.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -18,8 +19,10 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
 
@@ -31,16 +34,18 @@ public class SecurityConfig {
                 // Dezactivăm CSRF deoarece folosim JWT (stateless), nu sesiuni bazate pe cookie-uri.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(sessionCookieFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Rute publice
-                        .requestMatchers("/v1/auth/**", "/actuator/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
 
                         // 2. THE PIPE - WebSockets & SSE (Rezolvă eroarea 403 Forbidden)
                         // Am adăugat rutele din pozele tale anterioare
                         .requestMatchers("/locatie/**").permitAll()
-                        .requestMatchers("/v1/parent/stream/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll() // in caz ca ai un prefix general de ws
-                        .requestMatchers("/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+                        .requestMatchers("/api/v1/parent/stream/**").permitAll()
+                        .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
+                        .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
+                        .requestMatchers("/v1/chat/**").permitAll()      // <-- AI CHAT
 
                         // Swagger UI
                         .requestMatchers("/swagger-ui/**").permitAll()
@@ -48,22 +53,21 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**").permitAll()
 
                         // Cheltuieli (folosite de frontend pentru harta/istoric)
-                        .requestMatchers("/v1/expenses/**").permitAll()
+                        .requestMatchers("/api/v1/expenses/**").permitAll()
 
                         // Lookups pentru filtre
-                        .requestMatchers("/v1/categories/**").permitAll()
-                        .requestMatchers("/v1/users/**").permitAll()
+                        .requestMatchers("/api/v1/categories/**").permitAll()
+                        .requestMatchers("/api/v1/users/**").permitAll()
 
                         // Persistare coordonate geocodate in PostGIS
-                        .requestMatchers("/v1/locations/**").permitAll()
+                        .requestMatchers("/api/v1/locations/**").permitAll()
 
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
-                        .requestMatchers("/v1/parent/**").hasRole(ROLE_PARENT)
-                        .requestMatchers("/v1/alerts/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/api/v1/parent/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/api/v1/alerts/**").hasRole(ROLE_PARENT)
 
                         // Copilul si Parintele pot trimite date de locatie
-                        .requestMatchers("/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)
-                        .requestMatchers("/telemetry/**").permitAll()
+                        .requestMatchers("/api/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)
 
                         // Orice alt request trebuie sa fie autentificat
                         .anyRequest().authenticated()

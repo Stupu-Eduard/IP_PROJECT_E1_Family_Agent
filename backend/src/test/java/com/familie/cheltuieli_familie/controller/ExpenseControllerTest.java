@@ -15,68 +15,80 @@ import static org.mockito.Mockito.*;
 
 class ExpenseControllerTest {
 
-    private static final class Projection implements ExpenseRepository.ExpenseWithLocationProjection {
-        private final Long id;
-        private final BigDecimal amount;
-        private final String currency;
-        private final String description;
-        private final LocalDateTime expenseDate;
-        private final String category;
-        private final String person;
-        private final Long locationId;
-        private final String store;
-        private final String address;
-        private final String city;
-        private final String country;
-        private final Double lat;
-        private final Double lng;
+    private record Projection(Long id, BigDecimal amount, String currency, String description,
+                              LocalDateTime expenseDate, String category, String person, Long locationId, String store,
+                              String address, String city, String country, Double lat,
+                              Double lng) implements ExpenseRepository.ExpenseWithLocationProjection {
 
-        private Projection(
-                Long id,
-                BigDecimal amount,
-                String currency,
-                String description,
-                LocalDateTime expenseDate,
-                String category,
-                String person,
-                Long locationId,
-                String store,
-                String address,
-                String city,
-                String country,
-                Double lat,
-                Double lng
-        ) {
-            this.id = id;
-            this.amount = amount;
-            this.currency = currency;
-            this.description = description;
-            this.expenseDate = expenseDate;
-            this.category = category;
-            this.person = person;
-            this.locationId = locationId;
-            this.store = store;
-            this.address = address;
-            this.city = city;
-            this.country = country;
-            this.lat = lat;
-            this.lng = lng;
+        @Override
+        public Long getId() {
+            return id;
         }
 
-        @Override public Long getId() { return id; }
-        @Override public BigDecimal getAmount() { return amount; }
-        @Override public String getCurrency() { return currency; }
-        @Override public String getDescription() { return description; }
-        @Override public LocalDateTime getExpenseDate() { return expenseDate; }
-        @Override public String getCategory() { return category; }
-        @Override public String getPerson() { return person; }
-        @Override public Long getLocationId() { return locationId; }
-        @Override public String getStore() { return store; }
-        @Override public String getAddress() { return address; }
-        @Override public String getCity() { return city; }
-        @Override public String getCountry() { return country; }
-        @Override public Double getLat() { return lat; }
-        @Override public Double getLng() { return lng; }
+        @Override
+        public BigDecimal getAmount() {
+            return amount;
+        }
+
+        @Override
+        public String getCurrency() {
+            return currency;
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
+        }
+
+        @Override
+        public LocalDateTime getExpenseDate() {
+            return expenseDate;
+        }
+
+        @Override
+        public String getCategory() {
+            return category;
+        }
+
+        @Override
+        public String getPerson() {
+            return person;
+        }
+
+        @Override
+        public Long getLocationId() {
+            return locationId;
+        }
+
+        @Override
+        public String getStore() {
+            return store;
+        }
+
+        @Override
+        public String getAddress() {
+            return address;
+        }
+
+        @Override
+        public String getCity() {
+            return city;
+        }
+
+        @Override
+        public String getCountry() {
+            return country;
+        }
+
+        @Override
+        public Double getLat() {
+            return lat;
+        }
+
+        @Override
+        public Double getLng() {
+            return lng;
+        }
     }
 
     @Test

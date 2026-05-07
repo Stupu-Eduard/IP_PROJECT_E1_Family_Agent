@@ -1,44 +1,53 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import type { ExpenseDTO } from '../types/ExpenseDTO';
 import { processReceiptOCR } from '../services/expenses';
 import { ImageUploader } from './ImageUploader';
 
+const IcoArrowLeft = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 12H5"/><path d="m11 5-7 7 7 7"/>
+    </svg>
+)
+const IcoCheck = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 12 5 5 11-12"/>
+    </svg>
+)
+const IcoCamera = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/>
+    </svg>
+)
+
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
 
-  // Stări Formular
-  const [amount, setAmount] = useState<number | ''>('');
+  const [amount,   setAmount]   = useState<number | ''>('');
   const [category, setCategory] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
 
-  // Stări Procesare (Salvare și OCR)
-  const [loading, setLoading] = useState(false);
+  const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState('');
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [error,       setError]       = useState('');
+  const [ocrError,    setOcrError]    = useState<string | null>(null);
+  const [success,     setSuccess]     = useState(false);
 
   const handleOcrProcess = async (file: File) => {
     setIsAnalyzing(true);
     setOcrError(null);
     setError('');
-
     try {
       const data = await processReceiptOCR(file);
-
-      // Populare automată a câmpurilor din răspunsul OCR
-      if (data.amount) setAmount(data.amount);
+      if (data.amount)   setAmount(data.amount);
       if (data.category) setCategory(data.category);
-
       if (data.date) {
-        // Conversie din ISO sau format extins în YYYY-MM-DD pentru input date
         const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         setDate(formattedDate);
       }
     } catch {
-      setOcrError("Nu am putut citi automat toate datele. Te rugăm să le completezi manual.");
+      setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -48,122 +57,183 @@ const ExpenseForm: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess(false);
-
     if (Number(amount) <= 0) {
       setError('Suma trebuie să fie strict mai mare ca 0!');
       return;
     }
-
     setLoading(true);
-
-    const payload: ExpenseDTO = {
-      amount: Number(amount),
-      category,
-      date,
-    };
-
+    const payload: ExpenseDTO = { amount: Number(amount), category, date };
     console.log('Date pregătite pentru trimitere:', payload);
-
-    // Simulare API Call pentru salvarea cheltuielii
     setTimeout(() => {
       setLoading(false);
       setSuccess(true);
-
-      // Resetare formular după succes
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
       setOcrError(null);
-
       setTimeout(() => setSuccess(false), 3000);
     }, 1000);
   };
 
-  const isInputDisabled = loading || isAnalyzing;
-  const inputClasses = `w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-3 text-[14px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors ${isInputDisabled ? 'opacity-60 cursor-not-allowed' : ''}`;
+  const isInputDisabled = loading;
 
   return (
-      <div className="flex-1 flex justify-center py-12 px-6">
-          <div className="relative w-full max-w-md bg-white border border-[#EDE9E3] rounded-[14px] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] fade-in-up h-fit overflow-hidden">
+      <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
 
-            {/* Overlay de analiză OCR (Spinner & Blur) */}
+        <div className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+          <button
+              className="btn btn-ghost btn-icon"
+              onClick={() => navigate('/dashboard')}
+              aria-label="Înapoi"
+          >
+            <IcoArrowLeft />
+          </button>
+          <div className="chip chip-live">OCR · GATA DE SCANARE</div>
+        </div>
+
+        <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>Adaugă o cheltuială nouă</h1>
+        <div className="fade-up" style={{ color: 'var(--color-muted)', fontSize: 14, marginBottom: 28, lineHeight: 1.6, maxWidth: 560 }}>
+          Trage un bon, fă-i o poză sau introdu manual. AI-ul detectează magazinul, suma, categoria și locația.
+        </div>
+
+        {success && (
+            <div className="fade-up" style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'var(--color-primary-tint)', border: '1px solid var(--color-primary-edge)',
+              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+              color: '#7A5C44', fontSize: 13, fontWeight: 500,
+            }}>
+          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IcoCheck />
+          </span>
+              Cheltuială adăugată cu succes!
+            </div>
+        )}
+
+        {error && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: '#FEF2F2', border: '1px solid #FECACA',
+              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+              color: '#DC2626', fontSize: 13, fontWeight: 500,
+            }}>
+              <AlertCircle size={16} style={{ flexShrink: 0 }} /> {error}
+            </div>
+        )}
+
+        {ocrError && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              background: '#FFFBEB', border: '1px solid #FDE68A',
+              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+              color: '#92400E', fontSize: 13,
+            }}>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} /> {ocrError}
+            </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+
+          <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+
             {isAnalyzing && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center rounded-[14px] animate-in fade-in duration-300">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="relative">
-                      <div className="w-12 h-12 border-4 border-[#F4F0EB] border-t-[#C97B4B] rounded-full animate-spin"></div>
-                      <Loader2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#C97B4B]/30 w-5 h-5" />
+                <div style={{
+                  position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
+                  backdropFilter: 'blur(4px)', zIndex: 20,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 24, gap: 18,
+                }}>
+                  <div className="ring-spin">
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>OCR</span>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-ink)', letterSpacing: '-0.2px' }}>
+                      Procesăm bonul tău…
                     </div>
-                    <div className="text-center">
-                      <p className="text-[14px] font-bold text-[#2D2926]">Analizăm bonul...</p>
-                      <p className="text-[11px] text-[#9A8A7C] font-medium">FamilyAgent citește datele</p>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4 }}>
+                      FamilyAgent citește datele
                     </div>
+                  </div>
+                  <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="field-skeleton" style={{ width: '40%' }} />
+                    <div className="field-skeleton" style={{ width: '80%' }} />
+                    <div className="field-skeleton" style={{ width: '60%' }} />
                   </div>
                 </div>
             )}
 
-            {/* Header Section */}
-            <div className="flex items-center gap-4 mb-8">
-              <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm shrink-0"
-              >
-                <ArrowLeft size={18} />
-              </button>
+            <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h1 className="text-[22px] font-medium text-[#2D2926] tracking-tight mb-1">Adaugă Cheltuială</h1>
-                <p className="text-[13px] text-[#9A8A7C]">Înregistrează cheltuielile tale ușor și rapid</p>
+                <div className="label" style={{ marginBottom: 6 }}>BON FISCAL · SCANARE</div>
+                <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.3px' }}>Atașează bonul</div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <span className={`chip ${!isAnalyzing ? '' : 'chip-neutral'}`}>1 · Încarcă</span>
+                <span className={`chip ${isAnalyzing ? '' : 'chip-neutral'}`}>2 · OCR</span>
+                <span className={`chip ${success ? '' : 'chip-neutral'}`}>3 · Confirmă</span>
               </div>
             </div>
 
-            {/* Notificări de stare */}
-            {success && (
-                <div className="bg-[#FFF8F2] border border-[#F0DFD0] text-[#7A5C44] px-4 py-3 rounded-[10px] text-[13px] font-medium mb-6 flex items-center gap-2">
-                  <span>✓</span> Cheltuială adăugată cu succes!
-                </div>
-            )}
+            <div style={{ padding: '18px 28px 28px' }}>
+              <ImageUploader
+                  onImageSelect={(file) => {
+                    if (file) {
+                      handleOcrProcess(file);
+                    } else {
+                      setOcrError(null);
+                    }
+                  }}
+              />
 
-            {error && (
-                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-[10px] text-[13px] font-medium mb-6 flex items-center gap-2">
-                  <span>✗</span> {error}
-                </div>
-            )}
+              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-muted)' }}>
+                <IcoCamera />
+                JPG, PNG · max 5 MB · OCR completează câmpurile automat
+              </div>
+            </div>
+          </div>
 
-            {ocrError && (
-                <div className="bg-amber-50 border border-amber-100 text-amber-700 px-4 py-3 rounded-[10px] text-[12px] font-medium mb-6 flex items-start gap-2 animate-in slide-in-from-top-1">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                  <span>{ocrError}</span>
-                </div>
-            )}
+          <div className="card" style={{}}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div className="label">DETALII CHELTUIALĂ</div>
+              {isAnalyzing && (
+                  <span style={{ fontSize: 11, color: "var(--color-primary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)", display: "inline-block", animation: "pulse-dot 1.4s ease-out infinite" }} />
+                OCR completează automat
+              </span>
+              )}
+            </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* Amount Input */}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
               <div>
-                <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
-                  Sumă (RON) <span className="text-[#C97B4B]">*</span>
+                <label htmlFor="amount" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  Sumă (RON) <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
                 <input
+                    id="amount"
                     type="number"
                     step="0.01"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className={inputClasses}
+                    className="input"
                     placeholder="Ex: 50.50"
                     required
                     disabled={isInputDisabled}
+                    style={{ opacity: isInputDisabled ? 0.6 : 1 }}
                 />
               </div>
 
-              {/* Category Dropdown */}
               <div>
-                <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
-                  Categorie <span className="text-[#C97B4B]">*</span>
+                <label htmlFor="category" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  Categorie <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
-                <div className="relative">
+                <div style={{ position: 'relative' }}>
                   <select
+                      id="category"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className={`${inputClasses} appearance-none cursor-pointer`}
+                      className="input"
+                      style={{ appearance: 'none', cursor: 'pointer', opacity: isInputDisabled ? 0.6 : 1 }}
                       required
                       disabled={isInputDisabled}
                   >
@@ -173,62 +243,57 @@ const ExpenseForm: React.FC = () => {
                     <option value="transport">🚗 Transport</option>
                     <option value="divertisment">🎮 Divertisment</option>
                   </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#9A8A7C]">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-muted)' }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
                 </div>
               </div>
 
-              {/* Date Picker */}
               <div>
-                <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
-                  Dată <span className="text-[#C97B4B]">*</span>
+                <label htmlFor="date" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  Dată <span style={{ color: 'var(--color-primary)' }}>*</span>
                 </label>
                 <input
+                    id="date"
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className={inputClasses}
+                    className="input"
                     required
                     disabled={isInputDisabled}
+                    style={{ opacity: isInputDisabled ? 0.6 : 1 }}
                 />
               </div>
 
-              {/* Image Uploader */}
-              <div>
-                <label className="block text-[11px] tracking-[1px] text-[#B8A99A] font-medium mb-2 uppercase">
-                  Atașament Bon Fiscal (Opțional)
-                </label>
-                <ImageUploader
-                    onImageSelect={(file) => {
-                      if (file) {
-                        handleOcrProcess(file);
-                      } else {
-                        setOcrError(null);
-                      }
-                    }}
-                />
-              </div>
-
-              {/* Submit Button */}
               <button
                   type="submit"
                   disabled={isInputDisabled}
-                  className="mt-2 w-full bg-[#2D2926] text-white rounded-[10px] py-3.5 text-[14px] font-medium transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                  className="btn btn-primary"
+                  style={{ marginTop: 4, width: '100%', justifyContent: 'center' }}
               >
                 {loading ? (
                     <>
-                      <Loader2 className="animate-spin h-4 w-4 text-white" />
+                      <Loader2 size={16} style={{ animation: 'ring-rotate 0.8s linear infinite' }} />
                       Se salvează...
                     </>
                 ) : (
-                    'Salvează Cheltuiala'
+                    'Salvează cheltuiala'
                 )}
               </button>
             </form>
+
+            <div style={{
+              marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--color-border)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🔐</div>
+              <div style={{ fontSize: 11.5, color: 'var(--color-muted)', lineHeight: 1.5 }}>
+                Procesare locală + criptată. Bonurile nu sunt stocate fără confirmarea ta.
+              </div>
+            </div>
           </div>
+
+        </div>
       </div>
   );
 };

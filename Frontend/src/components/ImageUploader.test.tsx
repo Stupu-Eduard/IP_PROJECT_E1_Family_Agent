@@ -1,104 +1,157 @@
-import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ImageUploader } from './ImageUploader';
-
-// Mock pentru URL.createObjectURL (necesar deoarece funcția nu există în mediul izolat de test Node/JSDOM)
-beforeEach(() => {
-    global.URL.createObjectURL = vi.fn(() => 'mock-preview-url');
-});
-
-afterEach(() => {
-    vi.restoreAllMocks();
-});
+import '@testing-library/jest-dom'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { ImageUploader } from './ImageUploader'
 
 describe('ImageUploader Component', () => {
-    const mockOnImageSelect = vi.fn();
+    const mockOnImageSelect = vi.fn()
+    let inputClickMock: any
 
     beforeEach(() => {
-        vi.clearAllMocks();
-    });
+        vi.clearAllMocks()
+        globalThis.URL.createObjectURL = vi.fn(() => 'mock-url')
+        inputClickMock = vi.fn()
+        window.HTMLInputElement.prototype.click = inputClickMock
+    })
 
-    it('1. Randează starea inițială corect', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
-        expect(screen.getByText('Apasă pentru a încărca')).toBeInTheDocument();
-        expect(screen.getByText('PNG sau JPG')).toBeInTheDocument();
-    });
+    afterEach(() => {
+        vi.restoreAllMocks()
+    })
 
-    it('2. Afișează eroare dacă formatul fișierului este invalid', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
+    const createFile = (name: string, size: number, type: string) => {
+        const file = new File([''], name, { type })
+        Object.defineProperty(file, 'size', { value: size })
+        return file
+    }
 
-        // Găsim input-ul ascuns folosind label-ul său
-        const input = screen.getByLabelText(/Apasă pentru a încărca/i);
+    it('1. Randează starea inițială de dropzone', () => {
+        render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        expect(screen.getByText('Trage bonul aici')).toBeInTheDocument()
+    })
 
-        // Simulăm încărcarea unui fișier text
-        const file = new File(['text content'], 'document.txt', { type: 'text/plain' });
-        fireEvent.change(input, { target: { files: [file] } });
+    it('2. Arată eroare la selectare manuală: fișierul nu este imagine', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        const pdfFile = createFile('test.pdf', 1024, 'application/pdf')
 
-        expect(screen.getByText('Format invalid. Vă rugăm să selectați o imagine (.jpg, .png).')).toBeInTheDocument();
-        expect(mockOnImageSelect).toHaveBeenCalledWith(null);
-    });
+        fireEvent.change(input, { target: { files: [pdfFile] } })
 
-    it('3. Afișează eroare dacă fișierul depășește limita de 5MB', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
-        const input = screen.getByLabelText(/Apasă pentru a încărca/i);
+        expect(screen.getByText(/Format invalid/i)).toBeInTheDocument()
+        expect(mockOnImageSelect).toHaveBeenCalledWith(null)
+    })
 
-        // Simulăm un fișier imagine de 6MB
-        const file = new File([''], 'huge_image.jpg', { type: 'image/jpeg' });
-        Object.defineProperty(file, 'size', { value: 6 * 1024 * 1024 });
+    it('3. Arată eroare la selectare manuală: fișier prea mare', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        const bigFile = createFile('big.jpg', 6 * 1024 * 1024, 'image/jpeg')
 
-        fireEvent.change(input, { target: { files: [file] } });
+        fireEvent.change(input, { target: { files: [bigFile] } })
 
-        expect(screen.getByText('Fișierul depășește limita maximă de 5MB.')).toBeInTheDocument();
-        expect(mockOnImageSelect).toHaveBeenCalledWith(null);
-    });
+        expect(screen.getByText(/depășește limita maximă/i)).toBeInTheDocument()
+    })
 
-    it('4. Procesează cu succes o imagine validă și afișează preview-ul', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
-        const input = screen.getByLabelText(/Apasă pentru a încărca/i);
+    it('4. Resetează corect dacă utilizatorul dă cancel la dialog (empty files)', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
 
-        // Simulăm o imagine validă
-        const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-        fireEvent.change(input, { target: { files: [file] } });
+        fireEvent.change(input, { target: { files: [] } })
 
-        // Verificăm apariția imaginii de preview
-        const previewImage = screen.getByAltText('Preview bon fiscal');
-        expect(previewImage).toBeInTheDocument();
-        expect(previewImage).toHaveAttribute('src', 'mock-preview-url');
+        expect(mockOnImageSelect).toHaveBeenCalledWith(null)
+    })
 
-        // Verificăm dacă fișierul a fost transmis corect către componenta părinte
-        expect(mockOnImageSelect).toHaveBeenCalledWith(file);
+    it('5. Încarcă cu succes o imagine și afișează preview-ul', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        const validFile = createFile('bon.jpg', 1024, 'image/jpeg')
 
-        // Verificăm că erorile nu sunt prezente
-        expect(screen.queryByText(/Format invalid/)).not.toBeInTheDocument();
-    });
+        fireEvent.change(input, { target: { files: [validFile] } })
 
-    it('5. Resetează selecția la apăsarea butonului de ștergere (X)', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
-        const input = screen.getByLabelText(/Apasă pentru a încărca/i);
+        expect(globalThis.URL.createObjectURL).toHaveBeenCalledWith(validFile)
+        expect(screen.getByText('Bon încărcat')).toBeInTheDocument()
+        expect(mockOnImageSelect).toHaveBeenCalledWith(validFile)
+    })
 
-        // Încărcăm imaginea
-        const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-        fireEvent.change(input, { target: { files: [file] } });
+    it('6. Șterge imaginea selectată', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        const validFile = createFile('bon.jpg', 1024, 'image/jpeg')
 
-        // Identificăm butonul X și dăm click pe el
-        const deleteButton = screen.getByTitle('Șterge imaginea');
-        fireEvent.click(deleteButton);
+        fireEvent.change(input, { target: { files: [validFile] } })
 
-        // Verificăm că preview-ul a dispărut și componenta părinte a primit "null"
-        expect(screen.queryByAltText('Preview bon fiscal')).not.toBeInTheDocument();
-        expect(mockOnImageSelect).toHaveBeenCalledWith(null);
-        expect(screen.getByText('Apasă pentru a încărca')).toBeInTheDocument();
-    });
+        const deleteBtn = screen.getByTitle('Șterge imaginea')
+        fireEvent.click(deleteBtn)
 
-    it('6. Tratează corect cazul în care selecția fișierului este anulată de utilizator', () => {
-        render(<ImageUploader onImageSelect={mockOnImageSelect} />);
-        const input = screen.getByLabelText(/Apasă pentru a încărca/i);
+        expect(screen.getByText('Trage bonul aici')).toBeInTheDocument()
+        expect(mockOnImageSelect).toHaveBeenCalledWith(null)
+    })
 
-        // Simulăm un change event cu un array gol de fișiere
-        fireEvent.change(input, { target: { files: [] } });
+    it('7. Gestionează evenimentele vizuale de Drag Over și Leave', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
 
-        expect(mockOnImageSelect).toHaveBeenCalledWith(null);
-        expect(screen.getByText('Apasă pentru a încărca')).toBeInTheDocument();
-    });
-});
+        fireEvent.dragOver(dropzone)
+        expect(screen.getByText('Eliberează ca să încărcăm bonul')).toBeInTheDocument()
+
+        fireEvent.dragLeave(dropzone)
+        expect(screen.getByText('Trage bonul aici')).toBeInTheDocument()
+    })
+
+    it('8. Încarcă cu succes o imagine prin Drag & Drop', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
+
+        const validFile = createFile('drag.png', 1024, 'image/png')
+        fireEvent.drop(dropzone, { dataTransfer: { files: [validFile] } })
+
+        expect(mockOnImageSelect).toHaveBeenCalledWith(validFile)
+    })
+
+    it('9. Arată eroare la Drop: fișierul nu este imagine', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
+        const pdfFile = createFile('test.pdf', 1024, 'application/pdf')
+
+        fireEvent.drop(dropzone, { dataTransfer: { files: [pdfFile] } })
+
+        expect(screen.getByText(/Format invalid/i)).toBeInTheDocument()
+    })
+
+    it('10. Arată eroare la Drop: fișier prea mare', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
+        const bigFile = createFile('big.jpg', 6 * 1024 * 1024, 'image/jpeg')
+
+        fireEvent.drop(dropzone, { dataTransfer: { files: [bigFile] } })
+
+        expect(screen.getByText(/depășește limita maximă/i)).toBeInTheDocument()
+    })
+
+    it('11. Ignoră drop-ul dacă nu există fișiere în payload', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
+
+        fireEvent.drop(dropzone, { dataTransfer: { files: undefined } })
+        expect(mockOnImageSelect).not.toHaveBeenCalled()
+    })
+
+    it('12. Permite accesibilitate prin tastatură (Enter pe dropzone)', () => {
+        const { container } = render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+        const dropzone = container.querySelector('.dropzone') as HTMLElement
+
+        fireEvent.keyDown(dropzone, { key: 'Space' })
+        expect(inputClickMock).not.toHaveBeenCalled()
+
+        fireEvent.keyDown(dropzone, { key: 'Enter' })
+        expect(inputClickMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('13. Declanșează input-ul la click pe butonul interior (Folosește camera)', () => {
+        render(<ImageUploader onImageSelect={mockOnImageSelect} />)
+
+        const cameraBtn = screen.getByText(/folosește camera/i)
+
+        fireEvent.click(cameraBtn)
+
+        expect(inputClickMock).toHaveBeenCalled()
+    })
+})

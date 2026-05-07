@@ -44,6 +44,7 @@ export default function ExpenseMap() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'family-agent-google-maps',
     googleMapsApiKey: mapsApiKey ?? '',
+    libraries: ['drawing', 'geometry'],
   })
 
   const [center, setCenter] = useState<LatLng>({ lat: 44.4268, lng: 26.1025 })
@@ -296,8 +297,13 @@ export default function ExpenseMap() {
       }
     }
 
-    void run()
-    return () => controller.abort()
+    void run().catch((err) => {
+      if (err?.name === 'AbortError') return
+      console.error('❌ HARTA: Eroare la inițializarea hărții', err)
+      setMessage('A apărut o eroare la încărcarea hărții. Reîncearcă sau dă refresh.')
+      setMarker(null)
+    });
+    return () => controller.abort();
   }, [geocodingApiKey, isLoaded, label, loadError, mapsApiKey, state.lat, state.lng, state.locationId])
 
   const googleMapsLink = (() => {
@@ -335,7 +341,8 @@ export default function ExpenseMap() {
           </div>
         </nav>
 
-        <div className="px-6 lg:px-10 pt-6 pb-10 max-w-[1200px] mx-auto w-full flex-1">
+                <div className="text-[12px] text-[#9A8A7C]">Locație</div>
+                <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug" data-testid="sidebar-location-label">{place?.name || (label ? undefined : 'Locație')}</div>
 
           {/* --- BANNER DE ALERTA GEOFENCING (Task Miron Andrei) --- */}
           {isOutsideZone && marker && (
@@ -480,7 +487,6 @@ export default function ExpenseMap() {
                 </div>
               </div>
           )}
-        </div>
       </div>
   )
 }

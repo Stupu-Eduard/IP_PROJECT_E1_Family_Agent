@@ -1,14 +1,13 @@
 package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
 import com.familie.cheltuieli_familie.service.RagRetrievalService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
@@ -23,19 +22,21 @@ class RagQueryControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private RagRetrievalService ragRetrievalService;
+
+    @MockitoBean
+    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
 
     @Test
     void testRagQuery() throws Exception {
-        when(ragRetrievalService.askWithContext("Cât am cheltuit la Mega Image?"))
-                .thenReturn("Ai cheltuit 89 de lei la Mega Image.");
+        when(ragRetrievalService.askWithContext("intrebare")).thenReturn("Raspuns RAG");
 
         mockMvc.perform(post("/v1/rag/query")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"query\": \"Cât am cheltuit la Mega Image?\"}"))
+                        .content("{\"query\": \"intrebare\"}"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Ai cheltuit 89 de lei la Mega Image."));
+                .andExpect(content().string("Raspuns RAG"));
     }
 
     @Test
