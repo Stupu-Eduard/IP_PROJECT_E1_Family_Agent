@@ -11,7 +11,7 @@ spring:
 
 qdrant:
   host: qdrant
-  port: 6333
+  port: 6334
   collection-name: expenses
 
 # LangChain4j Config referencing .env values
