@@ -5,6 +5,7 @@ import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -61,6 +62,7 @@ public class EmbeddingConfig {
     }
 
     @Bean
+    @Primary
     public EmbeddingModel embeddingModel() {
         String openRouterKey = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
         if (openRouterKey.isEmpty()) {
