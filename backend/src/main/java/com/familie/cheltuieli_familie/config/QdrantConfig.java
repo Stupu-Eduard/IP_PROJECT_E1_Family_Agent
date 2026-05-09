@@ -77,7 +77,6 @@ public class QdrantConfig {
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());
-            throw new ResourceInitializationException("Failed to create Qdrant collection", e);
         }
     }
 
@@ -96,7 +95,6 @@ public class QdrantConfig {
             log.info("Created payload index for field: {}", fieldName);
         } catch (Exception e) {
             log.error("Failed to create payload index for field {}: {}", fieldName, e.getMessage());
-            throw new ResourceInitializationException("Failed to create payload index for field " + fieldName, e);
         }
     }
 }

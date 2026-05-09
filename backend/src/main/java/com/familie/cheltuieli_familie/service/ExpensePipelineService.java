@@ -56,7 +56,6 @@ public class ExpensePipelineService {
                 thePipeHandler.broadcast(payload);
             } catch (Exception e) {
                 log.error("Failed to broadcast expense to The Pipe", e);
-                throw new PipelineException("Failed to broadcast expense to The Pipe", e);
             }
             // --------------------------------------------------
             

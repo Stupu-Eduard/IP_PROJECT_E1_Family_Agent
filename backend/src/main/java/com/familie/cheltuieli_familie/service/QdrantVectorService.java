@@ -115,7 +115,6 @@ public class QdrantVectorService {
             }
         } catch (Exception e) {
             log.error("Qdrant search failed: {}", e.getMessage());
-            throw new VectorStoreException("Qdrant search failed", e);
         }
 
         return List.of();
@@ -212,7 +211,6 @@ public class QdrantVectorService {
             }
         } catch (Exception e) {
             log.error("Qdrant exists check failed: {}", e.getMessage());
-            throw new VectorStoreException("Qdrant exists check failed", e);
         }
         return false;
     }
