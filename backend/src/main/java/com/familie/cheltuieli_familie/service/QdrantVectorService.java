@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.exception.VectorStoreException;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
@@ -114,6 +115,7 @@ public class QdrantVectorService {
             }
         } catch (Exception e) {
             log.error("Qdrant search failed: {}", e.getMessage());
+            throw new VectorStoreException("Qdrant search failed", e);
         }
 
         return List.of();
@@ -210,6 +212,7 @@ public class QdrantVectorService {
             }
         } catch (Exception e) {
             log.error("Qdrant exists check failed: {}", e.getMessage());
+            throw new VectorStoreException("Qdrant exists check failed", e);
         }
         return false;
     }

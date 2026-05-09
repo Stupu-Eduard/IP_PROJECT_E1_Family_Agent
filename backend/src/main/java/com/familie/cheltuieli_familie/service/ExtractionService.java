@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.familie.cheltuieli_familie.exception.AiServiceException;
 import com.familie.cheltuieli_familie.exception.AmountNotFoundException;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
@@ -114,13 +115,13 @@ public class ExtractionService {
                         Thread.sleep(delay);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
-                        throw new RuntimeException("Retry interrupted", ie);
+                        throw new AiServiceException("Retry interrupted", ie);
                     }
                 }
             }
         }
 
-        throw new RuntimeException("Eroare internă la procesarea AI după " + MAX_RETRIES + " încercări. Ultima eroare: " + lastError);
+        throw new AiServiceException("Eroare internă la procesarea AI după " + MAX_RETRIES + " încercări. Ultima eroare: " + lastError);
     }
 
     @Transactional
@@ -155,7 +156,7 @@ public class ExtractionService {
             throw e;
         } catch (Exception e) {
             log.error("Error processing extraction JSON", e);
-            throw new RuntimeException("Eroare internă la procesarea AI", e);
+            throw new AiServiceException("Eroare internă la procesarea AI", e);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.config;
 
+import com.familie.cheltuieli_familie.exception.ResourceInitializationException;
 import dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,7 @@ public class QdrantConfig {
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());
+            throw new ResourceInitializationException("Failed to create Qdrant collection", e);
         }
     }
 
@@ -94,6 +96,7 @@ public class QdrantConfig {
             log.info("Created payload index for field: {}", fieldName);
         } catch (Exception e) {
             log.error("Failed to create payload index for field {}: {}", fieldName, e.getMessage());
+            throw new ResourceInitializationException("Failed to create payload index for field " + fieldName, e);
         }
     }
 }

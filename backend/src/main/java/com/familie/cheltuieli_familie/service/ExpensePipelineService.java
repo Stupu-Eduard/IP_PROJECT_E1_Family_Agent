@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.exception.PipelineException;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
@@ -55,6 +56,7 @@ public class ExpensePipelineService {
                 thePipeHandler.broadcast(payload);
             } catch (Exception e) {
                 log.error("Failed to broadcast expense to The Pipe", e);
+                throw new PipelineException("Failed to broadcast expense to The Pipe", e);
             }
             // --------------------------------------------------
             

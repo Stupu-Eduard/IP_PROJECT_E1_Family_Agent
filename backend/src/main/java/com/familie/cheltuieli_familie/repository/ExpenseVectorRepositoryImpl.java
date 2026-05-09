@@ -9,6 +9,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
 
+import com.familie.cheltuieli_familie.exception.VectorStoreException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class ExpenseVectorRepositoryImpl implements ExpenseVectorRepository {
         String url = qdrantUrl + "?wait=true";
 
         if (entity.getId() == null) {
-            throw new RuntimeException("Cannot save vector: entity has no ID yet");
+            throw new VectorStoreException("Cannot save vector: entity has no ID yet");
         }
 
         // Qdrant REST upsert - PUT /collections/{name}/points
@@ -57,7 +58,7 @@ public class ExpenseVectorRepositoryImpl implements ExpenseVectorRepository {
         try {
             restTemplate.exchange(putUrl, org.springframework.http.HttpMethod.PUT, httpEntity, String.class);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save vector to Qdrant: " + e.getMessage(), e);
+            throw new VectorStoreException("Failed to save vector to Qdrant: " + e.getMessage(), e);
         }
     }
 
