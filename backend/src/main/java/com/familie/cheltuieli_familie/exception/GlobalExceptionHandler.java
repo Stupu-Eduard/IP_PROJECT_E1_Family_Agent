@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    String final TIMESTAMP = "timestamp";
-    String final MESSAGE = "message";
-    String final STATUS = "status";
+    private static final String TIMESTAMP = "timestamp";
+    private static final String MESSAGE = "message";
+    private static final String STATUS = "status";
 
     @ExceptionHandler(AmountNotFoundException.class)
     public ResponseEntity<Object> handleAmountNotFoundException(AmountNotFoundException ex) {
