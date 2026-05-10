@@ -37,13 +37,26 @@ vi.mock('../services/auth', () => ({
     getLoginErrorMessage: vi.fn(() => 'A apărut o eroare neașteptată.'),
 }))
 
+// Helper pentru a construi un fake JWT cu un payload arbitrar
+function buildFakeJwt(payload: Record<string, unknown>): string {
+    const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+    const body   = btoa(JSON.stringify(payload))
+    return `${header}.${body}.signature`
+}
+
 describe('LoginForm - Optimizare Coverage 100%', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockAuthData.isAuthenticated = false
         mockAuthData.token = null
         vi.mocked(jwtUtils.isTokenExpired).mockReturnValue(false)
-        ;(loginWithEmailPassword as any).mockResolvedValue({ message: 'ok', userName: 'Test' })
+        // FIX: răspunsul mock-uit de bază trebuie să conțină `token`,
+        // altfel LoginForm intră pe ramura else și afișează "Token lipsă."
+        ;(loginWithEmailPassword as any).mockResolvedValue({
+            message: 'ok',
+            userName: 'Test',
+            token: buildFakeJwt({ role: 'Parent', sub: 'default@test.com' })
+        })
     })
 
     const renderComponent = () => render(<BrowserRouter><LoginForm /></BrowserRouter>)
@@ -63,7 +76,16 @@ describe('LoginForm - Optimizare Coverage 100%', () => {
         const passwordInput = screen.getByPlaceholderText('••••••••')
         const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
 
-        ;(loginWithEmailPassword as any).mockResolvedValueOnce({ message: 'ok', userName: 'Test' })
+        // FIX: serverul (mock-uit) este cel care construiește JWT-ul cu rol Child
+        // pentru contul de copil. LoginForm doar primește acest token și-l trimite
+        // în loginStore (mockAuthData.login).
+        const childToken = buildFakeJwt({ role: 'Child', sub: 'copil@example.com' })
+        ;(loginWithEmailPassword as any).mockResolvedValueOnce({
+            message: 'ok',
+            userName: 'Copil',
+            token: childToken,
+            role: 'Child',
+        })
 
         fireEvent.change(emailInput, { target: { value: 'copil@example.com' } })
         fireEvent.change(passwordInput, { target: { value: 'password123' } })
@@ -74,7 +96,7 @@ describe('LoginForm - Optimizare Coverage 100%', () => {
 
         await waitFor(() => {
             expect(mockAuthData.login).toHaveBeenCalled()
-            // Verificăm dacă token-ul generat (al doilea argument din login) conține rolul Child
+            // Verificăm dacă token-ul trimis în store conține rolul Child
             const tokenSent = vi.mocked(mockAuthData.login).mock.calls[0][0]
             const payload = JSON.parse(atob(tokenSent.split('.')[1]))
             expect(payload.role).toBe('Child')
@@ -82,16 +104,10 @@ describe('LoginForm - Optimizare Coverage 100%', () => {
     })
 
     it('3. Eroare Server: Ar trebui să afișeze mesaj de eroare la eșecul promisiunii', async () => {
-        // Pentru acest test, forțăm o eroare generică (nu de validare)
-        // Simulăm un email care trece de Yup dar e invalid în logica noastră internă
         renderComponent()
 
         fireEvent.change(screen.getByPlaceholderText('username@exemplu.com'), { target: { value: 'error@test.com' } })
         fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'password123' } })
-
-        // Mockăm temporar funcția de login să arunce o eroare dacă e nevoie,
-        // sau lăsăm catch-ul să prindă erori neașteptate.
-        // În componenta ta, orice eroare de server (mockApiCall reject) ajunge în catch.
 
         const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
 

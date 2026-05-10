@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import RegisterForm from './RegisterForm'
 import { useAuthStore } from '../store/authStore'
+import { api } from '../services/api'
 
 // ── Mock-uri ──
 vi.mock('../store/authStore', () => ({
@@ -12,6 +13,14 @@ vi.mock('../store/authStore', () => ({
 
 vi.mock('../utils/jwt', () => ({
     isTokenExpired: vi.fn(() => false)
+}))
+
+// FIX: trebuie mock-at modulul services/api pentru a controla răspunsul
+// (RegisterForm folosește api.post, nu un mockApiCall intern).
+vi.mock('../services/api', () => ({
+    api: {
+        post: vi.fn(),
+    },
 }))
 
 const mockNavigate = vi.fn()
@@ -28,6 +37,8 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         ;(useAuthStore as any).mockImplementation((selector: any) =>
             selector({ token: null, isAuthenticated: false, login: mockLogin })
         )
+        // Default: înregistrare reușită cu token valid (suprascris în testele care vor altceva)
+        ;(api.post as any).mockResolvedValue({ data: { token: 'fake.jwt.token' } })
     })
 
     const renderComponent = () => render(
@@ -102,12 +113,21 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
 
+        // FIX: Forțăm un mic delay pentru a putea observa starea de loading
+        // (codul real folosește api.post, nu un mock cu setTimeout 1500ms)
+        let resolvePost: ((value: any) => void) | null = null
+        ;(api.post as any).mockImplementationOnce(() => new Promise((resolve) => {
+            resolvePost = resolve
+        }))
+
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
 
         // Verificăm starea de loading
         expect(await screen.findByText(/Se procesează/i)).toBeInTheDocument()
 
-        // mockApiCall are setTimeout 1500ms — așteptăm să se termine
+        // Rezolvăm promisiunea cu un token valid
+        resolvePost?.({ data: { token: 'fake.jwt.token' } })
+
         await waitFor(() => {
             expect(mockLogin).toHaveBeenCalledTimes(1)
             expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true })
@@ -118,11 +138,14 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         renderComponent()
 
         fireEvent.change(screen.getByPlaceholderText(/Ana Popescu/i), { target: { value: 'Test User' } })
-        // Email hardcodat în RegisterForm care declanșează reject-ul 409
         fireEvent.change(screen.getByPlaceholderText(/username@exemplu.com/i), { target: { value: 'test@example.com' } })
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
+
+        // FIX: api.post aruncă un Error cu mesajul așteptat
+        // (în RegisterForm, catch-ul tratează `err instanceof Error` → setError(err.message))
+        ;(api.post as any).mockRejectedValueOnce(new Error('Acest email este deja asociat unui cont.'))
 
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
 
@@ -138,7 +161,10 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
 
-        // mockLogin aruncă un string (non-Error) → ramura `else setError('Eroare neașteptată...')`
+        // FIX: pentru ca mockLogin (loginStore) să fie chemat, api.post trebuie
+        // să returneze un response cu token. Apoi mockLogin aruncă un string
+        // (non-Error) → ramura else: setError('Eroare neașteptată de rețea.')
+        ;(api.post as any).mockResolvedValueOnce({ data: { token: 'fake.jwt.token' } })
         mockLogin.mockImplementationOnce(() => { throw 'Crash non-Error' })
 
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
