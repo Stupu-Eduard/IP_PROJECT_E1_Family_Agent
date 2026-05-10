@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
 import KidDashboard from './KidDashboard'
+import { getProfileDisplayName, getProfileRole } from '../utils/profile'
 
 // ─── Google Maps container style ────────────────────────────────────────────
 const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
@@ -42,6 +43,7 @@ const barData = [
 
 export default function Dashboard() {
   const token    = useAuthStore((state) => state.token)
+  const profile  = useAuthStore((state) => state.profile)
   const navigate = useNavigate()
 
   // ── State WebSocket locație live (LOGICĂ NEATINSĂ) ─────────────────────────
@@ -62,16 +64,8 @@ export default function Dashboard() {
   })
 
   // ── RBAC — decodare token (NEATINS) ───────────────────────────────────────
-  let userRole = 'Parent'
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      userRole = payload.role || 'Parent';
-      console.log('👤 Rol detectat din token:', userRole);
-    } catch (error) {
-      console.error("Eroare la parsarea JWT-ului:", error);
-    }
-  }
+  const userRole = getProfileRole(profile, token)
+  const displayName = getProfileDisplayName(profile, token, userRole === 'Child' ? 'Andrei' : 'Eduard')
 
   // ── WebSocket conexiune (LOGICĂ NEATINSĂ) ─────────────────────────────────
   useEffect(() => {
@@ -121,7 +115,7 @@ export default function Dashboard() {
               background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-soft) 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             }}>
-            Eduard!
+            {displayName}!
           </span>
           </h1>
           <div style={{ color: 'var(--color-muted)', fontSize: 14, lineHeight: 1.6, maxWidth: 520 }}>

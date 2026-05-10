@@ -13,6 +13,7 @@ import ExpenseMap from './pages/ExpenseMap'
 import ExpensesMapAll from './pages/ExpensesMapAll'
 import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
+import ProfileSettings from './pages/ProfileSettings'
 import AppErrorBoundary from './components/AppErrorBoundary'
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
@@ -40,6 +41,7 @@ function App() {
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/expenses/all-map" element={<ExpensesMapAll />} />
                         <Route path="/family" element={<FamilySettings />} />
+                        <Route path="/profile-settings" element={<ProfileSettings />} />
                     </Route>
 
                     <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,15 +1,17 @@
 import '@testing-library/jest-dom'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import Reports from './Reports'
 
 // ── 1. Mock Recharts ──
 vi.mock('recharts', async () => {
     const actual = await vi.importActual('recharts');
+    const MockResponsiveContainer = ({ children }: { children?: ReactNode }) => <div style={{ width: 800, height: 300 }}>{children}</div>;
     return {
         ...actual,
-        ResponsiveContainer: ({ children }: any) => <div style={{ width: 800, height: 300 }}>{children}</div>,
+        ResponsiveContainer: MockResponsiveContainer,
     };
 });
 
@@ -27,7 +29,6 @@ describe('Reports Component - 100% Coverage', () => {
     });
 
     afterEach(() => {
-        vi.runAllTimers();
         vi.useRealTimers();
     });
 

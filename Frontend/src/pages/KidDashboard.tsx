@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Camera } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { getProfileDisplayName, getProfileInitials, getProfileRole } from '../utils/profile';
 
 // ── Mock data (va fi înlocuit de API când e disponibil) ───────────────────
 const myExpenses = [
@@ -27,13 +29,20 @@ const quickActions = [
 
 export default function KidDashboard() {
     const navigate = useNavigate()
+    const token = useAuthStore((state) => state.token)
+    const profile = useAuthStore((state) => state.profile)
+    const hasAuthInfo = Boolean(token || profile)
+    const userRole = hasAuthInfo ? getProfileRole(profile, token) : 'Child'
+    const displayName = getProfileDisplayName(profile, token, 'Andrei P.')
+    const initials = getProfileInitials(profile, token, displayName)
+    const avatarUrl = profile?.avatarUrl ?? null
 
     return (
         <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
 
             {/* ── Header ──────────────────────────────────────────────────────── */}
             <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div className="chip chip-live">SESIUNE COPIL · ANDREI</div>
+                <div className="chip chip-live">{userRole === 'Child' ? 'SESIUNE COPIL' : 'SESIUNE ACTIVĂ'} · {displayName.split(' ')[0]?.toUpperCase() ?? 'ANDREI'}</div>
                 <button
                     className="btn btn-accent"
                     style={{ fontSize: 13 }}
@@ -44,7 +53,7 @@ export default function KidDashboard() {
             </div>
 
             <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>
-                Salut, <span style={{ color: 'var(--color-primary)' }}>Andrei</span> 👋
+                Salut, <span style={{ color: 'var(--color-primary)' }}>{displayName.split(' ')[0]}</span> 👋
             </h1>
             <div className="fade-up" style={{ color: 'var(--color-muted)', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
                 Ce ai cumpărat astăzi? Scanează bonul și suma se scade din buget.
@@ -95,9 +104,9 @@ export default function KidDashboard() {
                             fontSize: 32, fontWeight: 700, color: 'white',
                             marginBottom: 10, boxShadow: '0 8px 20px rgba(201,123,75,0.3)',
                         }}>
-                            A
+                            {avatarUrl ? <img src={avatarUrl} alt="Avatar profil copil" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 20 }} /> : initials}
                         </div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-ink)' }}>Andrei P.</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-ink)' }}>{displayName}</div>
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             marginTop: 4, fontSize: 11, color: 'var(--color-muted)',

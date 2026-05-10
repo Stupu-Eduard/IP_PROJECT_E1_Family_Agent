@@ -26,7 +26,7 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
         vi.clearAllMocks()
         // Configurare implicită pentru auth store
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = { token: null, logout: mockLogout }
+            const state = { token: null, profile: null, logout: mockLogout }
             return selector(state)
         })
     })
@@ -51,7 +51,7 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
 
     it('2. Randează meniul restrâns pentru Copil (Gradient Avatar)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = { token: createMockToken('Child', 'andrei@test.com'), logout: mockLogout }
+            const state = { token: createMockToken('Child', 'andrei@test.com'), profile: null, logout: mockLogout }
             return selector(state)
         })
 
@@ -114,5 +114,35 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
 
         expect(mockLogout).toHaveBeenCalled()
         expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
+    })
+
+    it('8. Deschide setările profilului la click pe avatar', () => {
+        const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>)
+
+        const avatar = container.querySelector('.fa-sidebar-avatar') as HTMLElement
+        fireEvent.click(avatar)
+
+        expect(mockNavigate).toHaveBeenCalledWith('/profile-settings')
+    })
+
+    it('9. Folosește datele de profil salvate când există în store', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => {
+            const state = {
+                token: createMockToken('Parent', 'eduard@test.com'),
+                profile: {
+                    name: 'Alex Popescu',
+                    avatarUrl: 'https://cdn.test/avatar.png',
+                    preferences: { theme: 'light', language: 'ro', emailNotifications: true },
+                    role: 'Parent',
+                },
+                logout: mockLogout,
+            }
+            return selector(state)
+        })
+
+        render(<MemoryRouter><Sidebar /></MemoryRouter>)
+
+        expect(screen.getByText('Alex Popescu')).toBeInTheDocument()
+        expect(screen.getByAltText('Avatar profil')).toHaveAttribute('src', 'https://cdn.test/avatar.png')
     })
 })

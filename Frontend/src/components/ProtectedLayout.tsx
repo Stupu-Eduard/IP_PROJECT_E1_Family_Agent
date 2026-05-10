@@ -2,17 +2,13 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar.tsx'
 import ChatAI from './ChatAi'
 import { useAuthStore } from '../store/authStore'
+import { getProfileRole } from '../utils/profile'
 
 export default function ProtectedLayout() {
 	const token = useAuthStore((s) => s.token)
+	const profile = useAuthStore((s) => s.profile)
 
-	let isChild = false
-	if (token) {
-		try {
-			const payload = JSON.parse(atob(token.split('.')[1]))
-			isChild = payload.role === 'Child'
-		} catch { /* empty */ }
-	}
+	const isChild = getProfileRole(profile, token) === 'Child'
 
 	return (
 		<div className="fa-layout">

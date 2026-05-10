@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { useAuthStore, AUTH_TOKEN_STORAGE_KEY } from './authStore'
+import { useAuthStore, AUTH_TOKEN_STORAGE_KEY, AUTH_PROFILE_STORAGE_KEY } from './authStore'
 
 describe('AuthStore - Zustand & Persistență', () => {
     beforeEach(() => {
@@ -36,11 +36,19 @@ describe('AuthStore - Zustand & Persistență', () => {
 
     it('ar trebui să curețe localStorage și starea la apelarea logout()', () => {
         useAuthStore.getState().login('test-token')
+        useAuthStore.getState().setProfile({
+            name: 'Alex Popescu',
+            avatarUrl: 'https://cdn.test/avatar.png',
+            role: 'Parent',
+            preferences: { theme: 'dark', language: 'en', emailNotifications: false },
+        })
         useAuthStore.getState().logout()
 
         expect(useAuthStore.getState().token).toBe(null)
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
         expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+        expect(localStorage.getItem(AUTH_PROFILE_STORAGE_KEY)).toBe(null)
+        expect(useAuthStore.getState().profile).toBe(null)
     })
 
     it('4. setToken() - Ramura IF: salvează token dacă valoarea este validă', () => {
@@ -62,5 +70,41 @@ describe('AuthStore - Zustand & Persistență', () => {
         expect(useAuthStore.getState().token).toBe(null)
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
         expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+    })
+
+    it('6. setProfile() și updateProfile() persistă și fuzionează preferințele', () => {
+        useAuthStore.getState().setProfile({
+            name: 'Maria Popescu',
+            avatarUrl: null,
+            role: 'Parent',
+            preferences: { theme: 'light', language: 'ro', emailNotifications: false },
+        })
+
+        useAuthStore.getState().updateProfile({
+            name: 'Maria Ionescu',
+            preferences: { emailNotifications: true },
+        })
+
+        expect(useAuthStore.getState().profile).toEqual({
+            name: 'Maria Ionescu',
+            avatarUrl: null,
+            role: 'Parent',
+            preferences: { theme: 'light', language: 'ro', emailNotifications: true },
+        })
+        expect(JSON.parse(localStorage.getItem(AUTH_PROFILE_STORAGE_KEY) as string)).toEqual(useAuthStore.getState().profile)
+    })
+
+    it('7. setToken(null) curăță și profilul salvat', () => {
+        useAuthStore.getState().setProfile({
+            name: 'Alex Popescu',
+            avatarUrl: null,
+            role: 'Parent',
+            preferences: { theme: 'system', language: 'ro', emailNotifications: true },
+        })
+
+        useAuthStore.getState().setToken(null)
+
+        expect(useAuthStore.getState().profile).toBe(null)
+        expect(localStorage.getItem(AUTH_PROFILE_STORAGE_KEY)).toBe(null)
     })
 })

@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { getProfileAvatarUrl, getProfileDisplayName, getProfileInitials, getProfileRole, getProfileRoleLabel } from '../utils/profile'
 
 // ── Nav items Părinte ──────────────────────────────────────────────────────
 const parentNavItems = [
@@ -24,6 +25,11 @@ const parentNavItems = [
                 <circle cx="17" cy="9" r="2.6"/><path d="M22 20c0-2.6-2.2-4.7-5-4.7"/>
             </svg>
         )},
+    { id: 'profile-settings', label: 'Setări profil', icon: (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7.1 4.6l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1A2 2 0 1 1 19.4 7l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.2a1.7 1.7 0 0 0-1.4 1Z"/>
+            </svg>
+        )},
     { id: 'expenses/map', label: 'Hartă Live',  icon: (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/>
@@ -36,36 +42,22 @@ const childNavItems = [
     { id: 'dashboard',    label: 'Dashboard',   icon: parentNavItems[0].icon },
     { id: 'expenses',     label: 'Cheltuielile mele', icon: parentNavItems[1].icon },
     { id: 'family',       label: 'Familie',     icon: parentNavItems[3].icon },
+    { id: 'profile-settings', label: 'Setări profil', icon: parentNavItems[4].icon },
 ]
 
 export default function Sidebar() {
     const navigate  = useNavigate()
     const location  = useLocation()
     const token     = useAuthStore((s) => s.token)
+    const profile   = useAuthStore((s) => s.profile)
     const logout    = useAuthStore((s) => s.logout)
 
     // ── Detectare rol din JWT (același mecanism ca în Dashboard) ──────────
-    let userRole = 'Parent'
-    let userName = 'Eduard P.'
-    let userRoleLabel = 'Părinte · Activ'
-    let userInitials = 'ED'
-
-    if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            userRole = payload.role || 'Parent'
-            if (payload.sub) {
-                const email = payload.sub as string
-                userInitials = email.slice(0, 2).toUpperCase()
-                if (userRole === 'Child') {
-                    userName = 'Andrei P.'
-                    userRoleLabel = 'Copil · Activ'
-                    userInitials = 'AN'
-                }
-            }
-        } catch {}
-    }
-
+    const userRole = getProfileRole(profile, token)
+    const userName = getProfileDisplayName(profile, token, userRole === 'Child' ? 'Andrei P.' : 'Eduard P.')
+    const userRoleLabel = getProfileRoleLabel(userRole)
+    const userInitials = getProfileInitials(profile, token, userName)
+    const userAvatar = getProfileAvatarUrl(profile, token)
     const isChild  = userRole === 'Child'
     const navItems = isChild ? childNavItems : parentNavItems
 
@@ -121,12 +113,21 @@ export default function Sidebar() {
             <div className="fa-sidebar-footer">
                 <div
                     className="fa-sidebar-avatar"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate('/profile-settings')}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            navigate('/profile-settings')
+                        }
+                    }}
                     style={isChild
                         ? { background: 'linear-gradient(135deg, #B5956A, #D4B896)' }
                         : undefined
                     }
                 >
-                    {userInitials}
+                    {userAvatar ? <img src={userAvatar} alt="Avatar profil" className="w-full h-full object-cover rounded-full" /> : userInitials}
                 </div>
                 <div className="fa-sidebar-user-info">
                     <div className="fa-sidebar-user-name">{userName}</div>
