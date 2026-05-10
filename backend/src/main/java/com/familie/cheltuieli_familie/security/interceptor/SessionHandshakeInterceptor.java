@@ -75,5 +75,6 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
     @Override
     public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                WebSocketHandler wsHandler, Exception exception) {
+        // Această metodă este lăsată goală intenționat deoarece nu este nevoie de logică post-handshake momentan.
     }
 }

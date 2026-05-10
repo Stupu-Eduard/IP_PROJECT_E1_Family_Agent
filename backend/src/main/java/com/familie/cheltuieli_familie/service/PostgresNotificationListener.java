@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,19 +60,9 @@ public class PostgresNotificationListener {
     private void processNotification(String channel, String payload) {
         log.debug("🔔 Eveniment DB pe canalul [{}]: {}", channel, payload);
         try {
-            // Putem adăuga logică de filtrare aici
-            JsonNode node = objectMapper.readTree(payload);
-            
-            // Exemplu de filtrare/augmentare pentru locații
-            if ("location_updates".equals(channel)) {
-                // Dacă payload-ul este doar un ID, putem face un fetch, 
-                // dar conform V33, row_to_json trimite tot rândul.
-                thePipeHandler.broadcast(payload);
-            } else {
-                // Trimitere generică pentru alte canale
-                thePipeHandler.broadcast(payload);
-            }
-            
+            // Validăm dacă e JSON valid înainte de broadcast (fără a stoca în variabilă neutilizată)
+            objectMapper.readTree(payload);
+            thePipeHandler.broadcast(payload);
         } catch (Exception e) {
             log.error("❌ Eroare procesare payload DB: {}", e.getMessage());
         }

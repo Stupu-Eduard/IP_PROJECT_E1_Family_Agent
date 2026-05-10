@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.socket.WebSocketHandler;
@@ -26,13 +27,10 @@ class SessionHandshakeInterceptorTest {
 
     @Mock
     private JwtUtil jwtUtil;
-
     @Mock
     private UserRepository userRepository;
-
     @Mock
     private TokenBlacklistService blacklistService;
-
     @Mock
     private WebSocketHandler wsHandler;
 
@@ -41,7 +39,7 @@ class SessionHandshakeInterceptorTest {
 
     @Test
     @DisplayName("🟢 Should allow handshake when valid JWT token exists in query params")
-    void beforeHandshake_WhenValidTokenInQueryParams_ReturnsTrue() {
+    void beforeHandshake_WhenValidTokenInQuery_ReturnsTrue() {
         // GIVEN
         String token = "valid-token";
         String email = "test@familie.com";
@@ -71,11 +69,55 @@ class SessionHandshakeInterceptorTest {
     }
 
     @Test
-    @DisplayName("❌ Should return false when token is missing")
-    void beforeHandshake_WhenTokenIsMissing_ReturnsFalse() {
+    @DisplayName("🟢 Should allow handshake when valid JWT token exists in Authorization header")
+    void beforeHandshake_WhenValidTokenInHeader_ReturnsTrue() {
+        // GIVEN
+        String token = "valid-header-token";
+        String email = "test-header@familie.com";
+        String jti = "jti-header";
+        
+        MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+        mockRequest.addHeader("Authorization", "Bearer " + token);
+        ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
+
+        User user = new User();
+        user.setEmail(email);
+
+        when(jwtUtil.extractEmail(token)).thenReturn(email);
+        when(jwtUtil.extractJti(token)).thenReturn(jti);
+        when(blacklistService.isBlacklisted(jti)).thenReturn(false);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(jwtUtil.validateToken(token, email)).thenReturn(true);
+        
+        Map<String, Object> attributes = new HashMap<>();
+
+        // WHEN
+        boolean result = interceptor.beforeHandshake(request, null, wsHandler, attributes);
+
+        // THEN
+        assertTrue(result);
+        assertEquals(user, attributes.get("user"));
+    }
+
+    @Test
+    @DisplayName("❌ Should return false when no token is provided")
+    void beforeHandshake_WhenNoToken_ReturnsFalse() {
         // GIVEN
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
+
+        // WHEN
+        boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
+
+        // THEN
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("❌ Should return false when request is not ServletServerHttpRequest")
+    void beforeHandshake_WhenNotServletRequest_ReturnsFalse() {
+        // GIVEN
+        ServerHttpRequest request = mock(ServerHttpRequest.class);
 
         // WHEN
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
@@ -99,6 +141,24 @@ class SessionHandshakeInterceptorTest {
         when(jwtUtil.extractEmail(token)).thenReturn(email);
         when(jwtUtil.extractJti(token)).thenReturn(jti);
         when(blacklistService.isBlacklisted(jti)).thenReturn(true);
+
+        // WHEN
+        boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
+
+        // THEN
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("❌ Should return false when token validation throws exception")
+    void beforeHandshake_WhenExceptionOccurs_ReturnsFalse() {
+        // GIVEN
+        String token = "faulty-token";
+        MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+        mockRequest.setQueryString("token=" + token);
+        ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
+
+        when(jwtUtil.extractEmail(token)).thenThrow(new RuntimeException("Parsing failed"));
 
         // WHEN
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());

@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -78,6 +80,48 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_CandUserAreRolCopil_NormalizeazaRol() {
+        // GIVEN
+        LoginRequest request = new LoginRequest();
+        request.setEmail("copil@familie.com");
+        request.setPassword("parola");
+
+        User user = new User();
+        user.setId(2L);
+        user.setName("Copil");
+        user.setEmail("copil@familie.com");
+        user.setPasswordH("parola");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("child"); // lowercase in DB
+        com.familie.cheltuieli_familie.model.Family family = new com.familie.cheltuieli_familie.model.Family();
+        family.setId(10L);
+        member.setFamily(family);
+
+        when(userRepository.findByEmail("copil@familie.com")).thenReturn(Optional.of(user));
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(any(), any())).thenReturn("tk");
+
+        // WHEN
+        ResponseEntity<Object> result = authController.login(request);
+
+        // THEN
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Child", body.get("role")); // Capitalized
+    }
+
+    @Test
+    void login_CandUserInexistent_ReturneazaUnauthorized() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("none@example.com");
+        when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.login(request);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, result.getStatusCode());
+    }
+
+    @Test
     void login_CandParolaGresita_ReturneazaUnauthorized() {
         // GIVEN
         LoginRequest request = new LoginRequest();
@@ -120,6 +164,21 @@ class AuthControllerTest {
     }
 
     @Test
+    void register_CandEmailExistent_ReturneazaConflict() {
+        // GIVEN
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("existent@example.com");
+
+        when(userRepository.findByEmail("existent@example.com")).thenReturn(Optional.of(new User()));
+
+        // WHEN
+        ResponseEntity<Object> result = authController.register(request);
+
+        // THEN
+        assertEquals(HttpStatus.CONFLICT, result.getStatusCode());
+    }
+
+    @Test
     void logout_CandTokenEsteValid_IlAdaugaInBlacklist() {
         // GIVEN
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -133,5 +192,29 @@ class AuthControllerTest {
         // THEN
         assertEquals(HttpStatus.OK, result.getStatusCode());
         verify(blacklistService, times(1)).revokeToken(eq("jti-123"), any(Date.class));
+    }
+
+    @Test
+    void logout_CandTokenInvalidSauLipsaJti_ReturneazaBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer invalid");
+        when(jwtUtil.extractJti(any())).thenThrow(new RuntimeException("Fail"));
+
+        ResponseEntity<Object> result = authController.logout(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void logout_CandHeaderLipseste_ReturneazaBadRequest() {
+        // GIVEN
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn(null);
+
+        // WHEN
+        ResponseEntity<Object> result = authController.logout(request);
+
+        // THEN
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
     }
 }

@@ -29,6 +29,11 @@ import java.util.HashMap;
 @CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class AuthController {
 
+    private static final String ROLE_PARENT = "Parent";
+    private static final String ROLE_CHILD = "Child";
+    private static final String MSG_KEY = "message";
+    private static final String ERR_KEY = "error";
+
     private final UserRepository userRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final JwtUtil jwtUtil;
@@ -44,11 +49,11 @@ public class AuthController {
             User user = userOpt.get();
 
             List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
-            String role = memberships.isEmpty() ? "Parent" : memberships.get(0).getRole();
+            String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
 
             // Normalizăm rolul (frontend se așteaptă la "Parent" sau "Child")
-            if (role.equalsIgnoreCase("parent")) role = "Parent";
-            else if (role.equalsIgnoreCase("child")) role = "Child";
+            if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
+            else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
 
             Map<String, Object> claims = new HashMap<>();
             claims.put("userId", user.getId());
@@ -62,7 +67,7 @@ public class AuthController {
             String token = jwtUtil.generateToken(user.getEmail(), claims);
 
             return ResponseEntity.ok(Map.of(
-                    "message", "Login realizat cu succes!",
+                    MSG_KEY, "Login realizat cu succes!",
                     "token", token,
                     "userName", user.getName(),
                     "role", role
@@ -70,7 +75,7 @@ public class AuthController {
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Email sau parolă incorectă."));
+                .body(Map.of(ERR_KEY, "Email sau parolă incorectă."));
     }
 
     @PostMapping("/register")
@@ -79,7 +84,7 @@ public class AuthController {
 
         if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "Email deja asociat unui cont."));
+                    .body(Map.of(ERR_KEY, "Email deja asociat unui cont."));
         }
 
         User user = new User();
@@ -92,17 +97,17 @@ public class AuthController {
         // Generăm token JWT imediat după înregistrare
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
-        claims.put("role", "Parent"); // Default role
+        claims.put("role", ROLE_PARENT); // Default role
         claims.put("name", user.getName());
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
-                        "message", "Înregistrare realizată cu succes!",
+                        MSG_KEY, "Înregistrare realizată cu succes!",
                         "token", token,
                         "userName", user.getName(),
-                        "role", "Parent"
+                        "role", ROLE_PARENT
                 ));
     }
 
@@ -118,12 +123,12 @@ public class AuthController {
                 if (jti != null && expiration != null) {
                     blacklistService.revokeToken(jti, expiration);
                     log.info("✅ Sesiune delogată și token revocat cu succes.");
-                    return ResponseEntity.ok(Map.of("message", "Delogare realizată cu succes."));
+                    return ResponseEntity.ok(Map.of(MSG_KEY, "Delogare realizată cu succes."));
                 }
             } catch (Exception e) {
                 log.error("Eroare la delogare: {}", e.getMessage());
             }
         }
-        return ResponseEntity.badRequest().body(Map.of("error", "Token invalid sau inexistent."));
+        return ResponseEntity.badRequest().body(Map.of(ERR_KEY, "Token invalid sau inexistent."));
     }
 }

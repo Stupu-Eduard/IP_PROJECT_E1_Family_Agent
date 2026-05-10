@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.model.RevokedToken;
 import com.familie.cheltuieli_familie.repository.RevokedTokenRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
