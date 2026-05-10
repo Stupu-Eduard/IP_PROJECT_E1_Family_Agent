@@ -40,7 +40,13 @@ describe('Login Component - 100% Coverage', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         setupUnauthenticated()
-        ;(loginWithEmailPassword as any).mockResolvedValue({ message: 'ok', userName: 'Test' })
+        // FIX: Adăugăm `token` în răspunsul mock-uit, altfel LoginForm
+        // intră pe ramura `else` și afișează "Token lipsă."
+        ;(loginWithEmailPassword as any).mockResolvedValue({
+            message: 'ok',
+            userName: 'Test',
+            token: 'fake.jwt.token'
+        })
     })
 
     const renderComponent = () => render(
@@ -125,8 +131,8 @@ describe('Login Component - 100% Coverage', () => {
 
         let resolveLogin: ((value: any) => void) | null = null
         const loginPromise = new Promise((resolve) => {
-            resolveLogin = resolve
-        })
+                resolveLogin = resolve
+            })
         ;(loginWithEmailPassword as any).mockReturnValueOnce(loginPromise)
 
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -136,7 +142,8 @@ describe('Login Component - 100% Coverage', () => {
         expect(await screen.findByText(/Se procesează/i)).toBeInTheDocument()
         expect(emailInput).toBeDisabled()
 
-        resolveLogin?.({ message: 'ok', userName: 'Test' })
+        // FIX: trebuie să trimitem și `token` în răspuns, nu doar message + userName
+        resolveLogin?.({ message: 'ok', userName: 'Test', token: 'fake.jwt.token' })
 
         await waitFor(() => {
             expect(mockLogin).toHaveBeenCalled()
@@ -151,7 +158,13 @@ describe('Login Component - 100% Coverage', () => {
         const passInput  = screen.getByPlaceholderText(/••••••••/i)
         const form = emailInput.closest('form')!
 
-        ;(loginWithEmailPassword as any).mockResolvedValueOnce({ message: 'ok', userName: 'Test' })
+            // FIX: trebuie să trimitem și `token` în răspuns
+        ;(loginWithEmailPassword as any).mockResolvedValueOnce({
+            message: 'ok',
+            userName: 'Test',
+            token: 'fake.jwt.token',
+            role: 'Child'
+        })
 
         fireEvent.change(emailInput, { target: { value: 'copil@example.com' } })
         fireEvent.change(passInput,  { target: { value: 'password123' } })
@@ -170,6 +183,8 @@ describe('Login Component - 100% Coverage', () => {
         const passInput  = screen.getByPlaceholderText(/••••••••/i)
         const form = emailInput.closest('form')!
 
+        // FIX: pentru ca mockLogin (loginStore) să fie chemat, response.token
+        // trebuie să fie definit (din beforeEach are 'fake.jwt.token').
         // mockLogin aruncă un string — nu e instanceof Error, nici ValidationError
         mockLogin.mockImplementationOnce(() => { throw 'eroare_string' })
 

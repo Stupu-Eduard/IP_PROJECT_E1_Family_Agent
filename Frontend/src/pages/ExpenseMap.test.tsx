@@ -17,6 +17,19 @@ vi.mock('../services/locations', () => ({
     updateLocationCoordinates: vi.fn()
 }))
 
+// FIX: trebuie mock-at authStore-ul ca să returneze un token,
+// altfel useEffect-ul cu WebSocket din ExpenseMap se închide imediat
+// (din cauza `if (!token) return;`) și `activeWsInstance` rămâne null.
+vi.mock('../store/authStore', () => ({
+    useAuthStore: (selector: any) => selector({
+        token: 'fake.jwt.token',
+        isAuthenticated: true,
+        login: vi.fn(),
+        logout: vi.fn(),
+        setToken: vi.fn(),
+    }),
+}))
+
 // ── 2. Mock Google Maps API ──
 vi.mock('@react-google-maps/api', () => ({
     useJsApiLoader: vi.fn(() => ({ isLoaded: true, loadError: null })),
@@ -90,6 +103,11 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
     it('3. WebSocket: Alertă live și cleanup la unmount', async () => {
         const { unmount } = renderComponent({ lat: 44, lng: 26, locationLabel: 'Live' })
 
+        // Așteptăm ca useEffect-ul WebSocket să ruleze (după mount)
+        await waitFor(() => {
+            expect(activeWsInstance).not.toBeNull()
+        })
+
         act(() => {
             activeWsInstance?.onmessage?.({
                 data: JSON.stringify({ lat: 46.0, lng: 24.0, isRestricted: true })
@@ -106,6 +124,11 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         renderComponent({ locationLabel: 'ValidLabel' })
+
+        // Așteptăm ca useEffect-ul WebSocket să creeze instanța
+        await waitFor(() => {
+            expect(activeWsInstance).not.toBeNull()
+        })
 
         await act(async () => {
             activeWsInstance?.onmessage?.({
