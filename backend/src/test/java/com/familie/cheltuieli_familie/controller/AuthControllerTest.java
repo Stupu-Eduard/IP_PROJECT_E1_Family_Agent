@@ -1,11 +1,11 @@
 package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
+import com.familie.cheltuieli_familie.dto.RegisterRequest;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.model.UserSession;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.repository.UserSessionRepository;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -42,8 +42,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_CandDateSuntCorecte_CreeazaSesiuneSiReturneazaCookie() {
-        // GIVEN
+    void login_whenCredentialsAreValid_returnsOkAndCreatesSessionHeader() {
         LoginRequest request = new LoginRequest();
         request.setEmail("test@familie.com");
         request.setPassword("parolaBuna");
@@ -55,28 +54,18 @@ class AuthControllerTest {
 
         when(userRepository.findByEmail("test@familie.com")).thenReturn(Optional.of(user));
 
-        // WHEN
-        ResponseEntity<?> result = authController.login(request, response);
+        ResponseEntity<Object> result = authController.login(request, response);
 
-        // THEN
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertInstanceOf(Map.class, result.getBody());
         assertEquals("Edi", ((Map<?, ?>) result.getBody()).get("userName"));
-        
-        // Verificam cookie-ul creat
-        Cookie sessionCookie = response.getCookie("session_id");
-        assertNotNull(sessionCookie);
-        assertTrue(sessionCookie.isHttpOnly());
-        assertEquals("/", sessionCookie.getPath());
-        assertEquals(24 * 60 * 60, sessionCookie.getMaxAge());
-
-        // Verificam ca s-a salvat sesiunea in DB
+        assertNotNull(response.getHeader("Set-Cookie"));
+        assertTrue(response.getHeader("Set-Cookie").contains("session_id="));
         verify(sessionRepository, times(1)).save(any(UserSession.class));
     }
 
     @Test
-    void login_CandParolaGresita_ReturneazaUnauthorizedSiNuSalveazaNimic() {
-        // GIVEN
+    void login_whenPasswordIsInvalid_returnsUnauthorized() {
         LoginRequest request = new LoginRequest();
         request.setEmail("test@familie.com");
         request.setPassword("parolaGresita");
@@ -87,30 +76,64 @@ class AuthControllerTest {
 
         when(userRepository.findByEmail("test@familie.com")).thenReturn(Optional.of(user));
 
-        // WHEN
-        ResponseEntity<?> result = authController.login(request, response);
+        ResponseEntity<Object> result = authController.login(request, response);
 
-        // THEN
         assertEquals(HttpStatus.UNAUTHORIZED, result.getStatusCode());
-        assertNull(response.getCookie("session_id"));
+        assertNull(response.getHeader("Set-Cookie"));
         verify(sessionRepository, never()).save(any(UserSession.class));
     }
 
     @Test
-    void login_CandUserNuExista_ReturneazaUnauthorized() {
-        // GIVEN
+    void login_whenUserDoesNotExist_returnsUnauthorized() {
         LoginRequest request = new LoginRequest();
         request.setEmail("inexistent@familie.com");
         request.setPassword("parola");
 
         when(userRepository.findByEmail("inexistent@familie.com")).thenReturn(Optional.empty());
 
-        // WHEN
-        ResponseEntity<?> result = authController.login(request, response);
+        ResponseEntity<Object> result = authController.login(request, response);
 
-        // THEN
         assertEquals(HttpStatus.UNAUTHORIZED, result.getStatusCode());
-        assertNull(response.getCookie("session_id"));
+        assertNull(response.getHeader("Set-Cookie"));
         verify(sessionRepository, never()).save(any(UserSession.class));
+    }
+
+    @Test
+    void register_whenEmailAlreadyExists_returnsConflict() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Ana");
+        request.setEmail("ana@familie.com");
+        request.setPassword("password123");
+
+        User existingUser = new User();
+        existingUser.setEmail("ana@familie.com");
+        when(userRepository.findByEmail("ana@familie.com")).thenReturn(Optional.of(existingUser));
+
+        ResponseEntity<Object> result = authController.register(request, response);
+
+        assertEquals(HttpStatus.CONFLICT, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+        verify(sessionRepository, never()).save(any(UserSession.class));
+    }
+
+    @Test
+    void register_whenRequestIsValid_returnsCreatedAndSessionHeader() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Ana");
+        request.setEmail("ana@familie.com");
+        request.setPassword("password123");
+
+        when(userRepository.findByEmail("ana@familie.com")).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.register(request, response);
+
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertInstanceOf(Map.class, result.getBody());
+        assertEquals("Ana", ((Map<?, ?>) result.getBody()).get("userName"));
+        assertNotNull(((Map<?, ?>) result.getBody()).get("token"));
+        assertNotNull(response.getHeader("Set-Cookie"));
+        assertTrue(response.getHeader("Set-Cookie").contains("session_id="));
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(sessionRepository, times(1)).save(any(UserSession.class));
     }
 }

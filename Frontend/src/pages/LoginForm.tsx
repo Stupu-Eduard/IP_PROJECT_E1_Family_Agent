@@ -225,25 +225,6 @@ export default function Login() {
               </div>
             </form>
 
-            {/* Date demo */}
-            <div style={{
-              marginTop: 28,
-              background: 'var(--color-primary-tint)',
-              border: '1px solid var(--color-primary-edge)',
-              borderRadius: 12, padding: 14,
-              fontSize: 12, lineHeight: 1.7, color: '#7A4A2A',
-            }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>💡 Date de test</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-                <span>Cont Părinte</span><code style={{ fontFamily: 'inherit' }}>test@example.com</code>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-                <span>Cont Copil</span><code style={{ fontFamily: 'inherit' }}>copil@example.com</code>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-                <span>Parolă</span><code style={{ fontFamily: 'inherit' }}>password123</code>
-              </div>
-            </div>
           </div>
         </div>
       </div>
