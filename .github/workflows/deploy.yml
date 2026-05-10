@@ -29,7 +29,14 @@ jobs:
 
     
       - name: Ruleaza Testele JUnit
-        run: mvn test
+        run: mvn clean test -e
+
+      - name: Upload Surefire Reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
 
       - name: Scaneaza codul cu SonarCloud
         env:
