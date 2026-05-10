@@ -26,7 +26,7 @@ class RagQueryControllerTest {
     private RagRetrievalService ragRetrievalService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testRagQuery() throws Exception {

@@ -68,7 +68,7 @@ class PostgresNotificationListenerTest {
                 .thenAnswer(inv -> { Thread.currentThread().interrupt(); return null; });
         
         // WHEN & THEN
-        assertDoesNotThrow(() -> listener.listenToLocationUpdates());
+        assertDoesNotThrow(() -> listener.listenToEvents());
     }
 
     @Test
@@ -92,7 +92,7 @@ class PostgresNotificationListenerTest {
         when(resultSet.next()).thenReturn(false);
 
         // WHEN
-        listener.listenToLocationUpdates();
+        listener.listenToEvents();
 
         // THEN
         verify(thePipeHandler, never()).broadcast(anyString());

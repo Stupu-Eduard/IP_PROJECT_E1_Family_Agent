@@ -1,9 +1,9 @@
 package com.familie.cheltuieli_familie.security.interceptor;
 
 import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.model.UserSession;
-import com.familie.cheltuieli_familie.repository.UserSessionRepository;
-import jakarta.servlet.http.Cookie;
+import com.familie.cheltuieli_familie.repository.UserRepository;
+import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
+import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +14,6 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.socket.WebSocketHandler;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -26,7 +25,13 @@ import static org.mockito.Mockito.*;
 class SessionHandshakeInterceptorTest {
 
     @Mock
-    private UserSessionRepository sessionRepository;
+    private JwtUtil jwtUtil;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private TokenBlacklistService blacklistService;
 
     @Mock
     private WebSocketHandler wsHandler;
@@ -35,23 +40,26 @@ class SessionHandshakeInterceptorTest {
     private SessionHandshakeInterceptor interceptor;
 
     @Test
-    @DisplayName("🟢 Should allow handshake when valid session cookie exists")
-    void beforeHandshake_WhenValidCookieExists_ReturnsTrue() {
+    @DisplayName("🟢 Should allow handshake when valid JWT token exists in query params")
+    void beforeHandshake_WhenValidTokenInQueryParams_ReturnsTrue() {
         // GIVEN
-        String sessionId = "ws-session-id";
+        String token = "valid-token";
+        String email = "test@familie.com";
+        String jti = "jti-123";
+        
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
-        mockRequest.setCookies(new Cookie("session_id", sessionId));
+        mockRequest.setQueryString("token=" + token);
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
 
         User user = new User();
-        UserSession session = UserSession.builder()
-                .id(1L)
-                .sessionToken(sessionId)
-                .user(user)
-                .lastActive(LocalDateTime.now())
-                .build();
+        user.setEmail(email);
 
-        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.of(session));
+        when(jwtUtil.extractEmail(token)).thenReturn(email);
+        when(jwtUtil.extractJti(token)).thenReturn(jti);
+        when(blacklistService.isBlacklisted(jti)).thenReturn(false);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(jwtUtil.validateToken(token, email)).thenReturn(true);
+        
         Map<String, Object> attributes = new HashMap<>();
 
         // WHEN
@@ -63,8 +71,8 @@ class SessionHandshakeInterceptorTest {
     }
 
     @Test
-    @DisplayName("❌ Should return false when session cookie is missing")
-    void beforeHandshake_WhenCookieIsMissing_ReturnsFalse() {
+    @DisplayName("❌ Should return false when token is missing")
+    void beforeHandshake_WhenTokenIsMissing_ReturnsFalse() {
         // GIVEN
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
@@ -73,19 +81,24 @@ class SessionHandshakeInterceptorTest {
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
 
         // THEN
-        assertFalse(result); // Trebuie sa fie false pentru securitate maxima
+        assertFalse(result);
     }
 
     @Test
-    @DisplayName("❌ Should return false when session does not exist in DB")
-    void beforeHandshake_WhenSessionNotFound_ReturnsFalse() {
+    @DisplayName("❌ Should return false when token is blacklisted")
+    void beforeHandshake_WhenTokenIsBlacklisted_ReturnsFalse() {
         // GIVEN
-        String sessionId = "invalid-id";
+        String token = "blacklisted-token";
+        String email = "test@familie.com";
+        String jti = "jti-blacklisted";
+
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
-        mockRequest.setCookies(new Cookie("session_id", sessionId));
+        mockRequest.setQueryString("token=" + token);
         ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
 
-        when(sessionRepository.findBySessionToken(sessionId)).thenReturn(Optional.empty());
+        when(jwtUtil.extractEmail(token)).thenReturn(email);
+        when(jwtUtil.extractJti(token)).thenReturn(jti);
+        when(blacklistService.isBlacklisted(jti)).thenReturn(true);
 
         // WHEN
         boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());

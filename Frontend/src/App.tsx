@@ -17,12 +17,26 @@ import AppErrorBoundary from './components/AppErrorBoundary'
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
 
+function DevCrashGate() {
+    const location = useLocation()
+
+    if (import.meta.env.DEV) {
+        const params = new URLSearchParams(location.search)
+        if (params.has('crash')) {
+            throw new Error('Demo crash triggered via ?crash=1 (remove it to recover)')
+        }
+    }
+
+    return null
+}
+
 function App() {
     const location = useLocation()
     PUBLIC_PATHS.includes(location.pathname.toLowerCase());
     return (
         <div style={{ width: '100%' }}>
             <AppErrorBoundary>
+                <DevCrashGate />
                 <Routes>
                     {/* Public */}
                     <Route path="/" element={<LandingPage />} />

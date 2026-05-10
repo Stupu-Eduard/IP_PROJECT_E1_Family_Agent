@@ -73,31 +73,39 @@ export default function Dashboard() {
     }
   }
 
-  // ── WebSocket conexiune (LOGICĂ NEATINSĂ) ─────────────────────────────────
+  // ── WebSocket conexiune (LOGICĂ OPTIMIZATĂ JWT) ─────────────────────────────────
   useEffect(() => {
+    if (!token) return;
     console.log('🔌 Încercare conectare WebSocket... Rol:', userRole);
     if (userRole === 'Child') {
       console.log('🚫 WebSocket ignorat: Utilizatorul este Copil.');
       return;
     }
 
-    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
-    const socket = new WebSocket(`${wsUrl}/locatie`);
+    // IMPORTANT: Backend-ul rulează de obicei pe 8080, nu pe portul de Vite (5173)
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
+    
+    console.log('📡 Încercare conexiune la:', `${wsUrl}/locatie?token=...`);
+    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
 
     socket.onopen = () => console.log('🟢 WebSocket conectat cu succes la /locatie');
     socket.onerror = (err) => console.error('🔴 Eroare WebSocket:', err);
 
     socket.onmessage = (event) => {
+      console.log('📡 THE PIPE (Dashboard): Mesaj brut primit:', event.data);
       try {
         const data = JSON.parse(event.data);
+        console.log('📍 THE PIPE (Dashboard): Date parsate:', data);
         setLiveLocation(data);
       } catch (e) {
+        console.error('❌ THE PIPE (Dashboard): Eroare parsare JSON:', e);
         setLiveLocation({ raw: event.data });
       }
     };
 
     return () => socket.close();
-  }, [userRole]);
+  }, [userRole, token]);
 
   // ── KPI mouse-glow ref ─────────────────────────────────────────────────────
   const handleKpiMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

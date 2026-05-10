@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,8 @@ public class PostgresNotificationListener {
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
-    public void listenToLocationUpdates() {
+    public void listenToEvents() {
         try {
-            // Mai întâi verificăm ce bază de date avem activă
             try (Connection connection = dataSource.getConnection()) {
                 if (!connection.getMetaData().getDriverName().contains("PostgreSQL")) {
                     log.info("ℹ️ PostgresNotificationListener dezactivat (Mediu H2/Test detectat).");
@@ -35,54 +35,47 @@ public class PostgresNotificationListener {
                 }
             }
 
-            // Dacă am ajuns aici, avem Postgres, deci putem continua
-            log.info("📡 Pornesc ascultarea evenimentelor Postgres LISTEN...");
+            log.info("📡 Pornesc 'Inima Sistemului': Postgres LISTEN activat.");
             try (Connection connection = dataSource.getConnection()) {
                 PGConnection pgConnection = connection.unwrap(PGConnection.class);
                 try (Statement stmt = connection.createStatement()) {
+                    // Ascultăm pe canale specifice
                     stmt.execute("LISTEN location_updates");
+                    stmt.execute("LISTEN general_notifications");
                 }
 
                 while (!Thread.currentThread().isInterrupted()) {
                     PGNotification[] notifications = pgConnection.getNotifications(500);
                     if (notifications != null) {
                         for (PGNotification notification : notifications) {
-                            processNotification(notification.getParameter());
+                            processNotification(notification.getName(), notification.getParameter());
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Eroare în PostgresNotificationListener: ", e);
+            log.error("❌ Eroare critică în PostgresNotificationListener: ", e);
         }
     }
 
-    private void processNotification(String payload) {
-        log.info("🔔 NOTIFICARE POSTGRES DETECTATĂ: {}", payload);
+    private void processNotification(String channel, String payload) {
+        log.debug("🔔 Eveniment DB pe canalul [{}]: {}", channel, payload);
         try {
-            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(payload);
-            Long id = node.get("id").asLong();
-
-            try (Connection conn = dataSource.getConnection();
-                 java.sql.PreparedStatement pstmt = conn.prepareStatement(
-                         "SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng FROM locations WHERE id = ?")) {
-                
-                pstmt.setLong(1, id);
-                try (java.sql.ResultSet rs = pstmt.executeQuery()) {
-                    if (rs.next()) {
-                        String finalJson = String.format("{\"id\": %d, \"lat\": %f, \"lng\": %f, \"type\": \"LIVE_UPDATE\"}",
-                                id, rs.getDouble("lat"), rs.getDouble("lng"));
-                        thePipeHandler.broadcast(finalJson);
-                    } else {
-                        log.warn("⚠️ Coordonate negăsite în DB pentru ID: {}", id);
-                    }
-                }
+            // Putem adăuga logică de filtrare aici
+            JsonNode node = objectMapper.readTree(payload);
+            
+            // Exemplu de filtrare/augmentare pentru locații
+            if ("location_updates".equals(channel)) {
+                // Dacă payload-ul este doar un ID, putem face un fetch, 
+                // dar conform V33, row_to_json trimite tot rândul.
+                thePipeHandler.broadcast(payload);
+            } else {
+                // Trimitere generică pentru alte canale
+                thePipeHandler.broadcast(payload);
             }
+            
         } catch (Exception e) {
-            log.error("❌ Eroare transformare locație: {}", e.getMessage());
-            // Nu mai facem broadcast aici daca este o eroare de business/format, 
-            // pentru a evita trimiterea de date binare catre frontend.
+            log.error("❌ Eroare procesare payload DB: {}", e.getMessage());
         }
     }
-
 }
