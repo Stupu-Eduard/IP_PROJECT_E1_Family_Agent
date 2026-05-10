@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import Login from './LoginForm'
 import { useAuthStore } from '../store/authStore'
+import { loginWithEmailPassword } from '../services/auth'
 
 vi.mock('../store/authStore', () => ({
     useAuthStore: vi.fn()
@@ -11,6 +12,11 @@ vi.mock('../store/authStore', () => ({
 
 vi.mock('../utils/jwt', () => ({
     isTokenExpired: vi.fn(() => false)
+}))
+
+vi.mock('../services/auth', () => ({
+    loginWithEmailPassword: vi.fn(),
+    getLoginErrorMessage: vi.fn(() => 'A apărut o eroare neașteptată.'),
 }))
 
 const mockNavigate = vi.fn()
@@ -34,6 +40,7 @@ describe('Login Component - 100% Coverage', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         setupUnauthenticated()
+        ;(loginWithEmailPassword as any).mockResolvedValue({ message: 'ok', userName: 'Test' })
     })
 
     const renderComponent = () => render(
@@ -116,12 +123,20 @@ describe('Login Component - 100% Coverage', () => {
         const passInput  = screen.getByPlaceholderText(/••••••••/i)
         const form = emailInput.closest('form')!
 
+        let resolveLogin: ((value: any) => void) | null = null
+        const loginPromise = new Promise((resolve) => {
+            resolveLogin = resolve
+        })
+        ;(loginWithEmailPassword as any).mockReturnValueOnce(loginPromise)
+
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
         fireEvent.change(passInput,  { target: { value: 'password123' } })
         fireEvent.submit(form)
 
         expect(await screen.findByText(/Se procesează/i)).toBeInTheDocument()
         expect(emailInput).toBeDisabled()
+
+        resolveLogin?.({ message: 'ok', userName: 'Test' })
 
         await waitFor(() => {
             expect(mockLogin).toHaveBeenCalled()
@@ -135,6 +150,8 @@ describe('Login Component - 100% Coverage', () => {
         const emailInput = screen.getByPlaceholderText(/username@exemplu.com/i)
         const passInput  = screen.getByPlaceholderText(/••••••••/i)
         const form = emailInput.closest('form')!
+
+        ;(loginWithEmailPassword as any).mockResolvedValueOnce({ message: 'ok', userName: 'Test' })
 
         fireEvent.change(emailInput, { target: { value: 'copil@example.com' } })
         fireEvent.change(passInput,  { target: { value: 'password123' } })
