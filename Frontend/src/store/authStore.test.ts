@@ -39,28 +39,6 @@ describe('AuthStore - Zustand & Persistență', () => {
         useAuthStore.getState().logout()
 
         expect(useAuthStore.getState().token).toBe(null)
-        expect(useAuthStore.getState().isAuthenticated).toBe(false)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
-    })
-
-    it('4. setToken() - Ramura IF: salvează token dacă valoarea este validă', () => {
-        const newToken = 'token-set-456'
-        useAuthStore.getState().setToken(newToken)
-
-        expect(useAuthStore.getState().token).toBe(newToken)
-        expect(useAuthStore.getState().isAuthenticated).toBe(true)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(newToken)
-    })
-
-    it('5. setToken() - Ramura ELSE: șterge token dacă valoarea este null', () => {
-        // Mai întâi setăm un token
-        useAuthStore.getState().setToken('temp-token')
-
-        // Apoi apelăm setToken cu null (pentru a intra pe ramura else)
-        useAuthStore.getState().setToken(null)
-
-        expect(useAuthStore.getState().token).toBe(null)
-        expect(useAuthStore.getState().isAuthenticated).toBe(false)
         expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
     })
 })

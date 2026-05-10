@@ -27,17 +27,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install Tesseract OCR
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tesseract-ocr libtesseract-dev
-      
+    
       - name: Ruleaza Testele JUnit
-        if: github.ref != 'refs/heads/main'
         run: mvn test
 
       - name: Scaneaza codul cu SonarCloud
-        if: github.ref != 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -54,7 +48,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "backend/target/cheltuieli-familie-0.0.1-SNAPSHOT.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
+          source: "backend/target/*.jar" # Trimitem doar rezultatul compilarii, nu tot repo-ul
           target: "/root/FamilyAgent/target/" # Il punem unde Dockerfile-ul de pe server îl asteapta
           strip_components: 2
 

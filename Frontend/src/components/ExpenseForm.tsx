@@ -1,301 +1,155 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Loader2, AlertCircle } from 'lucide-react';
 import type { ExpenseDTO } from '../types/ExpenseDTO';
-import { processReceiptOCR } from '../services/expenses';
-import { ImageUploader } from './ImageUploader';
-
-const IcoArrowLeft = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 12H5"/><path d="m11 5-7 7 7 7"/>
-    </svg>
-)
-const IcoCheck = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m4 12 5 5 11-12"/>
-    </svg>
-)
-const IcoCamera = () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/>
-    </svg>
-)
 
 const ExpenseForm: React.FC = () => {
-  const navigate = useNavigate();
-
-  const [amount,   setAmount]   = useState<number | ''>('');
-  const [category, setCategory] = useState('');
-  const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
-
-  const [loading,     setLoading]     = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error,       setError]       = useState('');
-  const [ocrError,    setOcrError]    = useState<string | null>(null);
-  const [success,     setSuccess]     = useState(false);
-
-  const handleOcrProcess = async (file: File) => {
-    setIsAnalyzing(true);
-    setOcrError(null);
-    setError('');
-    try {
-      const data = await processReceiptOCR(file);
-      if (data.amount)   setAmount(data.amount);
-      if (data.category) setCategory(data.category);
-      if (data.date) {
-        const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
-        setDate(formattedDate);
-      }
-    } catch {
-      setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+  // Stările pentru câmpurile formularului
+  const [amount, setAmount] = useState<number | ''>('');
+  const [category, setCategory] = useState<string>('');
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<boolean>(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
+
     if (Number(amount) <= 0) {
       setError('Suma trebuie să fie strict mai mare ca 0!');
       return;
     }
+
     setLoading(true);
-    const payload: ExpenseDTO = { amount: Number(amount), category, date };
+
+    const payload: ExpenseDTO = {
+      amount: Number(amount),
+      category,
+      date,
+    };
+
     console.log('Date pregătite pentru trimitere:', payload);
+
     setTimeout(() => {
       setLoading(false);
       setSuccess(true);
+      
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
-      setOcrError(null);
+
       setTimeout(() => setSuccess(false), 3000);
     }, 1000);
   };
 
-  const isInputDisabled = loading;
-
   return (
-      <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
+    <div className="page-shell page-shell--centered">
+      <div className="surface-card surface-card--large fade-in-up">
 
-        <div className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-          <button
-              className="btn btn-ghost btn-icon"
-              onClick={() => navigate('/dashboard')}
-              aria-label="Înapoi"
-          >
-            <IcoArrowLeft />
-          </button>
-          <div className="chip chip-live">OCR · GATA DE SCANARE</div>
-        </div>
-
-        <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>Adaugă o cheltuială nouă</h1>
-        <div className="fade-up" style={{ color: 'var(--color-muted)', fontSize: 14, marginBottom: 28, lineHeight: 1.6, maxWidth: 560 }}>
-          Trage un bon, fă-i o poză sau introdu manual. AI-ul detectează magazinul, suma, categoria și locația.
-        </div>
-
-        {success && (
-            <div className="fade-up" style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: 'var(--color-primary-tint)', border: '1px solid var(--color-primary-edge)',
-              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
-              color: '#7A5C44', fontSize: 13, fontWeight: 500,
-            }}>
-          <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <IcoCheck />
-          </span>
-              Cheltuială adăugată cu succes!
-            </div>
-        )}
-
-        {error && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
-              color: '#DC2626', fontSize: 13, fontWeight: 500,
-            }}>
-              <AlertCircle size={16} style={{ flexShrink: 0 }} /> {error}
-            </div>
-        )}
-
-        {ocrError && (
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              background: '#FFFBEB', border: '1px solid #FDE68A',
-              borderRadius: 12, padding: '12px 16px', marginBottom: 20,
-              color: '#92400E', fontSize: 13,
-            }}>
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} /> {ocrError}
-            </div>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
-
-          <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-
-            {isAnalyzing && (
-                <div style={{
-                  position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)',
-                  backdropFilter: 'blur(4px)', zIndex: 20,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: 24, gap: 18,
-                }}>
-                  <div className="ring-spin">
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)' }}>OCR</span>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-ink)', letterSpacing: '-0.2px' }}>
-                      Procesăm bonul tău…
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 4 }}>
-                      FamilyAgent citește datele
-                    </div>
-                  </div>
-                  <div style={{ width: '100%', maxWidth: 280, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div className="field-skeleton" style={{ width: '40%' }} />
-                    <div className="field-skeleton" style={{ width: '80%' }} />
-                    <div className="field-skeleton" style={{ width: '60%' }} />
-                  </div>
-                </div>
-            )}
-
-            <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div className="label" style={{ marginBottom: 6 }}>BON FISCAL · SCANARE</div>
-                <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.3px' }}>Atașează bonul</div>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <span className={`chip ${!isAnalyzing ? '' : 'chip-neutral'}`}>1 · Încarcă</span>
-                <span className={`chip ${isAnalyzing ? '' : 'chip-neutral'}`}>2 · OCR</span>
-                <span className={`chip ${success ? '' : 'chip-neutral'}`}>3 · Confirmă</span>
-              </div>
-            </div>
-
-            <div style={{ padding: '18px 28px 28px' }}>
-              <ImageUploader
-                  onImageSelect={(file) => {
-                    if (file) {
-                      handleOcrProcess(file);
-                    } else {
-                      setOcrError(null);
-                    }
-                  }}
+        {/* Header Section */}
+        <div className="panel-header">
+          <div className="brand-mark brand-mark--sage">
+            <svg
+              viewBox="0 0 24 24"
+              className="brand-mark__icon brand-mark__icon--sage"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"
+                fill="currentColor"
               />
-
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-muted)' }}>
-                <IcoCamera />
-                JPG, PNG · max 5 MB · OCR completează câmpurile automat
-              </div>
-            </div>
+            </svg>
           </div>
-
-          <div className="card" style={{}}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-              <div className="label">DETALII CHELTUIALĂ</div>
-              {isAnalyzing && (
-                  <span style={{ fontSize: 11, color: "var(--color-primary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)", display: "inline-block", animation: "pulse-dot 1.4s ease-out infinite" }} />
-                OCR completează automat
-              </span>
-              )}
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-              <div>
-                <label htmlFor="amount" className="label" style={{ display: 'block', marginBottom: 8 }}>
-                  Sumă (RON) <span style={{ color: 'var(--color-primary)' }}>*</span>
-                </label>
-                <input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="input"
-                    placeholder="Ex: 50.50"
-                    required
-                    disabled={isInputDisabled}
-                    style={{ opacity: isInputDisabled ? 0.6 : 1 }}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="category" className="label" style={{ display: 'block', marginBottom: 8 }}>
-                  Categorie <span style={{ color: 'var(--color-primary)' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <select
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="input"
-                      style={{ appearance: 'none', cursor: 'pointer', opacity: isInputDisabled ? 0.6 : 1 }}
-                      required
-                      disabled={isInputDisabled}
-                  >
-                    <option value="" disabled>Selectează o categorie...</option>
-                    <option value="mancare">🍕 Mâncare & Alimente</option>
-                    <option value="facturi">📄 Facturi & Utilități</option>
-                    <option value="transport">🚗 Transport</option>
-                    <option value="divertisment">🎮 Divertisment</option>
-                  </select>
-                  <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-muted)' }}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="date" className="label" style={{ display: 'block', marginBottom: 8 }}>
-                  Dată <span style={{ color: 'var(--color-primary)' }}>*</span>
-                </label>
-                <input
-                    id="date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input"
-                    required
-                    disabled={isInputDisabled}
-                    style={{ opacity: isInputDisabled ? 0.6 : 1 }}
-                />
-              </div>
-
-              <button
-                  type="submit"
-                  disabled={isInputDisabled}
-                  className="btn btn-primary"
-                  style={{ marginTop: 4, width: '100%', justifyContent: 'center' }}
-              >
-                {loading ? (
-                    <>
-                      <Loader2 size={16} style={{ animation: 'ring-rotate 0.8s linear infinite' }} />
-                      Se salvează...
-                    </>
-                ) : (
-                    'Salvează cheltuiala'
-                )}
-              </button>
-            </form>
-
-            <div style={{
-              marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--color-border)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🔐</div>
-              <div style={{ fontSize: 11.5, color: 'var(--color-muted)', lineHeight: 1.5 }}>
-                Procesare locală + criptată. Bonurile nu sunt stocate fără confirmarea ta.
-              </div>
-            </div>
-          </div>
-
+          <h1 className="panel-title">Adaugă Cheltuială</h1>
+          <p className="panel-subtitle">Înregistrează cheltuielile tale ușor și rapid</p>
         </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="status-message status-message--success">
+            ✓ Cheltuială adăugată cu succes!
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="status-message status-message--error">
+            ✗ {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="form-stack">
+
+          {/* Amount Input */}
+          <div className="form-field">
+            <label className="form-label">
+              Sumă (RON) <span className="required-mark">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+              className="form-control"
+              placeholder="Ex: 50.50"
+              required
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="form-field">
+            <label className="form-label">
+              Categorie <span className="required-mark">*</span>
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="form-control form-control--select"
+              required
+            >
+              <option value="" disabled>Selectează o categorie...</option>
+              <option value="mancare">🍕 Mâncare & Alimente</option>
+              <option value="facturi">📄 Facturi & Utilități</option>
+              <option value="transport">🚗 Transport</option>
+              <option value="divertisment">🎮 Divertisment</option>
+            </select>
+          </div>
+
+          {/* Date Picker */}
+          <div className="form-field">
+            <label className="form-label">
+              Dată <span className="required-mark">*</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="form-control"
+              required
+            />
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className={`form-submit ${loading ? 'form-submit--loading' : ''}`}
+          >
+            {loading ? (
+              <span>
+                <span className="form-submit__spinner"></span>
+                Se salvează...
+              </span>
+            ) : (
+              'Salvează Cheltuiala'
+            )}
+          </button>
+        </form>
       </div>
+    </div>
   );
 };
 
 export default ExpenseForm;
+

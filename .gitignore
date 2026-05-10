@@ -1,30 +1,42 @@
-# Java
+*:Zone.Identifier
+*.Zone.Identifier
+data/postgres/*
+!data/postgres/.gitkeep
+data/qdrant/*
+!data/qdrant/.gitkeep
+
+# Maven
 target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+# https://github.com/takari/maven-wrapper#usage-without-binary-jar
+.mvn/wrapper/maven-wrapper.jar
+
 *.class
-*.jar
-*.war
-*.ear
-*.log
-
-# Node.js
-node_modules/
-dist/
-.npm
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 .env
-.env.local
 
-# IDEs
-.idea/
-*.iml
-.vscode/
-.settings/
-.project
+.vscode
+.mvn
+!backend/.mvn
+backend/.mvn/wrapper/maven-wrapper.jar
+
+.qoder
+
+# IDE / build artifacts
+*.log
 .classpath
 .factorypath
+.project
 
-# OS
-.DS_Store
-Thumbs.db
+# Documentation (team-specific, not app code)
+Documentation/
+
+# Markdown files
+*.md
+
