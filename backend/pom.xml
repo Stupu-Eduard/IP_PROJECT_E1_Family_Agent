@@ -121,6 +121,7 @@
                 <version>3.13.0</version>
                 <configuration>
                     <fork>true</fork>
+                    <parameters>true</parameters>
                     <compilerArgs>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
