@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import LoginForm from './LoginForm'
 import * as jwtUtils from '../utils/jwt'
+import { loginWithEmailPassword } from '../services/auth'
 
 // Mocking pentru React Router
 const mockNavigate = vi.fn()
@@ -31,12 +32,18 @@ vi.mock('../utils/jwt', () => ({
     isTokenExpired: vi.fn()
 }))
 
+vi.mock('../services/auth', () => ({
+    loginWithEmailPassword: vi.fn(),
+    getLoginErrorMessage: vi.fn(() => 'A apărut o eroare neașteptată.'),
+}))
+
 describe('LoginForm - Optimizare Coverage 100%', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         mockAuthData.isAuthenticated = false
         mockAuthData.token = null
         vi.mocked(jwtUtils.isTokenExpired).mockReturnValue(false)
+        ;(loginWithEmailPassword as any).mockResolvedValue({ message: 'ok', userName: 'Test' })
     })
 
     const renderComponent = () => render(<BrowserRouter><LoginForm /></BrowserRouter>)
@@ -55,6 +62,8 @@ describe('LoginForm - Optimizare Coverage 100%', () => {
         const emailInput = screen.getByPlaceholderText('username@exemplu.com')
         const passwordInput = screen.getByPlaceholderText('••••••••')
         const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
+
+        ;(loginWithEmailPassword as any).mockResolvedValueOnce({ message: 'ok', userName: 'Test' })
 
         fireEvent.change(emailInput, { target: { value: 'copil@example.com' } })
         fireEvent.change(passwordInput, { target: { value: 'password123' } })
@@ -85,6 +94,8 @@ describe('LoginForm - Optimizare Coverage 100%', () => {
         // În componenta ta, orice eroare de server (mockApiCall reject) ajunge în catch.
 
         const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
+
+        ;(loginWithEmailPassword as any).mockRejectedValueOnce({ response: { data: { error: 'Email sau parolă incorectă.' } } })
         await act(async () => {
             fireEvent.click(submitButton)
         })

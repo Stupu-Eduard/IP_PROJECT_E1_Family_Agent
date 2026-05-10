@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
+import com.familie.cheltuieli_familie.dto.RegisterRequest;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
@@ -67,7 +68,6 @@ class AuthControllerTest {
         // WHEN
         ResponseEntity<Object> result = authController.login(request);
 
-        // THEN
         assertEquals(HttpStatus.OK, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertNotNull(body);
@@ -92,7 +92,6 @@ class AuthControllerTest {
         // WHEN
         ResponseEntity<Object> result = authController.login(request);
 
-        // THEN
         assertEquals(HttpStatus.UNAUTHORIZED, result.getStatusCode());
     }
 
@@ -110,5 +109,44 @@ class AuthControllerTest {
         // THEN
         assertEquals(HttpStatus.OK, result.getStatusCode());
         verify(blacklistService, times(1)).revokeToken(eq("jti-123"), any(Date.class));
+    }
+
+    @Test
+    void register_whenEmailAlreadyExists_returnsConflict() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Ana");
+        request.setEmail("ana@familie.com");
+        request.setPassword("password123");
+
+        User existingUser = new User();
+        existingUser.setEmail("ana@familie.com");
+        when(userRepository.findByEmail("ana@familie.com")).thenReturn(Optional.of(existingUser));
+
+        ResponseEntity<Object> result = authController.register(request, response);
+
+        assertEquals(HttpStatus.CONFLICT, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+        verify(sessionRepository, never()).save(any(UserSession.class));
+    }
+
+    @Test
+    void register_whenRequestIsValid_returnsCreatedAndSessionHeader() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Ana");
+        request.setEmail("ana@familie.com");
+        request.setPassword("password123");
+
+        when(userRepository.findByEmail("ana@familie.com")).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.register(request, response);
+
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertInstanceOf(Map.class, result.getBody());
+        assertEquals("Ana", ((Map<?, ?>) result.getBody()).get("userName"));
+        assertNotNull(((Map<?, ?>) result.getBody()).get("token"));
+        assertNotNull(response.getHeader("Set-Cookie"));
+        assertTrue(response.getHeader("Set-Cookie").contains("session_id="));
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(sessionRepository, times(1)).save(any(UserSession.class));
     }
 }
