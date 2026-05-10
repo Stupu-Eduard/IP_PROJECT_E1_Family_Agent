@@ -29,7 +29,7 @@ class GlobalExceptionHandlerTest {
     private ExtractionService extractionService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testAmountNotFoundException() throws Exception {

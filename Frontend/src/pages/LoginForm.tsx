@@ -17,30 +17,19 @@ const loginSchema = yup.object().shape({
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
+  const [error,     setError]     = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const token = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const login = useAuthStore((state) => state.login);
+  const loginStore      = useAuthStore((state) => state.login);
 
   if (isAuthenticated && token && !isTokenExpired(token)) {
     return <Navigate to="/dashboard" replace />;
   }
-
-  const createMockJwt = () => {
-    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = btoa(
-      JSON.stringify({
-        sub: email,
-        exp: Math.floor(Date.now() / 1000) + 60 * 60,
-      }),
-    );
-
-    return `${header}.${payload}.mock_signature`;
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,21 +38,15 @@ export default function Login() {
     try {
       await loginSchema.validate({ email, password });
       setIsLoading(true);
-
-      const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
-        setTimeout(() => {
-          if (email && password) {
-            resolve({ token: createMockJwt() });
-          } else {
-            reject(new Error("Eroare de la server: Date incorecte."));
-          }
-        }, 1500);
-      });
-
-      const response = await mockApiCall;
-      login(response.token);
-      navigate('/dashboard', { replace: true });
-
+      
+      const response = await loginWithEmailPassword(email, password);
+      
+      if (response.token) {
+        loginStore(response.token);
+        navigate('/dashboard', { replace: true });
+      } else {
+        setError('Eroare la autentificare: Token lipsă.');
+      }
     } catch (err: unknown) {
       if (err instanceof yup.ValidationError) {
         setError(err.message);
@@ -82,24 +65,35 @@ export default function Login() {
 
         <div className="surface-card surface-card--large fade-in-up">
 
-          {/* Header Section */}
-          <div className="panel-header">
-            <div className="brand-mark brand-mark--sage">
-              <svg
-                  viewBox="0 0 24 24"
-                  className="brand-mark__icon brand-mark__icon--sage"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M9 22V8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M15 22V8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 10L12 7L15 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 7V2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6 16H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+        {/* Grid 2 coloane */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 80, flex: 1, alignItems: 'center',
+          maxWidth: 1000, margin: '0 auto', width: '100%',
+        }}>
+
+          {/* Stânga — copy editorial */}
+          <div className="fade-up">
+            <div style={{
+              fontSize: 11, letterSpacing: 2, fontWeight: 600,
+              color: 'var(--color-primary)', textTransform: 'uppercase',
+              marginBottom: 24, display: 'inline-flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ width: 24, height: 1, background: 'var(--color-primary)', display: 'inline-block' }} />
+              Capitolul 12
             </div>
-            <h1 className="panel-title">FamilyAgent</h1>
-            <p className="panel-subtitle">Gestionează cheltuielile familiei</p>
+
+            <h1 style={{
+              fontSize: 64, fontWeight: 400, letterSpacing: '-2.5px',
+              lineHeight: 0.98, margin: '0 0 24px', color: 'var(--color-ink)',
+            }}>
+              Bună,<br />
+              <em style={{ color: 'var(--color-primary)', fontStyle: 'italic', fontWeight: 400 }}>Utilizatorule.</em>
+            </h1>
+
+            <p style={{ fontSize: 16, color: 'var(--color-muted)', lineHeight: 1.55, margin: '0 0 32px', maxWidth: 380 }}>
+              Vizualizează și gestionează cheltuielile familiei tale într-un mod inteligent și sigur.
+            </p>
           </div>
 
           {/* Error Display */}
@@ -153,18 +147,14 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="info-card">
-            <p className="info-card__title">💡 Date de test:</p>
-            <p className="info-card__text">Email: test@example.com</p>
-            <p className="info-card__text">Parola: password123</p>
-          </div>
-
-          {/* Divider */}
-          <div className="form-note">
-            <p>
-              Aceasta este o versiune demo. Autentificarea este simulată.
-            </p>
+              {/* Securitate */}
+              <div style={{ marginTop: 18, fontSize: 11.5, color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3 4 6v6c0 4.5 3.4 8.4 8 9 4.6-.6 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/>
+                </svg>
+                Conexiune criptată · Datele rămân la tine.
+              </div>
+            </form>
           </div>
         </div>
       </div>

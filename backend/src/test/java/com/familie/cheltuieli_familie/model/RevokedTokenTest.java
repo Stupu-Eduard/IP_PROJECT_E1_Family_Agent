@@ -8,7 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,8 +41,8 @@ class RevokedTokenTest {
     @Test
     @DisplayName("Test 4: Should correctly set and get jti through constructor")
     void testJtiGetterFromConstructor() {
-        Instant revokedAt = Instant.parse("2026-05-10T10:00:00Z");
-        Instant expiresAt = Instant.parse("2026-05-10T11:00:00Z");
+        LocalDateTime revokedAt = LocalDateTime.parse("2026-05-10T10:00:00");
+        LocalDateTime expiresAt = LocalDateTime.parse("2026-05-10T11:00:00");
 
         RevokedToken revokedToken = new RevokedToken(
                 "token-jti-123",
@@ -56,8 +56,8 @@ class RevokedTokenTest {
     @Test
     @DisplayName("Test 5: Should correctly set and get revokedAt through constructor")
     void testRevokedAtGetterFromConstructor() {
-        Instant revokedAt = Instant.parse("2026-05-10T10:00:00Z");
-        Instant expiresAt = Instant.parse("2026-05-10T11:00:00Z");
+        LocalDateTime revokedAt = LocalDateTime.parse("2026-05-10T10:00:00");
+        LocalDateTime expiresAt = LocalDateTime.parse("2026-05-10T11:00:00");
 
         RevokedToken revokedToken = new RevokedToken(
                 "token-jti-123",
@@ -71,8 +71,8 @@ class RevokedTokenTest {
     @Test
     @DisplayName("Test 6: Should correctly set and get expiresAt through constructor")
     void testExpiresAtGetterFromConstructor() {
-        Instant revokedAt = Instant.parse("2026-05-10T10:00:00Z");
-        Instant expiresAt = Instant.parse("2026-05-10T11:00:00Z");
+        LocalDateTime revokedAt = LocalDateTime.parse("2026-05-10T10:00:00");
+        LocalDateTime expiresAt = LocalDateTime.parse("2026-05-10T11:00:00");
 
         RevokedToken revokedToken = new RevokedToken(
                 "token-jti-123",

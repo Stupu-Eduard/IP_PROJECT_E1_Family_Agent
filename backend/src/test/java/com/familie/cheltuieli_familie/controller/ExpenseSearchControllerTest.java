@@ -32,7 +32,7 @@ class ExpenseSearchControllerTest {
     private QdrantVectorService qdrantVectorService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testSemanticSearch() throws Exception {
