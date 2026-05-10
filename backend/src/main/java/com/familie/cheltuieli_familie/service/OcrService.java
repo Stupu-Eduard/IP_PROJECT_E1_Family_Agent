@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.familie.cheltuieli_familie.exception.AiServiceException;
 import jakarta.annotation.PostConstruct;
 
 import java.awt.image.BufferedImage;
@@ -55,7 +56,7 @@ public class OcrService {
 
         } catch (IOException | TesseractException e) {
             log.error("OCR failed", e);
-            throw new RuntimeException("Failed to process PDF for OCR", e);
+            throw new AiServiceException("Failed to process PDF for OCR", e);
         }
     }
 }
