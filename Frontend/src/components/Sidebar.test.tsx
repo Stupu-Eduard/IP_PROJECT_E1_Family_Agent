@@ -97,7 +97,15 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
         expect(expensesBtn).toHaveClass('active')
     })
 
-    it('6. Revine la dashboard dacă ruta nu este găsită (Default activeId)', () => {
+    it('6. Deschide harta completă din sidebar', () => {
+        render(<MemoryRouter><Sidebar /></MemoryRouter>)
+
+        fireEvent.click(screen.getByRole('button', { name: /hartă live/i }))
+
+        expect(mockNavigate).toHaveBeenCalledWith('/expenses/all-map')
+    })
+
+    it('7. Revine la dashboard dacă ruta nu este găsită (Default activeId)', () => {
         vi.mocked(useLocation).mockReturnValue({ pathname: '/ruta-inexistenta', state: null, key: '', search: '', hash: '' }as any)
 
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
@@ -106,7 +114,7 @@ describe('Sidebar Component - 100% Coverage Hunt', () => {
         expect(dashboardBtn).toHaveClass('active')
     })
 
-    it('7. Execută delogarea completă', () => {
+    it('8. Execută delogarea completă', () => {
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
 
         const logoutBtn = screen.getByTitle('Logout')

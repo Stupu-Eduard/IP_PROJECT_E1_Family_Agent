@@ -20,13 +20,53 @@ async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: n
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleMap, Marker, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
 import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter } from 'lucide-react';
+import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+
+type MapExpense = {
+  id: number
+  lat?: number
+  lng?: number
+  amount?: number
+  category?: string
+  person?: string
+  description?: string
+  location?: string
+  rawDate?: string
+}
+
+const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
+  const isoDate = expense.expenseDate ?? ''
+  const datePart = isoDate ? isoDate.slice(0, 10) : ''
+  const location = [expense.location?.store, expense.location?.address, expense.location?.city, expense.location?.country]
+    .filter(Boolean)
+    .join(', ') || 'Fără locație'
+  const amountNumber = typeof expense.amount === 'number' ? expense.amount : Number(expense.amount)
+
+  return {
+    id: expense.id,
+    lat: expense.location?.lat ?? undefined,
+    lng: expense.location?.lng ?? undefined,
+    amount: Number.isFinite(amountNumber) ? amountNumber : 0,
+    category: expense.category ?? 'Fără categorie',
+    person: expense.person ?? 'N/A',
+    description: expense.description ?? '',
+    location,
+    rawDate: datePart,
+  }
+}
 
 export default function ExpensesMapAll() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { expenses = [], filters = {} } = (location.state || {}) as any;
+  const locationState = (location.state || {}) as any;
+  const hasInjectedExpenses = Object.prototype.hasOwnProperty.call(locationState, 'expenses');
+  const injectedExpenses = (hasInjectedExpenses ? locationState.expenses : []) as MapExpense[];
+  const { filters = {} } = locationState;
+  const [remoteExpenses, setRemoteExpenses] = useState<MapExpense[]>([]);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(!hasInjectedExpenses);
+  const [expenseLoadError, setExpenseLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(filters.selectedCategory || '');
   const [selectedPerson, setSelectedPerson] = useState(filters.selectedPerson || '');
   const [startDate, setStartDate] = useState(filters.startDate || '');
@@ -54,9 +94,44 @@ export default function ExpensesMapAll() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (hasInjectedExpenses) {
+      setRemoteExpenses([]);
+      setExpenseLoadError(null);
+      setIsLoadingExpenses(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const run = async () => {
+      setIsLoadingExpenses(true);
+      setExpenseLoadError(null);
+
+      try {
+        const data = await fetchExpenses({}, controller.signal);
+        if (cancelled) return;
+        setRemoteExpenses(data.map(mapApiExpenseToMapExpense));
+      } catch {
+        if (cancelled) return;
+        setRemoteExpenses([]);
+        setExpenseLoadError('Nu am putut încărca cheltuielile. Deschide pagina Cheltuieli pentru a trimite datele sau verifică backend-ul.');
+      } finally {
+        if (!cancelled) setIsLoadingExpenses(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [hasInjectedExpenses]);
+
   // polygon drawing state
   const polygonRef = useRef<any>(null);
-  const [polygonPath, setPolygonPath] = useState<any[] | null>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
 
   // selected expense / place details for left panel
@@ -106,6 +181,8 @@ export default function ExpensesMapAll() {
 
   // Geocode missing lat/lng for expenses
   const [geocodedExpenses, setGeocodedExpenses] = useState<any[]>([]);
+  const expenses = hasInjectedExpenses ? injectedExpenses : remoteExpenses;
+
   useEffect(() => {
     if (!mapsApiKey || !expenses.length) return;
     let cancelled = false;
@@ -146,7 +223,9 @@ export default function ExpensesMapAll() {
     return matchCategory && matchPerson && matchStart && matchEnd && insidePolygon;
   });
 
-  const firstWithCoords = (expenses || []).find((e: any) => typeof e.lat === 'number' && typeof e.lng === 'number');
+  const firstWithCoords = (expenses || []).find(
+    (e: any): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number'
+  );
   const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 44.4268, lng: 26.1025 };
 
   return (
@@ -238,7 +317,6 @@ export default function ExpensesMapAll() {
                   try { if (polygonRef.current.__listeners) { polygonRef.current.__listeners.forEach((l: any) => l.remove?.()); } } catch {}
                   polygonRef.current.setMap(null);
                   polygonRef.current = null;
-                  setPolygonPath(null);
                 }
               }}
               className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
@@ -249,9 +327,16 @@ export default function ExpensesMapAll() {
           </div>
         </div>
 
-        {(!mapsApiKey || loadError) && (
+        {(expenseLoadError || (!mapsApiKey || loadError)) && (
           <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
+            {expenseLoadError && <div className="mb-2 text-[#2D2926]">{expenseLoadError}</div>}
             Nu s-a putut încărca Google Maps. Verifică cheia și restricțiile ei în Google Cloud Console.
+          </div>
+        )}
+
+        {isLoadingExpenses && !hasInjectedExpenses && (
+          <div className="mb-4 bg-white border border-[#EDE9E3] rounded-[14px] p-4 shadow-sm text-[13px] text-[#9A8A7C]">
+            Se încarcă cheltuielile pentru hartă...
           </div>
         )}
 
@@ -324,7 +409,7 @@ export default function ExpensesMapAll() {
                       }
                       poly.setEditable(true);
                       polygonRef.current = poly;
-                      const updatePath = () => setPolygonPath(poly.getPath().getArray().map((p: any) => ({ lat: p.lat(), lng: p.lng() })));
+                      const updatePath = () => poly.getPath().getArray().map((p: any) => ({ lat: p.lat(), lng: p.lng() }));
                       const insertListener = poly.getPath().addListener('insert_at', updatePath);
                       const setListener = poly.getPath().addListener('set_at', updatePath);
                       const removeListener = poly.getPath().addListener('remove_at', updatePath);
@@ -336,67 +421,71 @@ export default function ExpensesMapAll() {
                   />
 
                   <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
-                    {(clusterer: any) => filteredExpenses.filter((e: any) => typeof e.lat === 'number' && typeof e.lng === 'number').map((e: any) => (
-                      <Marker
-                        key={e.id}
-                        position={{ lat: e.lat, lng: e.lng }}
-                        clusterer={clusterer}
-                        title={e.description || e.location || ''}
-                        label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
-                        onClick={() => {
-                          setSelectedExpense(e);
-                          setPlace(null);
-                          setGoogleMapsUri(null);
-                          setMessage(null);
-                          // fetch nearby place details (best-effort)
-                          (async () => {
-                            try {
-                              if (!mapsApiKey) return;
-                              const textQuery = (e.location || e.description || '').toString();
-                              const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  'X-Goog-Api-Key': mapsApiKey,
-                                  'X-Goog-FieldMask': 'places.id,places.googleMapsUri',
-                                },
-                                body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: e.lat, longitude: e.lng }, radius: 800 } } }),
-                              });
-                              if (!res.ok) return;
-                              const data: any = await res.json();
-                              const first = data?.places?.[0];
-                              if (!first?.id) return;
-                              setPlaceId(first.id);
-                              setGoogleMapsUri(first.googleMapsUri ?? null);
-                              const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(first.id)}`, {
-                                method: 'GET',
-                                headers: {
-                                  'X-Goog-Api-Key': mapsApiKey,
-                                  'X-Goog-FieldMask': 'displayName,formattedAddress,phone,websiteUri,googleMapsUri,photos,rating,userRatingCount,regularOpeningHours.openNow,regularOpeningHours.weekdayDescriptions',
-                                },
-                              });
-                              if (!detRes.ok) return;
-                              const details: any = await detRes.json();
-                              setPlace({
-                                formattedAddress: details.formattedAddress,
-                                phone: details.internationalPhoneNumber ?? details.nationalPhoneNumber,
-                                name: details.displayName?.text,
-                                websiteUri: details.websiteUri,
-                                photoName: details?.photos?.[0]?.name,
-                                googleMapsUri: details.googleMapsUri,
-                                rating: details?.rating,
-                                userRatingCount: details?.userRatingCount,
-                                openNow: details?.regularOpeningHours?.openNow,
-                                weekdayDescriptions: details?.regularOpeningHours?.weekdayDescriptions,
-                              });
-                              if (details?.googleMapsUri) setGoogleMapsUri(details.googleMapsUri);
-                            } catch {
-                              // ignore
-                            }
-                          })();
-                        }}
-                      />
-                    ))}
+                    {(clusterer: any) => (
+                      <>
+                        {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
+                          <Marker
+                            key={e.id}
+                            position={{ lat: e.lat, lng: e.lng }}
+                            clusterer={clusterer}
+                            title={e.description || e.location || ''}
+                            label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
+                            onClick={() => {
+                              setSelectedExpense(e);
+                              setPlace(null);
+                              setGoogleMapsUri(null);
+                              setMessage(null);
+                              // fetch nearby place details (best-effort)
+                              (async () => {
+                                try {
+                                  if (!mapsApiKey) return;
+                                  const textQuery = (e.location || e.description || '').toString();
+                                  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'X-Goog-Api-Key': mapsApiKey,
+                                      'X-Goog-FieldMask': 'places.id,places.googleMapsUri',
+                                    },
+                                    body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: e.lat, longitude: e.lng }, radius: 800 } } }),
+                                  });
+                                  if (!res.ok) return;
+                                  const data: any = await res.json();
+                                  const first = data?.places?.[0];
+                                  if (!first?.id) return;
+                                  setPlaceId(first.id);
+                                  setGoogleMapsUri(first.googleMapsUri ?? null);
+                                  const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(first.id)}`, {
+                                    method: 'GET',
+                                    headers: {
+                                      'X-Goog-Api-Key': mapsApiKey,
+                                      'X-Goog-FieldMask': 'displayName,formattedAddress,phone,websiteUri,googleMapsUri,photos,rating,userRatingCount,regularOpeningHours.openNow,regularOpeningHours.weekdayDescriptions',
+                                    },
+                                  });
+                                  if (!detRes.ok) return;
+                                  const details: any = await detRes.json();
+                                  setPlace({
+                                    formattedAddress: details.formattedAddress,
+                                    phone: details.internationalPhoneNumber ?? details.nationalPhoneNumber,
+                                    name: details.displayName?.text,
+                                    websiteUri: details.websiteUri,
+                                    photoName: details?.photos?.[0]?.name,
+                                    googleMapsUri: details.googleMapsUri,
+                                    rating: details?.rating,
+                                    userRatingCount: details?.userRatingCount,
+                                    openNow: details?.regularOpeningHours?.openNow,
+                                    weekdayDescriptions: details?.regularOpeningHours?.weekdayDescriptions,
+                                  });
+                                  if (details?.googleMapsUri) setGoogleMapsUri(details.googleMapsUri);
+                                } catch {
+                                  // ignore
+                                }
+                              })();
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
                   </MarkerClusterer>
                 </GoogleMap>
               </div>
