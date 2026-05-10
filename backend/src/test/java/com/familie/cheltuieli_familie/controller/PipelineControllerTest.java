@@ -28,7 +28,7 @@ class PipelineControllerTest {
     private ExpensePipelineService pipelineService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testProcess() throws Exception {
