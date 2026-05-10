@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.dto.response.AgentResponseDTO;
 import com.proiect.dto.response.ChartPayload;
@@ -22,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AgentController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 class AgentControllerTest {
 
     @Autowired

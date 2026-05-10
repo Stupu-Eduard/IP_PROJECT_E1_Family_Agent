@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.model.ExpenseEntity;
 import com.proiect.repository.ExpenseJpaRepository;
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ExpenseController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 class ExpenseControllerTest {
 
     @Autowired

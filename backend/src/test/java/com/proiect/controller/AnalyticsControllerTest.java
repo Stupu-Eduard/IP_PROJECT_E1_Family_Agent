@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.service.AnalyticsAssistant;
 import com.proiect.service.ReportService;
@@ -17,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AnalyticsController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 class AnalyticsControllerTest {
 
     @Autowired

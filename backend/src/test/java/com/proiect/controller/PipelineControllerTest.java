@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.service.ExpensePipelineService;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @WebMvcTest(PipelineController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 class PipelineControllerTest {
 
     @Autowired

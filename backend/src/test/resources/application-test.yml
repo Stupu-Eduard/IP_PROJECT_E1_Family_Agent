@@ -2,7 +2,18 @@ spring:
   main:
     allow-bean-definition-overriding: true
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  sql:
+    init:
+      mode: never
+
 openai:
   api:
     key: test-key
@@ -12,3 +23,6 @@ qdrant:
 openrouter:
   api:
     key: test-key
+DEEPSEEK_API_KEY: test-key
+ANTHROPIC_API_KEY: test-key
+COHERE_API_KEY: test-key

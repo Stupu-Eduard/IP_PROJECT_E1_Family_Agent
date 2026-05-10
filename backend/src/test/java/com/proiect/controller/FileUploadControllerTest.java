@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.dto.ExtractionResponse;
 import com.proiect.service.ExtractionService;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @WebMvcTest(FileUploadController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 class FileUploadControllerTest {
 
     @Autowired
