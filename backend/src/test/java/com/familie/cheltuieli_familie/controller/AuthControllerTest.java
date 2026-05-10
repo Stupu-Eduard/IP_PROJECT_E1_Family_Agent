@@ -96,6 +96,28 @@ class AuthControllerTest {
     }
 
     @Test
+    void register_CandDateValide_CreeazaUserSiReturneazaToken() {
+        // GIVEN
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Nou User");
+        request.setEmail("new@example.com");
+        request.setPassword("password123");
+
+        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(jwtUtil.generateToken(eq("new@example.com"), any())).thenReturn("new-jwt-token");
+
+        // WHEN
+        ResponseEntity<Object> result = authController.register(request);
+
+        // THEN
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        verify(userRepository, times(1)).save(any(User.class));
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertNotNull(body);
+        assertEquals("new-jwt-token", body.get("token"));
+    }
+
+    @Test
     void logout_CandTokenEsteValid_IlAdaugaInBlacklist() {
         // GIVEN
         HttpServletRequest request = mock(HttpServletRequest.class);
