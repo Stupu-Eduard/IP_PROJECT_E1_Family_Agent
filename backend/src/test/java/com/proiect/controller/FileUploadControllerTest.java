@@ -1,4 +1,6 @@
 package com.proiect.controller;
+import org.springframework.boot.test.context.SpringBootTest;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.dto.ExtractionResponse;
@@ -24,10 +26,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.proiect.service.VoiceService;
 import java.util.List;
 
-@WebMvcTest(FileUploadController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 class FileUploadControllerTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.dto.response.ChartPayload;
 import com.proiect.dto.response.ChartResponseDTO;

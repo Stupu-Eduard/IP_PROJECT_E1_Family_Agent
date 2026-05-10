@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.model.ExpenseEntity;
 import com.proiect.repository.ExpenseJpaRepository;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.when;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
+@ContextConfiguration(classes = com.familie.cheltuieli_familie.CheltuieliFamilieApplication.class)
 class AnalyticsIntegrationTest {
 
     @MockitoBean

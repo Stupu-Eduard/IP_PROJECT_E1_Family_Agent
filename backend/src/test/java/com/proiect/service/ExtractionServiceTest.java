@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.dto.ExtractionRequest;
 import com.proiect.dto.ExtractionResponse;

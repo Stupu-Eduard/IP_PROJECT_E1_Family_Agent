@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

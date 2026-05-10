@@ -1,4 +1,5 @@
 package com.proiect.controller;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 
 import com.proiect.dto.response.AgentResponseDTO;
 import com.proiect.dto.response.ChartResponseDTO;
@@ -27,6 +28,9 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 @Import(com.proiect.config.TestSecurityConfig.class)
 class AgentControllerIntegrationTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private TestRestTemplate restTemplate;

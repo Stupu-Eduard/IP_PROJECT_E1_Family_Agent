@@ -1,4 +1,6 @@
 package com.proiect.controller;
+import org.springframework.boot.test.context.SpringBootTest;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.dto.ExtractionRequest;
@@ -22,10 +24,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
-@WebMvcTest(ExtractionController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 class ExtractionControllerTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private MockMvc mockMvc;

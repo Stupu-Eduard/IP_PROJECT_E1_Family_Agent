@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.config.LlmConfig;
 import dev.langchain4j.model.chat.ChatLanguageModel;

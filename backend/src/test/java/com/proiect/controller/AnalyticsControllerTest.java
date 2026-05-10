@@ -1,4 +1,7 @@
 package com.proiect.controller;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.service.AnalyticsAssistant;
@@ -16,10 +19,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AnalyticsController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 class AnalyticsControllerTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private MockMvc mockMvc;

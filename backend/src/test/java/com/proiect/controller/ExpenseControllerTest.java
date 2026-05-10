@@ -1,4 +1,6 @@
 package com.proiect.controller;
+import org.springframework.boot.test.context.SpringBootTest;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import com.proiect.model.ExpenseEntity;
@@ -24,10 +26,13 @@ import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(ExpenseController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 class ExpenseControllerTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private MockMvc mockMvc;

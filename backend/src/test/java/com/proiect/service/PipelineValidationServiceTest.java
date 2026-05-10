@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.exception.PipelineException;
 import com.proiect.repository.ExpenseJpaRepository;

@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;

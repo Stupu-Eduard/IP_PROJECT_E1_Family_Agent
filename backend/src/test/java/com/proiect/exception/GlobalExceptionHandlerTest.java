@@ -1,4 +1,5 @@
 package com.proiect.exception;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.controller.ExtractionController;
 import com.proiect.service.ExtractionService;
@@ -18,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ExtractionController.class)
 @ActiveProfiles("test")
+@ContextConfiguration(classes = com.familie.cheltuieli_familie.CheltuieliFamilieApplication.class)
 @AutoConfigureMockMvc(addFilters = false)
 class GlobalExceptionHandlerTest {
 

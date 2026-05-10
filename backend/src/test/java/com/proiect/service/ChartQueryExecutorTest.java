@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.model.ChartFilters;
 import com.proiect.model.ChartQueryIntent;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @JdbcTest
 @Import(ChartQueryExecutor.class)
 @ActiveProfiles("test")
+@ContextConfiguration(classes = com.familie.cheltuieli_familie.CheltuieliFamilieApplication.class)
 @Transactional
 class ChartQueryExecutorTest {
 

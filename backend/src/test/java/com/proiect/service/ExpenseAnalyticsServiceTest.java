@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import com.proiect.model.ExpenseEntity;
 import com.proiect.repository.ExpenseJpaRepository;
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
+@ContextConfiguration(classes = com.familie.cheltuieli_familie.CheltuieliFamilieApplication.class)
 class ExpenseAnalyticsServiceTest {
 
     @Mock

@@ -1,4 +1,5 @@
 package com.proiect.service;
+import org.springframework.test.context.ContextConfiguration;
 
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -12,6 +13,7 @@ import java.nio.file.Paths;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
+@ContextConfiguration(classes = com.familie.cheltuieli_familie.CheltuieliFamilieApplication.class)
 @Tag("integration")
 public class ApiConnectivityTest {
 

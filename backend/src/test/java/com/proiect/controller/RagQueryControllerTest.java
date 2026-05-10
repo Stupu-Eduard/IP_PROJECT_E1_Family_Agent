@@ -1,4 +1,6 @@
 package com.proiect.controller;
+import org.springframework.boot.test.context.SpringBootTest;
+import com.familie.cheltuieli_familie.repository.UserSessionRepository;
 
 import com.proiect.service.RagRetrievalService;
 import org.junit.jupiter.api.Test;
@@ -14,10 +16,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(RagQueryController.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 class RagQueryControllerTest {
+
+    @MockBean
+    private UserSessionRepository userSessionRepository;
 
     @Autowired
     private MockMvc mockMvc;
