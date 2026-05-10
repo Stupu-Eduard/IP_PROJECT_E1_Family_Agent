@@ -3,6 +3,7 @@ import * as yup from 'yup';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
+import { api } from '../services/api';
 import type { RegisterDTO } from '../types/AuthDTO';
 
 // ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
@@ -71,23 +72,11 @@ export default function RegisterForm() {
             await registerSchema.validate({ name, email, password, confirmPassword });
             setIsLoading(true);
             const payload: RegisterDTO = { name, email, password };
-            const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
-                setTimeout(() => {
-                    if (payload.email === 'test@example.com' || payload.email === 'copil@example.com') {
-                        reject(new Error('Eroare 409: Acest email este deja asociat unui cont.'));
-                    } else {
-                        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-                        const payloadData = btoa(JSON.stringify({
-                            sub: payload.email, role: 'Parent',
-                            exp: Math.floor(Date.now() / 1000) + 60 * 60,
-                        }));
-                        resolve({ token: `${header}.${payloadData}.mock_signature` });
-                    }
-                }, 1500);
-            });
-            const response = await mockApiCall;
-            login(response.token);
-            navigate('/dashboard', { replace: true });
+            const response = await api.post<{ token: string }>('/api/v1/auth/register', payload);
+            if (response.data.token) {
+                login(response.data.token);
+                navigate('/dashboard', { replace: true });
+            }
         } catch (err: unknown) {
             if (err instanceof yup.ValidationError) setError(err.message);
             else if (err instanceof Error) setError(err.message);
