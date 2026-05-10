@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.config;
 
+import com.familie.cheltuieli_familie.exception.ResourceInitializationException;
 import dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
