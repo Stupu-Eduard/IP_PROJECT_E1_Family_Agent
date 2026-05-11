@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import ExpenseForm from './ExpenseForm'
 import { processReceiptOCR } from '../services/expenses'
@@ -12,7 +12,8 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('../services/expenses', () => ({
-    processReceiptOCR: vi.fn()
+    processReceiptOCR: vi.fn(),
+    createExpense: vi.fn()
 }))
 
 vi.mock('./ImageUploader', () => ({
@@ -61,32 +62,22 @@ describe('ExpenseForm Component', () => {
         expect(await screen.findByText('Suma trebuie să fie strict mai mare ca 0!')).toBeInTheDocument()
     })
 
-    it('4. Salvează o cheltuială cu succes și resetează formularul', () => {
-        vi.useFakeTimers()
+    it('4. Salvează o cheltuială cu succes și resetează formularul', async () => {
+        const { createExpense } = await import('../services/expenses')
+        vi.mocked(createExpense).mockResolvedValueOnce({} as any)
+
         renderComponent()
         const amountInput = screen.getByLabelText(/Sumă \(RON\)/i)
         const categorySelect = screen.getByLabelText(/Categorie/i)
-        const form = amountInput.closest('form')!
 
         fireEvent.change(amountInput, { target: { value: '150.5' } })
         fireEvent.change(categorySelect, { target: { value: 'mancare' } })
-        fireEvent.submit(form)
+        fireEvent.submit(amountInput.closest('form')!)
 
-        expect(screen.getByText('Se salvează...')).toBeInTheDocument()
-
-        act(() => {
-            vi.advanceTimersByTime(1000)
+        await waitFor(() => {
+            expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
         })
-
-        expect(screen.getByText('Cheltuială adăugată cu succes!')).toBeInTheDocument()
         expect(amountInput).toHaveValue(null)
-
-        act(() => {
-            vi.advanceTimersByTime(3000)
-        })
-
-        vi.runOnlyPendingTimers()
-        vi.useRealTimers()
     })
 
     it('5. Completează datele prin OCR la selectarea unei imagini', async () => {
@@ -94,8 +85,7 @@ describe('ExpenseForm Component', () => {
             amount: 250,
             category: 'facturi',
             date: '2026-04-30T12:00:00'
-        }as any
-        )
+        } as any)
         renderComponent()
         fireEvent.click(screen.getByText('Simulare Încărcare OCR'))
         expect(screen.getByText('Procesăm bonul tău…')).toBeInTheDocument()
