@@ -1,4 +1,5 @@
 import type { OcrResponseDTO } from '../types/OcrResponseDTO';
+import type { ExpenseDTO } from '../types/ExpenseDTO';
 import { api } from './api'
 
 export interface ApiLocationDto {
@@ -44,5 +45,19 @@ export async function processReceiptOCR(file: File): Promise<OcrResponseDTO> {
 
   const response = await api.post<OcrResponseDTO>('/api/v1/ocr/process', formData);
 
+  return response.data;
+}
+
+export async function createExpense(payload: ExpenseDTO): Promise<ApiExpenseListDto> {
+  const body = {
+    amount: payload.amount,
+    category: payload.category,
+    date: payload.date,
+    currency: payload.currency ?? 'RON',
+    description: payload.description ?? null,
+    locationName: payload.locationName ?? null,
+  };
+
+  const response = await api.post<ApiExpenseListDto>('/api/v1/expenses', body);
   return response.data;
 }

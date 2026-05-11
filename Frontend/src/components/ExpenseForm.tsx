@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, AlertCircle } from 'lucide-react';
-import type { ExpenseDTO } from '../types/ExpenseDTO';
-import { processReceiptOCR } from '../services/expenses';
+import { Loader2, AlertCircle, MapPin } from 'lucide-react';
+import { processReceiptOCR, createExpense } from '../services/expenses';
 import { ImageUploader } from './ImageUploader';
 
 const IcoArrowLeft = () => (
@@ -27,6 +26,7 @@ const ExpenseForm: React.FC = () => {
   const [amount,   setAmount]   = useState<number | ''>('');
   const [category, setCategory] = useState('');
   const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
+  const [location, setLocation] = useState('');
 
   const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -40,12 +40,13 @@ const ExpenseForm: React.FC = () => {
     setError('');
     try {
       const data = await processReceiptOCR(file);
-      if (data.amount)   setAmount(data.amount);
-      if (data.category) setCategory(data.category);
+      if (data.amount)       setAmount(data.amount);
+      if (data.category)     setCategory(data.category);
       if (data.date) {
         const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         setDate(formattedDate);
       }
+      if (data.locationName) setLocation(data.locationName);
     } catch {
       setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
     } finally {
@@ -53,26 +54,37 @@ const ExpenseForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
+
     if (Number(amount) <= 0) {
       setError('Suma trebuie să fie strict mai mare ca 0!');
       return;
     }
+
     setLoading(true);
-    const payload: ExpenseDTO = { amount: Number(amount), category, date };
-    console.log('Date pregătite pentru trimitere:', payload);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createExpense({
+        amount: Number(amount),
+        category,
+        date,
+        locationName: location.trim() || undefined,
+      });
+
       setSuccess(true);
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
+      setLocation('');
       setOcrError(null);
       setTimeout(() => setSuccess(false), 3000);
-    }, 1000);
+    } catch {
+      setError('A apărut o eroare la salvare. Încearcă din nou.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isInputDisabled = loading;
@@ -134,6 +146,7 @@ const ExpenseForm: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
 
+          {/* Panoul OCR */}
           <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
 
             {isAnalyzing && (
@@ -184,7 +197,6 @@ const ExpenseForm: React.FC = () => {
                     }
                   }}
               />
-
               <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-muted)' }}>
                 <IcoCamera />
                 JPG, PNG · max 5 MB · OCR completează câmpurile automat
@@ -192,6 +204,7 @@ const ExpenseForm: React.FC = () => {
             </div>
           </div>
 
+          {/* Panoul formular manual */}
           <div className="card" style={{}}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div className="label">DETALII CHELTUIALĂ</div>
@@ -205,6 +218,7 @@ const ExpenseForm: React.FC = () => {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
+              {/* Suma */}
               <div>
                 <label htmlFor="amount" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Sumă (RON) <span style={{ color: 'var(--color-primary)' }}>*</span>
@@ -223,6 +237,7 @@ const ExpenseForm: React.FC = () => {
                 />
               </div>
 
+              {/* Categorie */}
               <div>
                 <label htmlFor="category" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Categorie <span style={{ color: 'var(--color-primary)' }}>*</span>
@@ -249,6 +264,7 @@ const ExpenseForm: React.FC = () => {
                 </div>
               </div>
 
+              {/* Data */}
               <div>
                 <label htmlFor="date" className="label" style={{ display: 'block', marginBottom: 8 }}>
                   Dată <span style={{ color: 'var(--color-primary)' }}>*</span>
@@ -260,6 +276,27 @@ const ExpenseForm: React.FC = () => {
                     onChange={(e) => setDate(e.target.value)}
                     className="input"
                     required
+                    disabled={isInputDisabled}
+                    style={{ opacity: isInputDisabled ? 0.6 : 1 }}
+                />
+              </div>
+
+              {/* Locatie */}
+              <div>
+                <label htmlFor="location" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <MapPin size={13} style={{ color: 'var(--color-muted)', flexShrink: 0 }} />
+                    Locație
+                    <span style={{ color: 'var(--color-muted)', fontWeight: 400, fontSize: 11, marginLeft: 2 }}>(opțional)</span>
+                  </span>
+                </label>
+                <input
+                    id="location"
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="input"
+                    placeholder="Ex: Kaufland, Mega Image..."
                     disabled={isInputDisabled}
                     style={{ opacity: isInputDisabled ? 0.6 : 1 }}
                 />
