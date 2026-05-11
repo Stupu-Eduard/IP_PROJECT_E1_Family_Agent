@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import java.time.Duration;
-import java.util.Map;
 
 @Configuration
 @Slf4j
@@ -30,26 +29,14 @@ public class LlmConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
-    private String resolveKey(String springValue, String envName) {
-        if (springValue != null && !springValue.isEmpty()) {
-            return springValue;
-        }
-        String env = System.getenv(envName);
-        if (env != null && !env.isEmpty()) {
-            return env;
-        }
-        Map<String, String> dotEnv = DotEnvLoader.load();
-        return dotEnv.getOrDefault(envName, "");
-    }
-
     @Bean
     @Primary
     public ChatLanguageModel deepseekModel() {
-        String dsKey = resolveKey(deepseekApiKey, "DEEPSEEK_API_KEY");
+        String dsKey = KeyResolver.resolve(deepseekApiKey, "DEEPSEEK_API_KEY");
         if (!dsKey.isEmpty()) {
             return buildOpenAiModel(dsKey, "https://api.deepseek.com", "deepseek-chat");
         }
-        String orKey = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
+        String orKey = KeyResolver.resolve(openRouterApiKey, "OPENROUTER_API_KEY");
         if (!orKey.isEmpty()) {
             return buildOpenAiModel(orKey, "https://openrouter.ai/api/v1", "deepseek/deepseek-chat");
         }
