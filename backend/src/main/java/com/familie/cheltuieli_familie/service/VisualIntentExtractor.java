@@ -31,6 +31,9 @@ public class VisualIntentExtractor {
     private static final Set<String> ALLOWED_GROUP_BY = Set.of("person", "category", "month", "year", "location");
     private static final Set<String> ALLOWED_SERIES_BY = Set.of("person", "category");
 
+    private static final String DEFAULT_GROUP_BY = "category";
+    private static final String DEFAULT_SERIES_BY = "person";
+
     interface IntentAssistant {
         @SystemMessage("""
             Ești un clasificator de intenții pentru un asistent financiar de familie.
@@ -83,7 +86,7 @@ public class VisualIntentExtractor {
 
                 objectMapper.readTree(jsonResult);
                 return jsonResult;
-            } catch (Exception e) {
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
                 lastError = e.getMessage();
                 log.warn("Intent extraction attempt {} failed: {}", attempt, lastError);
                 if (attempt < MAX_RETRIES) {
@@ -121,9 +124,9 @@ public class VisualIntentExtractor {
                 aggregation = "sum";
             }
 
-            String groupBy = root.path("groupBy").asText("category");
+            String groupBy = root.path("groupBy").asText(DEFAULT_GROUP_BY);
             if (!ALLOWED_GROUP_BY.contains(groupBy)) {
-                groupBy = "category";
+                groupBy = DEFAULT_GROUP_BY;
             }
 
             JsonNode seriesByNode = root.path("seriesBy");
@@ -146,7 +149,7 @@ public class VisualIntentExtractor {
                     .filters(filters)
                     .build();
 
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Failed to parse intent JSON: {}", e.getMessage());
             return ChartQueryIntent.builder()
                     .responseType("text")

@@ -26,6 +26,10 @@ public class ChartQueryExecutor {
     );
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("SUM", "COUNT", "AVG");
 
+    private static final String LABEL_KEY = "label";
+    private static final String SERIES_KEY = "series";
+    private static final String VALUE_KEY = "value";
+
     public ChartQueryResult execute(ChartQueryIntent intent, List<String> expandedCategories, List<String> expandedLocations) {
         validateIntent(intent);
 
@@ -59,7 +63,7 @@ public class ChartQueryExecutor {
         List<Map<String, Object>> rawRows = jdbcTemplate.query(
                 sql.toString(),
                 params.toArray(),
-                this::mapRow
+                (rs, rowNum) -> mapRow(rs)
         );
 
         return pivotAndFormat(rawRows, seriesColumn);
@@ -93,9 +97,7 @@ public class ChartQueryExecutor {
         if (filters == null) return;
 
         // Category filter (use expanded list if available)
-        List<String> categories = (expandedCategories != null && !expandedCategories.isEmpty())
-                ? expandedCategories
-                : (filters.getCategory() != null ? List.of(filters.getCategory()) : null);
+        List<String> categories = resolveFilterList(expandedCategories, filters.getCategory());
 
         if (categories != null && !categories.isEmpty()) {
             sql.append(" AND category IN (");
@@ -105,9 +107,7 @@ public class ChartQueryExecutor {
         }
 
         // Location filter
-        List<String> locations = (expandedLocations != null && !expandedLocations.isEmpty())
-                ? expandedLocations
-                : (filters.getLocation() != null ? List.of(filters.getLocation()) : null);
+        List<String> locations = resolveFilterList(expandedLocations, filters.getLocation());
 
         if (locations != null && !locations.isEmpty()) {
             sql.append(" AND location IN (");
@@ -134,13 +134,20 @@ public class ChartQueryExecutor {
         }
     }
 
-    private Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("label", rs.getString("label"));
-        if (hasColumn(rs, "series")) {
-            row.put("series", rs.getString("series"));
+    private List<String> resolveFilterList(List<String> expandedList, String singleValue) {
+        if (expandedList != null && !expandedList.isEmpty()) {
+            return expandedList;
         }
-        row.put("value", rs.getBigDecimal("total"));
+        return singleValue != null ? List.of(singleValue) : null;
+    }
+
+    private Map<String, Object> mapRow(ResultSet rs) throws SQLException {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put(LABEL_KEY, rs.getString(LABEL_KEY));
+        if (hasColumn(rs, SERIES_KEY)) {
+            row.put(SERIES_KEY, rs.getString(SERIES_KEY));
+        }
+        row.put(VALUE_KEY, rs.getBigDecimal("total"));
         return row;
     }
 
@@ -167,8 +174,8 @@ public class ChartQueryExecutor {
             List<Map<String, Object>> rows = new ArrayList<>();
             for (Map<String, Object> raw : rawRows) {
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("name", raw.get("label"));
-                row.put("value", raw.get("value"));
+                row.put("name", raw.get(LABEL_KEY));
+                row.put(VALUE_KEY, raw.get(VALUE_KEY));
                 rows.add(row);
             }
             return ChartQueryResult.builder()
@@ -179,15 +186,13 @@ public class ChartQueryExecutor {
         }
 
         // Multi-series: pivot raw rows into Recharts format
-        // Raw: {label: "2024-01", series: "Teodor", value: 1200}
-        // Target: {name: "2024-01", Teodor: 1200, Maria: 900}
         Set<String> seriesNames = new LinkedHashSet<>();
         Map<String, Map<String, Object>> pivot = new LinkedHashMap<>();
 
         for (Map<String, Object> raw : rawRows) {
-            String label = String.valueOf(raw.get("label"));
-            String series = String.valueOf(raw.get("series"));
-            BigDecimal value = (BigDecimal) raw.get("value");
+            String label = String.valueOf(raw.get(LABEL_KEY));
+            String series = String.valueOf(raw.get(SERIES_KEY));
+            BigDecimal value = (BigDecimal) raw.get(VALUE_KEY);
 
             seriesNames.add(series);
             pivot.computeIfAbsent(label, k -> {

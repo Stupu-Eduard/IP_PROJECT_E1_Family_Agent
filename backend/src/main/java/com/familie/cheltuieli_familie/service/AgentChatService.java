@@ -23,7 +23,7 @@ public class AgentChatService {
                     intent.getResponseType(), intent.getChartType(), intent.getGroupBy());
 
             if ("chart".equalsIgnoreCase(intent.getResponseType())) {
-                return chartGenerationService.generate(userMessage, intent);
+                return chartGenerationService.generate(intent);
             }
 
             // Default to text response via existing RAG pipeline

@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,69 +28,106 @@ class RagRetrievalServiceTest {
     @InjectMocks
     private RagRetrievalService ragRetrievalService;
 
-    @Test
-    void testAskWithContext() {
-        when(llmRouterService.routeAndChat("Cât am cheltuit?")).thenReturn("Ai cheltuit 100 RON.");
-
-        String result = ragRetrievalService.askWithContext("Cât am cheltuit?");
-
-        assertEquals("Ai cheltuit 100 RON.", result);
-        verify(llmRouterService, times(1)).routeAndChat("Cât am cheltuit?");
+    @BeforeEach
+    void setUp() {
     }
 
     @Test
-    void testRetrieveContextWithResults() {
-        EmbeddedExpense expense = EmbeddedExpense.builder()
-                .id(1L)
-                .amount(new BigDecimal("150.00"))
-                .category("Mâncare")
-                .location("Kaufland")
-                .date(LocalDate.of(2024, 3, 15))
-                .person("Familie")
-                .rawInput("Am platit 150 lei la Kaufland")
-                .score(0.95)
-                .build();
+    void askWithContext_shouldDelegateToLlmRouterService() {
+        String query = "How much did I spend?";
+        String expectedAnswer = "You spent 500 RON.";
 
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+        when(llmRouterService.routeAndChat(query)).thenReturn(expectedAnswer);
 
-        String context = ragRetrievalService.retrieveContext("mancare", 3);
+        String result = ragRetrievalService.askWithContext(query);
 
-        assertNotNull(context);
-        assertTrue(context.contains("Cheltuieli anterioare relevante"));
-        assertTrue(context.contains("Mâncare"));
-        assertTrue(context.contains("150"));
-        assertTrue(context.contains("Kaufland"));
+        assertEquals(expectedAnswer, result);
+        verify(llmRouterService).routeAndChat(query);
+        verifyNoInteractions(qdrantVectorService);
     }
 
     @Test
-    void testRetrieveContextWithNoResults() {
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(Collections.emptyList());
+    void retrieveContext_shouldReturnNoResultsMessage_whenEmpty() {
+        String query = "Find something";
+        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(Collections.emptyList());
 
-        String context = ragRetrievalService.retrieveContext("vacanta", 3);
+        String result = ragRetrievalService.retrieveContext(query, 10);
 
-        assertEquals("Nu s-au găsit cheltuieli relevante în baza de date.", context);
+        assertEquals("Nu s-au găsit cheltuieli relevante în baza de date.", result);
     }
 
     @Test
-    void testRetrieveContextWithNullFields() {
-        EmbeddedExpense expense = EmbeddedExpense.builder()
-                .id(2L)
-                .amount(new BigDecimal("75.00"))
-                .category("Utilități")
-                .location(null)
-                .date(null)
-                .person(null)
-                .rawInput(null)
-                .score(0.88)
-                .build();
+    void retrieveContext_shouldFormatTopResults() {
+        String query = "Food expenses";
+        List<EmbeddedExpense> results = List.of(
+                EmbeddedExpense.builder()
+                        .category("food")
+                        .amount(new BigDecimal("100.50"))
+                        .location("Lidl")
+                        .date(LocalDate.of(2024, 1, 15))
+                        .person("Teodor")
+                        .score(0.95)
+                        .build(),
+                EmbeddedExpense.builder()
+                        .category("food")
+                        .amount(new BigDecimal("50.00"))
+                        .location(null)
+                        .date(null)
+                        .person(null)
+                        .score(0.85)
+                        .build()
+        );
 
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
 
-        String context = ragRetrievalService.retrieveContext("utilitati", 3);
+        String result = ragRetrievalService.retrieveContext(query, 10);
 
-        assertNotNull(context);
-        assertTrue(context.contains("Utilități"));
-        assertTrue(context.contains("Necunoscut"));
-        assertTrue(context.contains("Familie"));
+        assertTrue(result.contains("Cheltuieli anterioare relevante:"));
+        assertTrue(result.contains("Lidl"));
+        assertTrue(result.contains("100.50"));
+        assertTrue(result.contains("Teodor"));
+        assertTrue(result.contains("Necunoscut"));
+        assertTrue(result.contains("0.9500"));
+    }
+
+    @Test
+    void retrieveContext_shouldLimitToTop5Results() {
+        String query = "Many expenses";
+        List<EmbeddedExpense> results = java.util.stream.IntStream.range(0, 20)
+                .mapToObj(i -> EmbeddedExpense.builder()
+                        .category("cat" + i)
+                        .amount(new BigDecimal(i))
+                        .location("loc" + i)
+                        .date(LocalDate.now())
+                        .person("person" + i)
+                        .score(0.9 - (i * 0.01))
+                        .build())
+                .toList();
+
+        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
+
+        String result = ragRetrievalService.retrieveContext(query, 10);
+
+        // Should contain exactly 5 items (numbered 1-5)
+        long count = result.lines().filter(line -> line.matches("^\\d+\\..*")).count();
+        assertEquals(5, count);
+    }
+
+    @Test
+    void retrieveContext_shouldSortByScoreDescending() {
+        String query = "Sorted expenses";
+        List<EmbeddedExpense> results = List.of(
+                EmbeddedExpense.builder().category("low").score(0.5).amount(BigDecimal.ONE).build(),
+                EmbeddedExpense.builder().category("high").score(0.99).amount(BigDecimal.TEN).build(),
+                EmbeddedExpense.builder().category("mid").score(0.75).amount(BigDecimal.ZERO).build()
+        );
+
+        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
+
+        String result = ragRetrievalService.retrieveContext(query, 10);
+
+        // First result should be the highest score (0.99)
+        assertTrue(result.indexOf("high") < result.indexOf("mid"));
+        assertTrue(result.indexOf("mid") < result.indexOf("low"));
     }
 }

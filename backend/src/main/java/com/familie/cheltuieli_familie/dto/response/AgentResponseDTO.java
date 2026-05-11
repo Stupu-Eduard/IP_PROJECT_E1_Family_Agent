@@ -23,7 +23,7 @@ public abstract class AgentResponseDTO {
     private String type;
     private String message;
 
-    public AgentResponseDTO(String type, String message) {
+    protected AgentResponseDTO(String type, String message) {
         this.type = type;
         this.message = message;
     }

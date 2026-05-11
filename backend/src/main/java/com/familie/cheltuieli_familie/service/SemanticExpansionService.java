@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +35,7 @@ public class SemanticExpansionService {
                     .filter(Objects::nonNull)
                     .filter(c -> !c.isBlank())
                     .distinct()
-                    .collect(Collectors.toList());
+                    .toList();
 
             log.info("Expanded category '{}' into {} concrete categories: {}",
                     fuzzyCategory, categories.size(), categories);
@@ -64,7 +63,7 @@ public class SemanticExpansionService {
                     .filter(Objects::nonNull)
                     .filter(l -> !l.isBlank())
                     .distinct()
-                    .collect(Collectors.toList());
+                    .toList();
 
             log.info("Expanded location '{}' into {} concrete locations: {}",
                     fuzzyLocation, locations.size(), locations);

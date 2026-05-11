@@ -21,7 +21,7 @@ public class ChartGenerationService {
     private final SemanticExpansionService semanticExpansionService;
     private final ChartQueryExecutor chartQueryExecutor;
 
-    public ChartResponseDTO generate(String userMessage, ChartQueryIntent intent) {
+    public ChartResponseDTO generate(ChartQueryIntent intent) {
         // 1. Semantic expansion of filters
         List<String> expandedCategories = null;
         List<String> expandedLocations = null;
