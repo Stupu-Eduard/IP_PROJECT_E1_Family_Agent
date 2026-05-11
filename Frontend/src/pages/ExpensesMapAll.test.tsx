@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ExpensesMapAll from './ExpensesMapAll';
 import { fetchExpenses } from '../services/expenses';
+import { updateLocationCoordinates } from '../services/locations';
 
 // ── Mock Google Maps ───────────────────────────────────────────────────────
 // Capturăm callback-ul onPolygonComplete prin global, astfel încât testele
@@ -65,6 +66,10 @@ vi.mock('../services/lookups', () => ({
 // Mock-uim și serviciul de expenses ca să putem controla ramura "remote fetch"
 vi.mock('../services/expenses', () => ({
   fetchExpenses: vi.fn(),
+}));
+
+vi.mock('../services/locations', () => ({
+  updateLocationCoordinates: vi.fn(),
 }));
 
 const mockNavigate = vi.fn();
@@ -338,7 +343,17 @@ describe('ExpensesMapAll', () => {
     }) as any;
 
     const expenseNoCoords = [
-      { id: 5, amount: 75, category: 'Food', person: 'Alice', description: 'Carrefour', location: 'Carrefour Băneasa', date: '2026-04-22' },
+      {
+        id: 5,
+        amount: 75,
+        category: 'Food',
+        person: 'Alice',
+        description: 'Carrefour',
+        locationId: 55,
+        locationStore: 'Carrefour',
+        locationCity: 'București',
+        date: '2026-04-22',
+      },
     ];
 
     await renderComponent({ expenses: expenseNoCoords, filters: {} });
@@ -546,7 +561,17 @@ describe('ExpensesMapAll', () => {
     }) as any;
 
     const expenseNoCoords = [
-      { id: 70, amount: 10, category: 'Food', person: 'Alice', description: 'Cafea', location: 'Adresa inexistentă', date: '2026-04-25' },
+      {
+        id: 70,
+        amount: 10,
+        category: 'Food',
+        person: 'Alice',
+        description: 'Cafea',
+        locationId: 70,
+        locationStore: 'Adresa inexistentă',
+        locationCity: 'București',
+        date: '2026-04-25',
+      },
     ];
 
     await renderComponent({ expenses: expenseNoCoords, filters: {} });
@@ -564,7 +589,17 @@ describe('ExpensesMapAll', () => {
     }) as any;
 
     const expenseNoCoords = [
-      { id: 71, amount: 10, category: 'Food', person: 'Alice', description: 'Test', location: 'Server eroare', date: '2026-04-25' },
+      {
+        id: 71,
+        amount: 10,
+        category: 'Food',
+        person: 'Alice',
+        description: 'Test',
+        locationId: 71,
+        locationStore: 'Server eroare',
+        locationCity: 'București',
+        date: '2026-04-25',
+      },
     ];
 
     await renderComponent({ expenses: expenseNoCoords, filters: {} });
@@ -582,7 +617,7 @@ describe('ExpensesMapAll', () => {
 
     // expense fără niciun câmp utilizabil pentru adresă → addr === ''
     const expenseEmptyAddr = [
-      { id: 72, amount: 5, category: 'Food', person: 'Alice', date: '2026-04-25' },
+      { id: 72, amount: 5, category: 'Food', person: 'Alice', locationId: 72, date: '2026-04-25' },
     ];
 
     await renderComponent({ expenses: expenseEmptyAddr, filters: {} });

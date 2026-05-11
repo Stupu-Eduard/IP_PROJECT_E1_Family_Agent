@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
 import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft } from 'lucide-react';
@@ -27,10 +27,11 @@ const avatarStyle = (name: string) => {
 };
 
 export default function Expenses() {
+    const location = useLocation();
     const navigate = useNavigate();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = 2;
+    const PAGE_SIZE = 10;
 
     const [expenses,            setExpenses]            = useState<ExpenseListDTO[]>([]);
     const [isLoading,           setIsLoading]           = useState(true);
@@ -56,8 +57,12 @@ export default function Expenses() {
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const locationState = (location.state || {}) as any;
+    const initialLocationFilter = locationState?.filters?.selectedLocation || '';
+
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson,   setSelectedPerson]   = useState('');
+    const [selectedLocation, setSelectedLocation] = useState(initialLocationFilter);
 
     useEffect(() => {
         let isCancelled = false;
@@ -132,11 +137,25 @@ export default function Expenses() {
         });
     };
 
+    const availableLocations = Array.from(
+        new Set(expenses.map((expense) => expense.location).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
+
     const filteredExpenses = expenses.filter((e) => {
         if (startDate && e.rawDate && e.rawDate < startDate) return false;
         if (endDate && e.rawDate && e.rawDate > endDate) return false;
+        if (selectedLocation && e.location !== selectedLocation) return false;
         return true;
     });
+
+    const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE));
+
+    useEffect(() => {
+        // Clamp current page when filters or expenses change
+        setCurrentPage((prev) => Math.min(prev, totalPages) || 1);
+    }, [totalPages]);
+
+    const pagedExpenses = filteredExpenses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] h-10 px-3 text-[13px] text-[#2D2926] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
@@ -169,7 +188,7 @@ export default function Expenses() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <div className="relative">
                     <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                     <input
@@ -220,8 +239,24 @@ export default function Expenses() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
+                <div className="relative">
+                    <select
+                        className={inputStyle}
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
+                        title="Locație"
+                    >
+                        <option value="">Orice Locație</option>
+                        {availableLocations.map((loc) => (
+                            <option key={loc} value={loc}>
+                                {loc}
+                            </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
+                </div>
                 <button
-                    onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+                    onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); setSelectedLocation(''); }}
                     className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors"
                     title="Resetează filtrele"
                 >
@@ -261,7 +296,7 @@ export default function Expenses() {
 
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="stagger" style={{ display: 'none' }}>
-                    {filteredExpenses.map((expense) => (
+                    {pagedExpenses.map((expense) => (
                         <div key={expense.id} className="card card-hover fade-up" style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                                 <div>
@@ -302,7 +337,7 @@ export default function Expenses() {
                     </div>
 
                     <div className="stagger">
-                        {filteredExpenses.map((expense) => (
+                        {pagedExpenses.map((expense) => (
                             <div
                                 key={expense.id}
                                 className="row-clickable fade-up"
@@ -337,7 +372,7 @@ export default function Expenses() {
                                     {expense.amount.toFixed(2)} <span style={{ color: 'var(--color-muted-2)', fontSize: 11, fontWeight: 400 }}>RON</span>
                                 </div>
                             </div>
-                        ))}
+                            ))}
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderTop: '1px solid var(--color-border)' }}>
@@ -353,7 +388,7 @@ export default function Expenses() {
                             >
                                 <ChevronLeft size={15} />
                             </button>
-                            {[1, 2].map((n) => (
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                                 <button
                                     key={n}
                                     onClick={() => setCurrentPage(n)}

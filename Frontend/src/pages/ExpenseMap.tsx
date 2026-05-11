@@ -351,6 +351,7 @@ export default function ExpenseMap() {
           </div>
         </nav>
 
+        <div className="px-6 lg:px-10 pt-8 pb-16 max-w-[1200px] mx-auto w-full flex-1">
                 <div className="text-[12px] text-[#9A8A7C]">Locație</div>
                 <div className="mt-1 text-[16px] font-medium text-[#2D2926] leading-snug" data-testid="sidebar-location-label">{place?.name || (label ? undefined : 'Locație')}</div>
 
@@ -455,7 +456,7 @@ export default function ExpenseMap() {
 
                   <div className="flex-1">
                     <GoogleMap
-                        mapContainerStyle={{ width: '100%', height: '520px' }}
+                        mapContainerStyle={{ width: '100%', height: '600px' }}
                         center={center}
                         zoom={marker ? 17 : 12}
                         options={{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
@@ -497,6 +498,7 @@ export default function ExpenseMap() {
                 </div>
               </div>
           )}
+            </div>
       </div>
   )
 }

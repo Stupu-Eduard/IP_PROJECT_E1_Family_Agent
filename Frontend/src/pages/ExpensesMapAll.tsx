@@ -21,10 +21,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleMap, Marker, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
 import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter } from 'lucide-react';
 import { fetchExpenses } from '../services/expenses';
+import { updateLocationCoordinates } from '../services/locations';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
 
 type MapExpense = {
   id: number
+  locationId?: number
   lat?: number
   lng?: number
   amount?: number
@@ -32,8 +34,39 @@ type MapExpense = {
   person?: string
   description?: string
   location?: string
+  locationStore?: string
+  locationAddress?: string
+  locationCity?: string
+  locationCountry?: string
   rawDate?: string
 }
+
+const isNonGeographicLabel = (label: string) => {
+  const normalized = label.trim().toLowerCase();
+  return normalized === 'online' || normalized === 'fără locație' || normalized === 'fara locatie';
+};
+
+const getClusterKey = (cluster: any) => {
+  const center = cluster?.getCenter?.();
+  if (!center) return '';
+  const lat = typeof center.lat === 'function' ? center.lat() : center.lat;
+  const lng = typeof center.lng === 'function' ? center.lng() : center.lng;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return '';
+  return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+};
+
+const buildGeocodeAddress = (expense: MapExpense) => {
+  const parts = [
+    expense.locationStore,
+    expense.locationAddress,
+    expense.locationCity,
+    expense.locationCountry,
+  ].filter(Boolean);
+
+  if (parts.length) return parts.join(', ');
+
+  return '';
+};
 
 const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
   const isoDate = expense.expenseDate ?? ''
@@ -45,6 +78,7 @@ const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
 
   return {
     id: expense.id,
+    locationId: expense.location?.id ?? undefined,
     lat: expense.location?.lat ?? undefined,
     lng: expense.location?.lng ?? undefined,
     amount: Number.isFinite(amountNumber) ? amountNumber : 0,
@@ -52,6 +86,10 @@ const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
     person: expense.person ?? 'N/A',
     description: expense.description ?? '',
     location,
+    locationStore: expense.location?.store ?? undefined,
+    locationAddress: expense.location?.address ?? undefined,
+    locationCity: expense.location?.city ?? undefined,
+    locationCountry: expense.location?.country ?? undefined,
     rawDate: datePart,
   }
 }
@@ -64,7 +102,7 @@ export default function ExpensesMapAll() {
   const hasInjectedExpenses = Object.prototype.hasOwnProperty.call(locationState, 'expenses');
   const injectedExpenses = (hasInjectedExpenses ? locationState.expenses : []) as MapExpense[];
   const { filters = {} } = locationState;
-  const [remoteExpenses, setRemoteExpenses] = useState<MapExpense[]>([]);
+  const [remoteExpenses, setRemoteExpenses] = useState<MapExpense[]>(() => (hasInjectedExpenses ? injectedExpenses : []));
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(!hasInjectedExpenses);
   const [expenseLoadError, setExpenseLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(filters.selectedCategory || '');
@@ -95,13 +133,6 @@ export default function ExpensesMapAll() {
   }, []);
 
   useEffect(() => {
-    if (hasInjectedExpenses) {
-      setRemoteExpenses([]);
-      setExpenseLoadError(null);
-      setIsLoadingExpenses(false);
-      return;
-    }
-
     const controller = new AbortController();
     let cancelled = false;
 
@@ -112,7 +143,10 @@ export default function ExpensesMapAll() {
       try {
         const data = await fetchExpenses({}, controller.signal);
         if (cancelled) return;
-        setRemoteExpenses(data.map(mapApiExpenseToMapExpense));
+        const mapped = data.map(mapApiExpenseToMapExpense);
+        if (mapped.length > 0 || !hasInjectedExpenses) {
+          setRemoteExpenses(mapped);
+        }
       } catch {
         if (cancelled) return;
         setRemoteExpenses([]);
@@ -133,6 +167,8 @@ export default function ExpensesMapAll() {
   // polygon drawing state
   const polygonRef = useRef<any>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+  const markerExpenseMapRef = useRef<Map<any, MapExpense>>(new Map());
+  const lastClusterClickRef = useRef<{ key: string; time: number } | null>(null);
 
   // selected expense / place details for left panel
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
@@ -142,6 +178,7 @@ export default function ExpensesMapAll() {
   const [message, setMessage] = useState<string | null>(null);
 
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  const geocodingApiKey = (import.meta.env.VITE_GOOGLE_GEOCODING_API_KEY as string | undefined) ?? mapsApiKey;
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'family-agent-google-maps',
     googleMapsApiKey: mapsApiKey ?? '',
@@ -179,20 +216,62 @@ export default function ExpensesMapAll() {
     return null;
   })();
 
+  const getMostCommonLocation = (markers: any[]) => {
+    const counts = new Map<string, number>();
+    markers.forEach((marker) => {
+      const expense = markerExpenseMapRef.current.get(marker);
+      const loc = expense?.location;
+      if (!loc) return;
+      counts.set(loc, (counts.get(loc) ?? 0) + 1);
+    });
+    let best: string | null = null;
+    let bestCount = 0;
+    counts.forEach((count, loc) => {
+      if (count > bestCount) {
+        best = loc;
+        bestCount = count;
+      }
+    });
+    return best;
+  };
+
+  const handleClusterClick = (cluster: any) => {
+    const now = Date.now();
+    const key = getClusterKey(cluster);
+    if (!key) return;
+    const last = lastClusterClickRef.current;
+    lastClusterClickRef.current = { key, time: now };
+
+    if (last && last.key === key && now - last.time < 800) {
+      const markers = cluster?.getMarkers?.() ?? [];
+      const locationLabel = getMostCommonLocation(markers);
+      if (!locationLabel || isNonGeographicLabel(locationLabel)) return;
+      navigate('/expenses', { state: { filters: { selectedLocation: locationLabel } } });
+    }
+  };
+
   // Geocode missing lat/lng for expenses
   const [geocodedExpenses, setGeocodedExpenses] = useState<any[]>([]);
-  const expenses = hasInjectedExpenses ? injectedExpenses : remoteExpenses;
+  const expenses = remoteExpenses;
 
   useEffect(() => {
-    if (!mapsApiKey || !expenses.length) return;
+    if (!geocodingApiKey || !expenses.length) return;
     let cancelled = false;
     (async () => {
       const results = await Promise.all(
         expenses.map(async (e: any) => {
           if (typeof e.lat === 'number' && typeof e.lng === 'number') return e;
-          // Try to geocode using location/address fields
-          const addr = e.location || e.adresa || e.adress || e.nume || e.store || e.description || '';
-          const geo = await geocodeAddress(addr, mapsApiKey);
+          if (!e.locationId) return e;
+          const addr = buildGeocodeAddress(e);
+          if (!addr || isNonGeographicLabel(addr)) return e;
+          const geo = await geocodeAddress(addr, geocodingApiKey);
+          if (geo && e.locationId) {
+            try {
+              await updateLocationCoordinates(e.locationId, geo.lat, geo.lng);
+            } catch {
+              // ignore save failures
+            }
+          }
           if (geo) return { ...e, lat: geo.lat, lng: geo.lng, _geocoded: true };
           return e;
         })
@@ -200,7 +279,7 @@ export default function ExpensesMapAll() {
       if (!cancelled) setGeocodedExpenses(results);
     })();
     return () => { cancelled = true; };
-  }, [expenses, mapsApiKey]);
+  }, [expenses, geocodingApiKey]);
 
   const isPointInPolygon = (lat: number, lng: number) => {
     try {
@@ -230,20 +309,23 @@ export default function ExpensesMapAll() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
-      <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
-          aria-label="Înapoi"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <h2 className="text-[18px] sm:text-[20px] font-medium text-[#2D2926] tracking-tight leading-tight">Toate Cheltuielile pe Hartă</h2>
+      <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] py-4">
+        <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-10 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
+            aria-label="Înapoi"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h2 className="text-[18px] sm:text-[20px] font-medium text-[#2D2926] tracking-tight leading-tight">Toate Cheltuielile pe Hartă</h2>
+        </div>
       </nav>
 
-      <div className="px-6 lg:px-10 pt-10 pb-20 max-w-[960px] mx-auto w-full flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+      <div className="pt-10 pb-20">
+        <div className="max-w-[1200px] mx-auto w-full flex-1 px-6 lg:px-10">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
           <div className="relative">
             <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
             <input
@@ -294,37 +376,35 @@ export default function ExpensesMapAll() {
             <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
           </div>
 
-          <div className="flex items-center gap-3 md:justify-start col-span-1">
-            <button
-              onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
-              className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
-              title="Resetează filtrele"
-            >
-              <Filter size={16} /><span>Resetează Filtre</span>
-            </button>
+          <button
+            onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+            className="h-10 w-full px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
+            title="Resetează filtrele"
+          >
+            <Filter size={16} /><span>Resetează Filtre</span>
+          </button>
 
-            <button
-              onClick={() => setDrawingEnabled((s) => !s)}
-              className={`h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors ${drawingEnabled ? 'ring-2 ring-[#C4B9AC]' : ''} whitespace-nowrap`}
-              title="Desenează poligon"
-            >
-              <span>Deseneaza</span>
-            </button>
+          <button
+            onClick={() => setDrawingEnabled((s) => !s)}
+            className={`h-10 w-full px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors ${drawingEnabled ? 'ring-2 ring-[#C4B9AC]' : ''} whitespace-nowrap`}
+            title="Desenează poligon"
+          >
+            <span>Deseneaza</span>
+          </button>
 
-            <button
-              onClick={() => {
-                if (polygonRef.current) {
-                  try { if (polygonRef.current.__listeners) { polygonRef.current.__listeners.forEach((l: any) => l.remove?.()); } } catch {}
-                  polygonRef.current.setMap(null);
-                  polygonRef.current = null;
-                }
-              }}
-              className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
-              title="Șterge poligon"
-            >
-              Sterge
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              if (polygonRef.current) {
+                try { if (polygonRef.current.__listeners) { polygonRef.current.__listeners.forEach((l: any) => l.remove?.()); } } catch {}
+                polygonRef.current.setMap(null);
+                polygonRef.current = null;
+              }
+            }}
+            className="h-10 w-full px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
+            title="Șterge poligon"
+          >
+            Sterge
+          </button>
         </div>
 
         {(expenseLoadError || (!mapsApiKey || loadError)) && (
@@ -394,7 +474,7 @@ export default function ExpensesMapAll() {
 
               <div className="flex-1">
                 <GoogleMap
-                  mapContainerStyle={{ width: '100%', height: '600px' }}
+                  mapContainerStyle={{ width: '100%', height: '700px' }}
                   center={center}
                   zoom={11}
                   options={{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
@@ -420,7 +500,10 @@ export default function ExpensesMapAll() {
                     options={{ drawingControl: false, polygonOptions: { fillColor: '#FF0000', fillOpacity: 0.08, strokeWeight: 2 } }}
                   />
 
-                  <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
+                  <MarkerClusterer
+                    onClick={handleClusterClick}
+                    options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}
+                  >
                     {(clusterer: any) => (
                       <>
                         {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
@@ -430,6 +513,12 @@ export default function ExpensesMapAll() {
                             clusterer={clusterer}
                             title={e.description || e.location || ''}
                             label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
+                            onLoad={(marker) => {
+                              markerExpenseMapRef.current.set(marker, e);
+                            }}
+                            onUnmount={(marker) => {
+                              markerExpenseMapRef.current.delete(marker);
+                            }}
                             onClick={() => {
                               setSelectedExpense(e);
                               setPlace(null);
@@ -493,8 +582,9 @@ export default function ExpensesMapAll() {
           </div>
         )}
 
-        <div className="mt-6 text-[13px] text-[#9A8A7C]">
-          <MapPin size={14} className="inline mr-1 text-[#D4C9BC]" /> Sunt afișate doar cheltuielile cu coordonate geografice.
+          <div className="mt-6 text-[13px] text-[#9A8A7C]">
+            <MapPin size={14} className="inline mr-1 text-[#D4C9BC]" /> Sunt afișate doar cheltuielile cu coordonate geografice.
+          </div>
         </div>
       </div>
     </div>
