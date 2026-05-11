@@ -101,6 +101,13 @@
             <version>${langchain4j.version}</version>
         </dependency>
 
+        <!-- gRPC: force consistent version to resolve conflict between Qdrant (1.59) and Firebase (1.69) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.69.0</version>
+        </dependency>
+
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

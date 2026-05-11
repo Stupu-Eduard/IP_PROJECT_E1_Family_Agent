@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.config;
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ExpenseTools;
 import com.familie.cheltuieli_familie.service.QdrantContentRetriever;
+import com.familie.cheltuieli_familie.service.VisualIntentExtractor;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
@@ -183,6 +184,11 @@ public class LlmConfig {
         return AiServices.builder(ReportAssistant.class)
                 .chatLanguageModel(deepseekModel)
                 .build();
+    }
+
+    @Bean
+    public VisualIntentExtractor visualIntentExtractor(ChatLanguageModel deepseekModel) {
+        return new VisualIntentExtractor(deepseekModel);
     }
 
 }
