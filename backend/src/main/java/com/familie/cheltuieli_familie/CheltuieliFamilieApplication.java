@@ -10,4 +10,6 @@ public class CheltuieliFamilieApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(CheltuieliFamilieApplication.class, args);
 	}
+
+
 }
