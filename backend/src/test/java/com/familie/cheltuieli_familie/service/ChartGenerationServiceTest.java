@@ -31,10 +31,6 @@ class ChartGenerationServiceTest {
     @InjectMocks
     private ChartGenerationService chartGenerationService;
 
-    @BeforeEach
-    void setUp() {
-    }
-
     @Test
     void generate_shouldReturnChartResponse_withSingleSeries() {
         ChartQueryIntent intent = ChartQueryIntent.builder()

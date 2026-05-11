@@ -62,8 +62,8 @@ public class ChartQueryExecutor {
 
         List<Map<String, Object>> rawRows = jdbcTemplate.query(
                 sql.toString(),
-                params.toArray(),
-                (rs, rowNum) -> mapRow(rs)
+                (rs, rowNum) -> mapRow(rs),
+                params.toArray()
         );
 
         return pivotAndFormat(rawRows, seriesColumn);
@@ -180,7 +180,7 @@ public class ChartQueryExecutor {
             }
             return ChartQueryResult.builder()
                     .rows(rows)
-                    .seriesNames(List.of("value"))
+                    .seriesNames(List.of(VALUE_KEY))
                     .labelKey("name")
                     .build();
         }

@@ -29,11 +29,6 @@ class AgentChatServiceTest {
     @InjectMocks
     private AgentChatService agentChatService;
 
-    @BeforeEach
-    void setUp() {
-        // InjectMocks handles instantiation
-    }
-
     @Test
     void processQuery_shouldReturnChartResponse_whenIntentIsChart() {
         String userMessage = "Show me expenses by category";

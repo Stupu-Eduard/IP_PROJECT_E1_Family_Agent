@@ -25,14 +25,14 @@ public class VisualIntentExtractor {
     private static final int MAX_RETRIES = 3;
     private static final long[] RETRY_DELAYS_MS = {2000, 4000};
 
+    private static final String DEFAULT_GROUP_BY = "category";
+    private static final String DEFAULT_SERIES_BY = "person";
+
     private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("text", "chart");
     private static final Set<String> ALLOWED_CHART_TYPES = Set.of("bar", "pie", "line");
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("sum", "count", "avg");
-    private static final Set<String> ALLOWED_GROUP_BY = Set.of("person", "category", "month", "year", "location");
-    private static final Set<String> ALLOWED_SERIES_BY = Set.of("person", "category");
-
-    private static final String DEFAULT_GROUP_BY = "category";
-    private static final String DEFAULT_SERIES_BY = "person";
+    private static final Set<String> ALLOWED_GROUP_BY = Set.of(DEFAULT_GROUP_BY, "person", "month", "year", "location");
+    private static final Set<String> ALLOWED_SERIES_BY = Set.of(DEFAULT_SERIES_BY, "category");
 
     interface IntentAssistant {
         @SystemMessage("""
@@ -96,13 +96,13 @@ public class VisualIntentExtractor {
                         Thread.sleep(delay);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
-                        throw new RuntimeException("Retry interrupted", ie);
+                        throw new IllegalStateException("Retry interrupted", ie);
                     }
                 }
             }
         }
 
-        throw new RuntimeException("Eroare la extragerea intenției: " + lastError);
+        throw new IllegalStateException("Eroare la extragerea intenției: " + lastError);
     }
 
     ChartQueryIntent parseIntent(String json) {

@@ -23,11 +23,6 @@ class SemanticExpansionServiceTest {
     @InjectMocks
     private SemanticExpansionService semanticExpansionService;
 
-    @BeforeEach
-    void setUp() {
-        // InjectMocks handles instantiation
-    }
-
     @Test
     void expandCategories_shouldReturnEmptyListForNullInput() {
         List<String> result = semanticExpansionService.expandCategories(null);

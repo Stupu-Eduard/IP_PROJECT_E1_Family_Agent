@@ -28,10 +28,6 @@ class RagRetrievalServiceTest {
     @InjectMocks
     private RagRetrievalService ragRetrievalService;
 
-    @BeforeEach
-    void setUp() {
-    }
-
     @Test
     void askWithContext_shouldDelegateToLlmRouterService() {
         String query = "How much did I spend?";

@@ -9,7 +9,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class LlmConfigTest {
@@ -21,16 +20,8 @@ class LlmConfigTest {
     private ChatLanguageModel chatLanguageModel;
 
     @Test
-    void visualIntentExtractor_shouldCreateBean() {
+    void visualIntentExtractor_shouldCreateBeanWithProvidedModel() {
         VisualIntentExtractor extractor = llmConfig.visualIntentExtractor(chatLanguageModel);
         assertNotNull(extractor);
-    }
-
-    @Test
-    void visualIntentExtractor_shouldUseProvidedModel() {
-        VisualIntentExtractor extractor = llmConfig.visualIntentExtractor(chatLanguageModel);
-        assertNotNull(extractor);
-        // The extractor is created with the model; we can't easily verify internals
-        // but we can verify it doesn't throw and returns a non-null object
     }
 }

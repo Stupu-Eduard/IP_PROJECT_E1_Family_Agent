@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.security.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -28,12 +27,12 @@ public class JwtUtil {
 
     public String generateToken(String email, Map<String, Object> extraClaims) {
         return Jwts.builder()
-                .setClaims(extraClaims)
-                .setSubject(email)
-                .setId(UUID.randomUUID().toString()) // jti pentru blacklist
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .claims(extraClaims)
+                .subject(email)
+                .id(UUID.randomUUID().toString()) // jti pentru blacklist
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(key)
                 .compact();
     }
 

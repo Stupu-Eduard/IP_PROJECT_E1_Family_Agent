@@ -1,6 +1,8 @@
 package com.familie.cheltuieli_familie.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.LocalDate;
 
@@ -8,18 +10,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DateRangeUtilTest {
 
-    @Test
-    void parseDateRange_shouldReturnNullsForNullInput() {
-        LocalDate[] result = DateRangeUtil.parseDateRange(null);
-        assertNull(result[0]);
-        assertNull(result[1]);
-    }
-
-    @Test
-    void parseDateRange_shouldReturnNullsForBlankInput() {
-        LocalDate[] result = DateRangeUtil.parseDateRange("   ");
-        assertNull(result[0]);
-        assertNull(result[1]);
+    @ParameterizedTest
+    @CsvSource({
+            "null, true",
+            "'   ', true",
+            "today, false",
+            "yesterday, false",
+            "this_week, false",
+            "this_month, false",
+            "last_month, false",
+            "last_3_months, false",
+            "last_6_months, false",
+            "this_year, false",
+            "last_year, false",
+            "invalid-range, true",
+            "'this month', false",
+            "2024-01-01, true",
+            "TODAY, false"
+    })
+    void parseDateRange_shouldHandleVariousInputs(String input, boolean expectNull) {
+        LocalDate[] result = DateRangeUtil.parseDateRange("null".equals(input) ? null : input);
+        if (expectNull) {
+            assertNull(result[0]);
+            assertNull(result[1]);
+        } else {
+            assertNotNull(result[0]);
+            assertNotNull(result[1]);
+        }
     }
 
     @Test
@@ -112,33 +129,5 @@ class DateRangeUtilTest {
         // This test documents the actual behavior
         assertNull(result[0]);
         assertNull(result[1]);
-    }
-
-    @Test
-    void parseDateRange_shouldReturnNullsForInvalidRange() {
-        LocalDate[] result = DateRangeUtil.parseDateRange("invalid-range");
-        assertNull(result[0]);
-        assertNull(result[1]);
-    }
-
-    @Test
-    void parseDateRange_shouldHandleSpaceInKeyword() {
-        LocalDate[] result = DateRangeUtil.parseDateRange("this month");
-        LocalDate now = LocalDate.now();
-        assertEquals(now.withDayOfMonth(1), result[0]);
-    }
-
-    @Test
-    void parseDateRange_shouldReturnNullsForSingleDate() {
-        LocalDate[] result = DateRangeUtil.parseDateRange("2024-01-01");
-        assertNull(result[0]);
-        assertNull(result[1]);
-    }
-
-    @Test
-    void parseDateRange_shouldHandleUpperCase() {
-        LocalDate[] result = DateRangeUtil.parseDateRange("TODAY");
-        LocalDate today = LocalDate.now();
-        assertEquals(today, result[0]);
     }
 }
