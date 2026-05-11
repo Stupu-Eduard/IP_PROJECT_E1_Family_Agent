@@ -163,8 +163,8 @@ public class VisualIntentExtractor {
         }
 
         return ChartFilters.builder()
-                .category(nullIfBlank(filtersNode.path("category").asText(null)))
-                .person(nullIfBlank(filtersNode.path("person").asText(null)))
+                .category(nullIfBlank(filtersNode.path(DEFAULT_GROUP_BY).asText(null)))
+                .person(nullIfBlank(filtersNode.path(DEFAULT_SERIES_BY).asText(null)))
                 .dateRange(nullIfBlank(filtersNode.path("dateRange").asText(null)))
                 .location(nullIfBlank(filtersNode.path("location").asText(null)))
                 .build();
