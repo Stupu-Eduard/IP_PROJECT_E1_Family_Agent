@@ -148,7 +148,7 @@ public class QdrantVectorService {
         }
 
         if (conditions.isEmpty()) {
-            return Map.of();
+            return null;
         }
         if (conditions.size() == 1) {
             return conditions.get(0);
