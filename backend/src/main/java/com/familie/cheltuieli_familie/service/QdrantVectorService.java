@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -36,6 +35,8 @@ public class QdrantVectorService {
     private static final String KEY_AMOUNT = "amount";
     private static final String KEY_ID = "id";
     private static final String QDRANT_RESULT = "result";
+    private static final String MATCH = "match";
+    private static final String VALUE = "value";
 
     private final QdrantEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
@@ -120,7 +121,7 @@ public class QdrantVectorService {
                 if (results != null) {
                     return results.stream()
                             .map(this::mapRestResultToEmbeddedExpense)
-                            .collect(Collectors.toList());
+                            .toList();
                 }
             }
         } catch (Exception e) {
@@ -134,10 +135,10 @@ public class QdrantVectorService {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of("value", category)));
+            conditions.add(Map.of("key", KEY_CATEGORY, MATCH, Map.of(VALUE, category)));
         }
         if (person != null && !person.isEmpty()) {
-            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of("value", person)));
+            conditions.add(Map.of("key", KEY_PERSON, MATCH, Map.of(VALUE, person)));
         }
         if (from != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("gte", from.toString())));
@@ -147,7 +148,7 @@ public class QdrantVectorService {
         }
 
         if (conditions.isEmpty()) {
-            return null;
+            return Map.of();
         }
         if (conditions.size() == 1) {
             return conditions.get(0);
@@ -206,7 +207,7 @@ public class QdrantVectorService {
         body.put("limit", 1);
         body.put("with_vector", false);
         body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))));
+        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, MATCH, Map.of(VALUE, id.toString())))));
 
         String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
         HttpHeaders headers = new HttpHeaders();
