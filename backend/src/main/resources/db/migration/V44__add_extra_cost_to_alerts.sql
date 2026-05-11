@@ -1,0 +1,1 @@
+ALTER TABLE alerts ADD COLUMN extra_cost DECIMAL(19, 2) DEFAULT 0.00;

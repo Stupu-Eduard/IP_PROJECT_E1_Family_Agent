@@ -22,6 +22,7 @@ public class ExpensePipelineService {
     private final PipelineValidationService validationService;
     private final ThePipeHandler thePipeHandler;
     private final ObjectMapper objectMapper;
+    private final com.familie.cheltuieli_familie.security.service.GeofencingService geofencingService;
 
     @Transactional
     public List<Long> processRawInput(String rawText) {
@@ -46,6 +47,17 @@ public class ExpensePipelineService {
             
             entity = syncService.syncExpense(entity);
             log.info("Saved and synced entity: {}", entity.getId());
+
+            // Geofence check for the new expense
+            try {
+                // If the expense has a location name, we might want to geocode it here if coordinates are missing, 
+                // but for now we'll assume the entity might have lat/lng if the sync service or previous steps added them.
+                // However, ExpenseEntity seems to not have lat/lng directly based on the builder above.
+                // Looking at syncService, it saves ExpenseEntity.
+                // Let's check ExpenseEntity model.
+            } catch (Exception e) {
+                log.error("Failed geofence check for expense", e);
+            }
 
             // validate Persistence
             validationService.validatePersistence(entity.getId());

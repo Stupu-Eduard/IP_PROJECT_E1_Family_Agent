@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.security.filter;
 
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.UserRepository;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,6 +32,8 @@ class JwtAuthFilterTest {
     private JwtUtil jwtUtil;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private FamilyMemberRepository familyMemberRepository;
     @Mock
     private TokenBlacklistService blacklistService;
     @Mock
@@ -80,6 +84,7 @@ class JwtAuthFilterTest {
         String jti = "good-jti";
         String email = "test@example.com";
         User user = new User();
+        user.setId(1L);
         user.setEmail(email);
 
         when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
@@ -88,6 +93,7 @@ class JwtAuthFilterTest {
         when(blacklistService.isBlacklisted(jti)).thenReturn(false);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(jwtUtil.validateToken(token, email)).thenReturn(true);
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(Collections.emptyList());
 
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
 

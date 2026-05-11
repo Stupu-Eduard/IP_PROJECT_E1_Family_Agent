@@ -64,6 +64,12 @@ public class SecurityConfig {
                         // Persistare coordonate geocodate in PostGIS
                         .requestMatchers("/api/v1/locations/**").permitAll()
 
+                        // Geofencing
+                        .requestMatchers("/api/geofencing/**").permitAll()
+
+                        // Rapoarte financiare (PDF) - DOAR PARINTI
+                        .requestMatchers("/api/v1/reports/**").hasRole(ROLE_PARENT)
+
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
                         .requestMatchers("/api/v1/parent/**").hasRole(ROLE_PARENT)
                         .requestMatchers("/api/v1/alerts/**").hasRole(ROLE_PARENT)

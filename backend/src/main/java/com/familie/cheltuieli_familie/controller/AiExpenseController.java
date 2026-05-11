@@ -19,6 +19,8 @@ import java.time.LocalDate;
 public class AiExpenseController {
 
     private final ExpenseJpaRepository repository;
+    private final com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
+    private final com.familie.cheltuieli_familie.service.QdrantVectorService qdrantVectorService;
 
     @GetMapping
     public ResponseEntity<Page<ExpenseEntity>> getAll(Pageable pageable) {
@@ -58,10 +60,14 @@ public class AiExpenseController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.info("Deleting expense with id: {}", id);
-        if (!repository.existsById(id)) {
+        if (!expenseRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        repository.deleteById(id);
+        // Use expenseRepository to ensure cascade deletion of items
+        expenseRepository.deleteById(id);
+        // Also delete from vector store
+        qdrantVectorService.deleteExpense(id);
+
         return ResponseEntity.noContent().build();
     }
 }

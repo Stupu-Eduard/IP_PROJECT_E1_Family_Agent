@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.config.LlmConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,9 @@ class ReportServiceTest {
 
     @Mock
     private ExpenseAnalyticsService analyticsService;
+
+    @Mock
+    private LlmConfig.ReportAssistant reportAssistant;
 
     @InjectMocks
     private ReportService reportService;
@@ -51,5 +55,17 @@ class ReportServiceTest {
 
         assertNotNull(result);
         assertTrue(result.contains("0"));
+    }
+
+    @Test
+    void testGenerateNarrativeReport() {
+        when(analyticsService.calculateTotal(any(), any())).thenReturn(new BigDecimal("100"));
+        when(analyticsService.byCategory(any(), any())).thenReturn(Map.of("Misc", new BigDecimal("100")));
+        when(reportAssistant.generateReport(anyString())).thenReturn("Narrative Report");
+
+        String result = reportService.generateNarrativeReport(2024, 1);
+
+        assertEquals("Narrative Report", result);
+        verify(reportAssistant).generateReport(anyString());
     }
 }

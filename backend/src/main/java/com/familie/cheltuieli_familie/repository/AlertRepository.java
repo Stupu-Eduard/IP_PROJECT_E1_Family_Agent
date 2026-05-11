@@ -13,4 +13,6 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     // Metoda nouă pentru validarea CSRF
     boolean existsByRestrictedCategory(String restrictedCategory);
+
+    List<Alert> findByTimestampBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

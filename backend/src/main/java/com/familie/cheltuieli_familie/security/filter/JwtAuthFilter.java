@@ -1,7 +1,9 @@
 package com.familie.cheltuieli_familie.security.filter;
 
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.repository.UserRepository;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -11,14 +13,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final TokenBlacklistService blacklistService;
 
     @Override
@@ -58,14 +63,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (userOpt.isPresent() && jwtUtil.validateToken(jwt, userEmail)) {
                     User user = userOpt.get();
+                    
+                    // Incarca autoritatile din tabela family_members
+                    List<SimpleGrantedAuthority> authorities = familyMemberRepository.findByUserId(user.getId())
+                            .stream()
+                            .map(fm -> new SimpleGrantedAuthority("ROLE_" + fm.getRole().toUpperCase()))
+                            .collect(Collectors.toList());
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             user,
                             null,
-                            Collections.emptyList() // Aici poți adăuga autoritățile dacă există
+                            authorities
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("✅ JWT Valid pentru user: {}", userEmail);
+                    log.debug("✅ JWT Valid pentru user: {} cu roluri: {}", userEmail, authorities);
                 }
             }
         } catch (Exception e) {

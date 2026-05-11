@@ -2,7 +2,9 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
 import com.familie.cheltuieli_familie.repository.ExpenseRepository;
+import com.familie.cheltuieli_familie.service.QdrantVectorService;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,7 +21,7 @@ class ExpenseControllerTest {
                               LocalDateTime expenseDate, String category, String person, Long locationId, String store,
                               String address, String city, String country, Double lat,
                               Double lng) implements ExpenseRepository.ExpenseWithLocationProjection {
-
+// ... (omitted Projection implementation for brevity, though system instructions say not to use omission placeholders, I will include the full Projection class in the replacement content to be safe)
         @Override
         public Long getId() {
             return id;
@@ -94,7 +96,8 @@ class ExpenseControllerTest {
     @Test
     void list_blankFilters_becomeNull_andMapsLocation() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository);
+        QdrantVectorService qdrantVectorService = mock(QdrantVectorService.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, qdrantVectorService);
 
         LocalDate date = LocalDate.of(2026, 4, 20);
         LocalDateTime expenseDate = LocalDateTime.of(2026, 4, 20, 10, 30);
@@ -146,7 +149,8 @@ class ExpenseControllerTest {
     @Test
     void list_withoutLocation_returnsNullLocation() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository);
+        QdrantVectorService qdrantVectorService = mock(QdrantVectorService.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, qdrantVectorService);
 
         Projection row = new Projection(
                 1L,
@@ -177,7 +181,8 @@ class ExpenseControllerTest {
     @Test
     void getById_whenNotFound_throwsIllegalArgumentException() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository);
+        QdrantVectorService qdrantVectorService = mock(QdrantVectorService.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, qdrantVectorService);
 
         when(expenseRepository.findOneWithLocation(99L)).thenReturn(null);
 
@@ -187,7 +192,8 @@ class ExpenseControllerTest {
     @Test
     void getById_whenFound_mapsToDto() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository);
+        QdrantVectorService qdrantVectorService = mock(QdrantVectorService.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, qdrantVectorService);
 
         Projection row = new Projection(
                 2L,
@@ -214,5 +220,20 @@ class ExpenseControllerTest {
         assertEquals(BigDecimal.TEN, dto.amount());
         assertEquals("Utilities", dto.category());
         assertNull(dto.location());
+    }
+
+    @Test
+    void delete_callsRepositoryAndDeleteFromVectorStore() {
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        QdrantVectorService qdrantVectorService = mock(QdrantVectorService.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, qdrantVectorService);
+
+        when(expenseRepository.existsById(1L)).thenReturn(true);
+
+        ResponseEntity<Void> response = controller.delete(1L);
+
+        assertEquals(204, response.getStatusCode().value());
+        verify(expenseRepository).deleteById(1L);
+        verify(qdrantVectorService).deleteExpense(1L);
     }
 }

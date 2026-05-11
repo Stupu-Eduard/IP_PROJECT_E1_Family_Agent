@@ -222,4 +222,24 @@ public class QdrantVectorService {
         }
         return false;
     }
+
+    public void deleteExpense(Long id) {
+        log.info("Deleting expense ID {} from vector store", id);
+        String url = String.format("http://%s:%d/collections/%s/points/delete", host, httpPort, collectionName);
+
+        Map<String, Object> body = new HashMap<>();
+        // In Qdrant, we filter by the 'id' payload field we stored
+        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id)))));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            restTemplate.postForEntity(url, entity, Map.class);
+            log.info("Successfully requested deletion of expense ID {} from vector store", id);
+        } catch (Exception e) {
+            log.error("Failed to delete expense ID {} from vector store: {}", id, e.getMessage());
+        }
+    }
 }

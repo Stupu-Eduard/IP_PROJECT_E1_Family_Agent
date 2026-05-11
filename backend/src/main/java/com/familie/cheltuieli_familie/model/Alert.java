@@ -30,4 +30,7 @@ public class Alert {
 
     @Column(nullable = false)
     private boolean read = false;
+
+    @Column(name = "extra_cost")
+    private java.math.BigDecimal extraCost = java.math.BigDecimal.ZERO;
 }

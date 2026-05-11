@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  */
 @RestController
 @RequestMapping("/api/v1/demo/pipe")
-@Tag(name = "The Pipe Demo", description = "Simulări în timp real pentru prezentare")
+@Tag(name = "The Pipe Demo", description = "Simulari in timp real pentru prezentare")
 @RequiredArgsConstructor
 public class ThePipeDemoController {
 
@@ -29,7 +29,7 @@ public class ThePipeDemoController {
         return "OK - Mesaj de salut trimis";
     }
 
-    @Operation(summary = "Simulează locația live a copilului (Zonă Sigură)")
+    @Operation(summary = "Simuleaza locatia live a copilului (Zona Sigura)")
     @GetMapping("/child-safe")
     public String simulateChildSafe() {
         String json = "{" +
@@ -44,7 +44,7 @@ public class ThePipeDemoController {
         return "OK - Locatie sigura trimisa (Piata Universitatii)";
     }
 
-    @Operation(summary = "Simulează intrarea copilului într-o zonă restricționată (ALERTĂ)")
+    @Operation(summary = "Simuleaza intrarea copilului intr-o zona restrictionata (ALERTA)")
     @GetMapping("/child-danger")
     public String simulateChildDanger() {
         String json = "{" +

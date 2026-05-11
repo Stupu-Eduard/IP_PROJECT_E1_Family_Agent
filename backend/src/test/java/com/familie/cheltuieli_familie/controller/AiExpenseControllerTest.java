@@ -37,6 +37,12 @@ class AiExpenseControllerTest {
     private ExpenseJpaRepository repository;
 
     @MockitoBean
+    private com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
+
+    @MockitoBean
+    private com.familie.cheltuieli_familie.service.QdrantVectorService qdrantVectorService;
+
+    @MockitoBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
@@ -138,8 +144,9 @@ class AiExpenseControllerTest {
 
     @Test
     void testDeleteSuccess() throws Exception {
-        when(repository.existsById(1L)).thenReturn(true);
-        doNothing().when(repository).deleteById(1L);
+        when(expenseRepository.existsById(1L)).thenReturn(true);
+        doNothing().when(expenseRepository).deleteById(1L);
+        doNothing().when(qdrantVectorService).deleteExpense(1L);
 
         mockMvc.perform(delete("/v1/expenses/1")
                 .contentType(MediaType.APPLICATION_JSON))
@@ -148,7 +155,7 @@ class AiExpenseControllerTest {
 
     @Test
     void testDeleteNotFound() throws Exception {
-        when(repository.existsById(99L)).thenReturn(false);
+        when(expenseRepository.existsById(99L)).thenReturn(false);
 
         mockMvc.perform(delete("/v1/expenses/99")
                 .contentType(MediaType.APPLICATION_JSON))

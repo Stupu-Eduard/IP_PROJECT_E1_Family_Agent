@@ -128,4 +128,18 @@ class QdrantVectorServiceTest {
 
         assertFalse(exists);
     }
+
+    @Test
+    void testDeleteExpense() {
+        ReflectionTestUtils.setField(qdrantVectorService, "host", "localhost");
+        ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
+        ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
+
+        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(Map.of(), HttpStatus.OK));
+
+        qdrantVectorService.deleteExpense(1L);
+
+        verify(restTemplate).postForEntity(contains("/points/delete"), any(), eq(Map.class));
+    }
 }

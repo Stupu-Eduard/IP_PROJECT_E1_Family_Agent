@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.controller;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
 import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.repository.ExpenseRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -14,9 +15,11 @@ import java.util.List;
 public class ExpenseController {
 
     private final ExpenseRepository expenseRepository;
+    private final com.familie.cheltuieli_familie.service.QdrantVectorService qdrantVectorService;
 
-    public ExpenseController(ExpenseRepository expenseRepository) {
+    public ExpenseController(ExpenseRepository expenseRepository, com.familie.cheltuieli_familie.service.QdrantVectorService qdrantVectorService) {
         this.expenseRepository = expenseRepository;
+        this.qdrantVectorService = qdrantVectorService;
     }
 
     @GetMapping
@@ -42,6 +45,16 @@ public class ExpenseController {
         }
 
         return toDto(row);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        if (!expenseRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        expenseRepository.deleteById(id);
+        qdrantVectorService.deleteExpense(id);
+        return ResponseEntity.noContent().build();
     }
 
     private ExpenseListDto toDto(ExpenseRepository.ExpenseWithLocationProjection row) {
