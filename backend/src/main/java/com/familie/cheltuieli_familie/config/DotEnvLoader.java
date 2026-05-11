@@ -20,26 +20,38 @@ public final class DotEnvLoader {
     }
 
     public static Map<String, String> load() {
-        Map<String, String> envMap = new HashMap<>();
         for (Path candidate : CANDIDATES) {
-            if (Files.exists(candidate)) {
-                try {
-                    for (String line : Files.readAllLines(candidate)) {
-                        line = line.trim();
-                        if (line.isEmpty() || line.startsWith("#")) {
-                            continue;
-                        }
-                        int idx = line.indexOf('=');
-                        if (idx > 0) {
-                            envMap.put(line.substring(0, idx), line.substring(idx + 1));
-                        }
-                    }
-                    return envMap;
-                } catch (IOException e) {
-                    // ignore
-                }
+            Map<String, String> envMap = tryLoad(candidate);
+            if (envMap != null) {
+                return envMap;
             }
         }
-        return envMap;
+        return new HashMap<>();
+    }
+
+    private static Map<String, String> tryLoad(Path path) {
+        if (!Files.exists(path)) {
+            return null;
+        }
+        try {
+            Map<String, String> envMap = new HashMap<>();
+            for (String line : Files.readAllLines(path)) {
+                parseLine(line, envMap);
+            }
+            return envMap;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private static void parseLine(String line, Map<String, String> envMap) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+            return;
+        }
+        int idx = trimmed.indexOf('=');
+        if (idx > 0) {
+            envMap.put(trimmed.substring(0, idx), trimmed.substring(idx + 1));
+        }
     }
 }
