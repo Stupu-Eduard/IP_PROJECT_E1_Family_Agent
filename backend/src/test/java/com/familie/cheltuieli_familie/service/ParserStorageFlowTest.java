@@ -57,6 +57,80 @@ class ParserStorageFlowTest {
     }
 
     @Test
+    void parserOutputWithIncomeAndTransferShouldBeSavedByStorageManager() {
+        String rawText = """
+                10/03/2026 Incasare salariu Flow Test 3500 RON
+                11/03/2026 Virament economii Flow Test 500 EUR
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertNotNull(transactions);
+        assertEquals(2, transactions.size());
+
+        StorageResult result = storageManager.save(transactions);
+
+        assertEquals(2, result.getTotalTransactions());
+        assertEquals(2, result.getSavedTransactions());
+        assertEquals(0, result.getFailedTransactions());
+
+        ArgumentCaptor<ExpenseOCREntity> captor = ArgumentCaptor.forClass(ExpenseOCREntity.class);
+        verify(repository, times(2)).save(captor.capture());
+
+        List<ExpenseOCREntity> savedEntities = captor.getAllValues();
+
+        assertEquals("INCOME", savedEntities.get(0).getTransactionType());
+        assertEquals("TRANSFER", savedEntities.get(1).getTransactionType());
+        assertEquals("RON", savedEntities.get(0).getCurrency());
+        assertEquals("EUR", savedEntities.get(1).getCurrency());
+    }
+
+    @Test
+    void parserShouldIgnoreInvalidLinesAndStorageShouldSaveOnlyValidTransactions() {
+        String rawText = """
+                Extras de cont
+                10/03/2026 Lidl Valid Flow Test 100.50 RON
+                99/99/2026 Linie invalida 50 RON
+                11/03/2026 X 10 RON
+                12/03/2026 Netflix Valid Flow Test 59.99 EUR
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertNotNull(transactions);
+        assertEquals(2, transactions.size());
+
+        StorageResult result = storageManager.save(transactions);
+
+        assertEquals(2, result.getTotalTransactions());
+        assertEquals(2, result.getSavedTransactions());
+        assertEquals(0, result.getFailedTransactions());
+
+        verify(repository, times(2)).save(any(ExpenseOCREntity.class));
+    }
+
+    @Test
+    void parserShouldRemoveDuplicatesBeforeStorageManagerSavesTransactions() {
+        String rawText = """
+                10/03/2026 Lidl Duplicate Flow Test 100.50 RON
+                10/03/2026 Lidl Duplicate Flow Test 100.50 RON
+                11/03/2026 Netflix Duplicate Flow Test 59.99 EUR
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(2, transactions.size());
+
+        StorageResult result = storageManager.save(transactions);
+
+        assertEquals(2, result.getTotalTransactions());
+        assertEquals(2, result.getSavedTransactions());
+        assertEquals(0, result.getFailedTransactions());
+
+        verify(repository, times(2)).save(any(ExpenseOCREntity.class));
+    }
+
+    @Test
     void storageManagerShouldReportFailuresWhenRepositoryThrowsException() {
         String rawText = """
                 10/03/2026 Lidl Failure Test 100.50 RON
@@ -74,6 +148,28 @@ class ParserStorageFlowTest {
         assertEquals(2, result.getTotalTransactions());
         assertEquals(0, result.getSavedTransactions());
         assertEquals(2, result.getFailedTransactions());
+
+        verify(repository, times(2)).save(any(ExpenseOCREntity.class));
+    }
+
+    @Test
+    void storageManagerShouldReportPartialSuccessWhenOnlyOneSaveFails() {
+        String rawText = """
+                10/03/2026 Lidl Partial Flow Test 100.50 RON
+                11/03/2026 Netflix Partial Flow Test 59.99 EUR
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        when(repository.save(any(ExpenseOCREntity.class)))
+                .thenThrow(new RuntimeException("DB error"))
+                .thenReturn(new ExpenseOCREntity());
+
+        StorageResult result = storageManager.save(transactions);
+
+        assertEquals(2, result.getTotalTransactions());
+        assertEquals(1, result.getSavedTransactions());
+        assertEquals(1, result.getFailedTransactions());
 
         verify(repository, times(2)).save(any(ExpenseOCREntity.class));
     }

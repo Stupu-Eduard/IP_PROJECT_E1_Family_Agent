@@ -81,7 +81,54 @@ class BankStatementParserTest {
     }
 
     @Test
-    void parseTextShouldAcceptOcrMistakeR0NAsRon() {
+    void parseTextShouldExtractIncomeAndTransferTypes() {
+        String rawText = """
+                10/03/2026 Incasare salariu martie 3500 RON
+                11/03/2026 Virament cont economii 500 RON
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(2, transactions.size());
+
+        assertEquals("INCOME", transactions.get(0).getType());
+        assertEquals("TRANSFER", transactions.get(1).getType());
+    }
+
+    @Test
+    void parseTextShouldExtractSupportedCurrencies() {
+        String rawText = """
+                10/03/2026 Plata card Lidl 100.50 RON
+                11/03/2026 Netflix subscription 59.99 EUR
+                12/03/2026 Amazon order 25.75 USD
+                13/03/2026 London payment 30.25 GBP
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(4, transactions.size());
+
+        assertEquals("RON", transactions.get(0).getCurrency());
+        assertEquals("EUR", transactions.get(1).getCurrency());
+        assertEquals("USD", transactions.get(2).getCurrency());
+        assertEquals("GBP", transactions.get(3).getCurrency());
+    }
+
+    @Test
+    void parseTextShouldUseDefaultsWhenCurrencyAndTypeAreMissing() {
+        String rawText = """
+                10/03/2026 Magazin alimentar 80.25
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(1, transactions.size());
+        assertEquals("RON", transactions.get(0).getCurrency());
+        assertEquals("EXPENSE", transactions.get(0).getType());
+    }
+
+    @Test
+    void parseTextShouldHandleOcrMistakeR0NAsRon() {
         String rawText = """
                 10/03/2026 Lidl OCR Test 100.50 R0N
                 """;
@@ -107,6 +154,34 @@ class BankStatementParserTest {
     }
 
     @Test
+    void parseTextShouldKeepDifferentTransactionsWithSameDate() {
+        String rawText = """
+                10/03/2026 Lidl 100.50 RON
+                10/03/2026 Netflix 59.99 RON
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(2, transactions.size());
+        assertEquals("Lidl", transactions.get(0).getDescription());
+        assertEquals("Netflix", transactions.get(1).getDescription());
+    }
+
+    @Test
+    void parseTextShouldHandleCommaAmountsAndExtraSpaces() {
+        String rawText = """
+                10/03/2026      Kaufland      45,99      RON
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(1, transactions.size());
+        assertEquals("Kaufland", transactions.get(0).getDescription());
+        assertEquals(45.99, transactions.get(0).getAmount());
+        assertEquals("RON", transactions.get(0).getCurrency());
+    }
+
+    @Test
     void parseTextShouldIgnoreInvalidLines() {
         String rawText = """
                 Extras de cont
@@ -121,6 +196,19 @@ class BankStatementParserTest {
         List<Transaction> transactions = parser.parseText(rawText);
 
         assertNotNull(transactions);
+        assertTrue(transactions.isEmpty());
+    }
+
+    @Test
+    void parseTextShouldIgnoreInvalidDescriptionsAndMissingAmounts() {
+        String rawText = """
+            10/03/2026 X 50 RON
+            11/03/2026 123456 70 RON
+            12/03/2026 Descriere fara suma
+            """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
         assertTrue(transactions.isEmpty());
     }
 

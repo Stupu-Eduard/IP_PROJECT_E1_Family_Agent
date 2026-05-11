@@ -19,7 +19,7 @@ public class BankStatementParser {
             LoggerFactory.getLogger(BankStatementParser.class);
 
     private static final Pattern AMOUNT_PATTERN =
-            Pattern.compile("(\\d+[.,]?\\d*)\\s*(RON|R0N|EUR|USD|GBP)?\\s*$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("(?<!\\S)(\\d+(?:[.,]\\d{1,2})?)\\s*(R0N|RON|EUR|USD|GBP)?\\s*$", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern DATE_PATTERN =
             Pattern.compile("\\d{2}/\\d{2}/\\d{4}");
