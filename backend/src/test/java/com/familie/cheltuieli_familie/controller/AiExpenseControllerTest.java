@@ -37,7 +37,7 @@ class AiExpenseControllerTest {
     private ExpenseJpaRepository repository;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testGetAll() throws Exception {

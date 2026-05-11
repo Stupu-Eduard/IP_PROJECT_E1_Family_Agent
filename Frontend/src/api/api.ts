@@ -2,8 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8081',
-    withCredentials: true, // Permite trimiterea cookie-urilor de sesiune
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'https://api.family-agent.me',
+    withCredentials: true, 
 });
 
 // Interceptorul

@@ -24,7 +24,7 @@ class LocationSseControllerTest {
     private LocationStreamService locationStreamService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testStreamLocation() throws Exception {
