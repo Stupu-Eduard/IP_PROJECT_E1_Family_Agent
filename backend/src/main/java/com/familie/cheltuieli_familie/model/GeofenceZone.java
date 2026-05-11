@@ -24,5 +24,6 @@ public class GeofenceZone {
     @Column(columnDefinition = "geometry(Polygon, 4326)")
     private Polygon area;
 
+    @Builder.Default
     private boolean isActive = true;
 }

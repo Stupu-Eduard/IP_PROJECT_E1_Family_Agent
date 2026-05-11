@@ -35,6 +35,7 @@ public class QdrantVectorService {
     private static final String KEY_AMOUNT = "amount";
     private static final String KEY_ID = "id";
     private static final String QDRANT_RESULT = "result";
+    private static final String QDRANT_VALUE_KEY = "value";
 
     private final QdrantEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
@@ -86,6 +87,7 @@ public class QdrantVectorService {
         return searchWithFilter(query, topK, null, null, null, null);
     }
 
+    @SuppressWarnings("unchecked")
     public List<EmbeddedExpense> searchWithFilter(
             String query, int topK, String category, String person, LocalDate from, LocalDate to) {
 
@@ -132,10 +134,10 @@ public class QdrantVectorService {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of("value", category)));
+            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of(QDRANT_VALUE_KEY, category)));
         }
         if (person != null && !person.isEmpty()) {
-            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of("value", person)));
+            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of(QDRANT_VALUE_KEY, person)));
         }
         if (from != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("gte", from.toString())));
@@ -153,6 +155,7 @@ public class QdrantVectorService {
         return Map.of("must", conditions);
     }
 
+    @SuppressWarnings("unchecked")
     private EmbeddedExpense mapRestResultToEmbeddedExpense(Map<String, Object> result) {
         Map<String, Object> payload = (Map<String, Object>) result.get("payload");
         double score = ((Number) result.get("score")).doubleValue();
@@ -163,7 +166,9 @@ public class QdrantVectorService {
             if (idObj instanceof Number) {
                 id = ((Number) idObj).longValue();
             } else {
-                id = Long.parseLong(idObj.toString());
+                try {
+                    id = Long.parseLong(idObj.toString());
+                } catch (Exception ignored) {}
             }
         }
 
@@ -173,7 +178,9 @@ public class QdrantVectorService {
             if (amtObj instanceof Number) {
                 amount = BigDecimal.valueOf(((Number) amtObj).doubleValue());
             } else {
-                amount = new BigDecimal(amtObj.toString());
+                try {
+                    amount = new BigDecimal(amtObj.toString());
+                } catch (Exception ignored) {}
             }
         }
 
@@ -198,13 +205,14 @@ public class QdrantVectorService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public boolean existsInVectorStore(Long id) {
         Map<String, Object> body = new HashMap<>();
         body.put("vector", new float[2048]);
         body.put("limit", 1);
         body.put("with_vector", false);
         body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))));
+        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of(QDRANT_VALUE_KEY, id.toString())))));
 
         String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
         HttpHeaders headers = new HttpHeaders();

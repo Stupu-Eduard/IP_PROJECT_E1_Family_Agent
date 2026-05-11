@@ -30,53 +30,79 @@ public class DateNormalizer {
         }
 
         String cleanText = text.toLowerCase().trim();
-        LocalDate date = LocalDate.now();
+        
+        LocalDate relativeDate = resolveRelativeTerms(cleanText);
+        if (relativeDate != null) {
+            return relativeDate;
+        }
 
+        LocalDate monthDate = parseMonthBasedDate(cleanText);
+        if (monthDate != null) {
+            return monthDate;
+        }
+
+        LocalDate numericDate = parseNumericDate(cleanText);
+        if (numericDate != null) {
+            return numericDate;
+        }
+
+        return LocalDate.now();
+    }
+
+    private static LocalDate resolveRelativeTerms(String cleanText) {
         if (cleanText.contains("alaltăieri")) {
-            date = date.minusDays(2);
-        } else if (cleanText.contains("ieri")) {
-            date = date.minusDays(1);
-        } else if (cleanText.contains("astăzi") || cleanText.contains("azi")) {
-            date = LocalDate.now();
-        } else if (cleanText.contains("poimâine")) {
-            date = date.plusDays(2);
-        } else if (cleanText.contains("săptămâna trecută") || cleanText.contains("saptamana trecuta")) {
-            date = date.minusWeeks(1);
-        } else if (cleanText.contains("luna trecută") || cleanText.contains("luna trecuta")) {
-            date = date.minusMonths(1);
-        } else {
-            // Try to match patterns like "15 ianuarie"
-            for (Map.Entry<String, Integer> entry : MONTHS.entrySet()) {
-                if (cleanText.contains(entry.getKey())) {
-                    Pattern pattern = Pattern.compile("(\\d{1,2})\\s+" + entry.getKey());
-                    Matcher matcher = pattern.matcher(cleanText);
-                    if (matcher.find()) {
-                        int day = Integer.parseInt(matcher.group(1));
-                        int month = entry.getValue();
-                        int year = LocalDate.now().getYear();
-                        return LocalDate.of(year, month, day);
-                    }
+            return LocalDate.now().minusDays(2);
+        }
+        if (cleanText.contains("ieri")) {
+            return LocalDate.now().minusDays(1);
+        }
+        if (cleanText.contains("astăzi") || cleanText.contains("azi")) {
+            return LocalDate.now();
+        }
+        if (cleanText.contains("poimâine")) {
+            return LocalDate.now().plusDays(2);
+        }
+        if (cleanText.contains("săptămâna trecută") || cleanText.contains("saptamana trecuta")) {
+            return LocalDate.now().minusWeeks(1);
+        }
+        if (cleanText.contains("luna trecută") || cleanText.contains("luna trecuta")) {
+            return LocalDate.now().minusMonths(1);
+        }
+        return null;
+    }
+
+    private static LocalDate parseMonthBasedDate(String cleanText) {
+        for (Map.Entry<String, Integer> entry : MONTHS.entrySet()) {
+            if (cleanText.contains(entry.getKey())) {
+                Pattern pattern = Pattern.compile("(\\d{1,2})\\s+" + entry.getKey());
+                Matcher matcher = pattern.matcher(cleanText);
+                if (matcher.find()) {
+                    int day = Integer.parseInt(matcher.group(1));
+                    int month = entry.getValue();
+                    int year = LocalDate.now().getYear();
+                    return LocalDate.of(year, month, day);
                 }
             }
+        }
+        return null;
+    }
 
-            // Try standard formats like 20.10.2023 or 20-10-2023
-            Pattern datePattern = Pattern.compile("(\\d{1,2})[./-](\\d{1,2})[./-](\\d{2,4})");
-            Matcher matcher = datePattern.matcher(cleanText);
-            if (matcher.find()) {
+    private static LocalDate parseNumericDate(String cleanText) {
+        Pattern datePattern = Pattern.compile("(\\d{1,2})[./-](\\d{1,2})[./-](\\d{2,4})");
+        Matcher matcher = datePattern.matcher(cleanText);
+        if (matcher.find()) {
+            try {
                 int day = Integer.parseInt(matcher.group(1));
                 int month = Integer.parseInt(matcher.group(2));
                 int year = Integer.parseInt(matcher.group(3));
                 if (year < 100) {
                     year += 2000;
                 }
-                try {
-                    return LocalDate.of(year, month, day);
-                } catch (Exception e) {
-                    // Ignore invalid dates
-                }
+                return LocalDate.of(year, month, day);
+            } catch (Exception e) {
+                // Ignore invalid dates
             }
         }
-
-        return date;
+        return null;
     }
 }

@@ -36,47 +36,76 @@ public class HallucinationGuard {
     }
 
     private String validateNumbers(String aiResponse, String toolOutput) {
+        if (isInputTooLarge(aiResponse, toolOutput)) {
+            return aiResponse;
+        }
+
+        List<BigDecimal> toolNumbers = extractNumbers(toolOutput);
+        if (toolNumbers.isEmpty()) {
+            return aiResponse;
+        }
+
+        return correctAiNumbers(aiResponse, toolNumbers);
+    }
+
+    private boolean isInputTooLarge(String aiResponse, String toolOutput) {
         if (aiResponse != null && aiResponse.length() > MAX_INPUT_LENGTH) {
             log.warn("AI response exceeds max length, skipping number validation");
-            return aiResponse;
+            return true;
         }
         if (toolOutput != null && toolOutput.length() > MAX_INPUT_LENGTH) {
             log.warn("Tool output exceeds max length, skipping number validation");
-            return aiResponse;
+            return true;
         }
+        return false;
+    }
 
-        List<BigDecimal> toolNumbers = new ArrayList<>();
-        Matcher toolMatcher = NUMBER_PATTERN.matcher(toolOutput);
-        while (toolMatcher.find()) {
-            toolNumbers.add(new BigDecimal(toolMatcher.group(1).replace(",", ".")));
+    private List<BigDecimal> extractNumbers(String text) {
+        List<BigDecimal> numbers = new ArrayList<>();
+        if (text == null) return numbers;
+        Matcher matcher = NUMBER_PATTERN.matcher(text);
+        while (matcher.find()) {
+            try {
+                numbers.add(new BigDecimal(matcher.group(1).replace(",", ".")));
+            } catch (Exception ignored) {}
         }
+        return numbers;
+    }
 
-        if (toolNumbers.isEmpty()) return aiResponse;
-
+    private String correctAiNumbers(String aiResponse, List<BigDecimal> toolNumbers) {
         Matcher aiMatcher = NUMBER_PATTERN.matcher(aiResponse);
         String correctedResponse = aiResponse;
         
         while (aiMatcher.find()) {
             try {
-                BigDecimal aiValue = new BigDecimal(aiMatcher.group(1).replace(",", "."));
-                BigDecimal closestToolValue = null;
-                BigDecimal minDiff = null;
+                String aiMatchStr = aiMatcher.group(1);
+                BigDecimal aiValue = new BigDecimal(aiMatchStr.replace(",", "."));
+                BigDecimal closestToolValue = findClosestValue(aiValue, toolNumbers);
 
-                for (BigDecimal toolValue : toolNumbers) {
-                    BigDecimal diff = aiValue.subtract(toolValue).abs();
-                    if (minDiff == null || diff.compareTo(minDiff) < 0) {
-                        minDiff = diff;
-                        closestToolValue = toolValue;
+                if (closestToolValue != null) {
+                    BigDecimal diff = aiValue.subtract(closestToolValue).abs();
+                    // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
+                    if (diff.compareTo(BigDecimal.ZERO) > 0 && diff.compareTo(new BigDecimal("1.00")) < 0) {
+                        correctedResponse = correctedResponse.replace(aiMatchStr, closestToolValue.toPlainString());
                     }
-                }
-
-                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
-                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
-                    correctedResponse = correctedResponse.replace(aiMatcher.group(1), closestToolValue.toPlainString());
                 }
             } catch (Exception ignored) {}
         }
         return correctedResponse;
+    }
+
+    private BigDecimal findClosestValue(BigDecimal aiValue, List<BigDecimal> toolNumbers) {
+        BigDecimal closestValue = null;
+        BigDecimal minDiff = null;
+
+        for (BigDecimal toolValue : toolNumbers) {
+            BigDecimal diff = aiValue.subtract(toolValue).abs();
+            if (minDiff == null || diff.compareTo(minDiff) < 0) {
+                minDiff = diff;
+                closestValue = toolValue;
+            }
+        }
+        return closestValue;
     }
 
     private String validateSemantic(String aiResponse, String toolOutput) {

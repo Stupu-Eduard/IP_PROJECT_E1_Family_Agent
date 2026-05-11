@@ -31,6 +31,7 @@ public class ExtractionService {
     private final SyncService syncService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final String EXPENSES_FIELD = "expenses";
     private static final int MAX_RETRIES = 3;
     private static final long[] RETRY_DELAYS_MS = {2000, 4000};
 
@@ -130,7 +131,7 @@ public class ExtractionService {
 
         try {
             JsonNode root = objectMapper.readTree(jsonResult);
-            JsonNode expensesNode = root.path("expenses");
+            JsonNode expensesNode = root.path(EXPENSES_FIELD);
             List<ExtractionResponse> responses = new ArrayList<>();
 
             if (expensesNode.isArray()) {
@@ -141,8 +142,8 @@ public class ExtractionService {
                 // Fallback if AI returns a single object instead of array or unexpected format
                 if (root.has("amount")) {
                     responses.add(mapToResponse(root, request.getRawText()));
-                } else if (root.has("expenses") && root.get("expenses").isObject()) {
-                     responses.add(mapToResponse(root.get("expenses"), request.getRawText()));
+                } else if (root.has(EXPENSES_FIELD) && root.get(EXPENSES_FIELD).isObject()) {
+                     responses.add(mapToResponse(root.get(EXPENSES_FIELD), request.getRawText()));
                 }
             }
 
@@ -161,49 +162,13 @@ public class ExtractionService {
     }
 
     private ExtractionResponse mapToResponse(JsonNode node, String rawText) {
-        // Extract amount with normalization
-        String amountStr = node.path("amount").asText();
-        BigDecimal amount = NormalizerUtil.normalizeAmount(amountStr);
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
-            // Only attempt global normalization if this is the only node or if it's really missing
-            amount = NormalizerUtil.normalizeAmount(node.toString());
-        }
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
-            log.warn("Could not find amount in expense node: {}", node);
-            throw new AmountNotFoundException("Nu s-a putut identifica suma unei tranzacții.");
-        }
-
+        BigDecimal amount = resolveAmount(node);
         LocalDate transactionDate = NormalizerUtil.normalizeDate(rawText);
         String category = node.path("category").asText("Altele");
         String location = node.path("location").asText("Necunoscut");
         String person = node.path("person").asText("Familie");
 
-        // Consistency Validation
-        JsonNode itemsNode = node.path("items");
-        BigDecimal itemsTotal = BigDecimal.ZERO;
-        int itemsCount = 0;
-        if (itemsNode.isArray()) {
-            for (JsonNode item : itemsNode) {
-                BigDecimal price = NormalizerUtil.normalizeAmount(item.path("price").asText("0"));
-                if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
-                    itemsTotal = itemsTotal.add(price);
-                    itemsCount++;
-                }
-            }
-        }
-
-        String validationNote = null;
-        if (itemsCount > 0) {
-            BigDecimal diff = amount.subtract(itemsTotal).abs();
-            if (diff.compareTo(new BigDecimal("0.10")) > 0) {
-                validationNote = String.format("[AVERTISMENT: Suma celor %d articole (%s) nu corespunde cu totalul (%s)]", 
-                        itemsCount, itemsTotal, amount);
-            } else {
-                validationNote = String.format("[VALIDARE REUȘITĂ: Suma celor %d articole corespunde cu totalul]", itemsCount);
-            }
-        }
+        String validationNote = validateItems(amount, node.path("items"));
 
         String finalRawInput = rawText;
         if (validationNote != null) {
@@ -230,6 +195,48 @@ public class ExtractionService {
                 .rawInput(rawText)
                 .validationNote(validationNote)
                 .build();
+    }
+
+    private BigDecimal resolveAmount(JsonNode node) {
+        String amountStr = node.path("amount").asText();
+        BigDecimal amount = NormalizerUtil.normalizeAmount(amountStr);
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            amount = NormalizerUtil.normalizeAmount(node.toString());
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            log.warn("Could not find amount in expense node: {}", node);
+            throw new AmountNotFoundException("Nu s-a putut identifica suma unei tranzacții.");
+        }
+        return amount;
+    }
+
+    private String validateItems(BigDecimal amount, JsonNode itemsNode) {
+        if (!itemsNode.isArray()) {
+            return null;
+        }
+
+        BigDecimal itemsTotal = BigDecimal.ZERO;
+        int itemsCount = 0;
+        for (JsonNode item : itemsNode) {
+            BigDecimal price = NormalizerUtil.normalizeAmount(item.path("price").asText("0"));
+            if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                itemsTotal = itemsTotal.add(price);
+                itemsCount++;
+            }
+        }
+
+        if (itemsCount == 0) {
+            return null;
+        }
+
+        BigDecimal diff = amount.subtract(itemsTotal).abs();
+        if (diff.compareTo(new BigDecimal("0.10")) > 0) {
+            return String.format("[AVERTISMENT: Suma celor %d articole (%s) nu corespunde cu totalul (%s)]", 
+                    itemsCount, itemsTotal, amount);
+        }
+        return String.format("[VALIDARE REUȘITĂ: Suma celor %d articole corespunde cu totalul]", itemsCount);
     }
 
     public String validateOcrContent(String rawOcrText) {

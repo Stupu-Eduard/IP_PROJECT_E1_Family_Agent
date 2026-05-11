@@ -10,8 +10,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Configuration
 public class EmbeddingConfig {
@@ -20,33 +23,34 @@ public class EmbeddingConfig {
     private String openRouterApiKey;
 
     private static Map<String, String> loadDotEnv() {
-        Map<String, String> envMap = new HashMap<>();
-        Path[] candidates = new Path[]{
-                Paths.get(".env"),
-                Paths.get("..", ".env"),
-                Paths.get(System.getProperty("user.dir"), ".env"),
-                Paths.get(System.getProperty("user.dir"), "..", ".env")
-        };
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                try {
-                    for (String line : Files.readAllLines(candidate)) {
-                        line = line.trim();
-                        if (line.isEmpty() || line.startsWith("#")) {
-                            continue;
-                        }
-                        int idx = line.indexOf('=');
-                        if (idx > 0) {
-                            envMap.put(line.substring(0, idx), line.substring(idx + 1));
-                        }
-                    }
-                    return envMap;
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
+        return Arrays.stream(new Path[]{
+                        Paths.get(".env"),
+                        Paths.get("..", ".env"),
+                        Paths.get(System.getProperty("user.dir"), ".env"),
+                        Paths.get(System.getProperty("user.dir"), "..", ".env")
+                })
+                .filter(Files::exists)
+                .map(EmbeddingConfig::parseEnvFile)
+                .filter(map -> !map.isEmpty())
+                .findFirst()
+                .orElse(Collections.emptyMap());
+    }
+
+    private static Map<String, String> parseEnvFile(Path path) {
+        try {
+            return Files.readAllLines(path).stream()
+                    .map(String::trim)
+                    .filter(line -> !line.isEmpty() && !line.startsWith("#"))
+                    .map(line -> line.split("=", 2))
+                    .filter(parts -> parts.length == 2)
+                    .collect(Collectors.toMap(
+                            parts -> parts[0].trim(),
+                            parts -> parts[1].trim(),
+                            (existing, replacement) -> existing
+                    ));
+        } catch (IOException e) {
+            return Collections.emptyMap();
         }
-        return envMap;
     }
 
     private String resolveKey(String springValue, String envName) {

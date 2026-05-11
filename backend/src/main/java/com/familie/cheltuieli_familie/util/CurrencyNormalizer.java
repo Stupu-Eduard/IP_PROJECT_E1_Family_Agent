@@ -10,7 +10,15 @@ public class CurrencyNormalizer {
         }
 
         String cleanText = text.toLowerCase().trim();
+        BigDecimal specialValue = parseSpecialRomanianCases(cleanText);
+        if (specialValue != null) {
+            return specialValue;
+        }
 
+        return parseNumericPart(cleanText);
+    }
+
+    private static BigDecimal parseSpecialRomanianCases(String cleanText) {
         if (cleanText.contains("o sută jumate")) {
             return new BigDecimal("150.0");
         }
@@ -29,27 +37,29 @@ public class CurrencyNormalizer {
         if (cleanText.contains("două milioane")) {
             return new BigDecimal("2000000.0");
         }
+        return null;
+    }
 
+    private static BigDecimal parseNumericPart(String cleanText) {
         try {
             String numericPart = cleanText.replaceAll("[^0-9.,]", "");
             if (numericPart.isEmpty()) {
                 return null;
             }
-
-            if (numericPart.contains(",") && numericPart.contains(".")) {
-                if (numericPart.lastIndexOf(",") > numericPart.lastIndexOf(".")) {
-                    numericPart = numericPart.replace(".", "").replace(",", ".");
-                } else {
-                    numericPart = numericPart.replace(",", "");
-                }
-            } else {
-                numericPart = numericPart.replace(",", ".");
-            }
-
-            return new BigDecimal(numericPart);
+            return new BigDecimal(normalizeDecimalSeparator(numericPart));
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private static String normalizeDecimalSeparator(String numericPart) {
+        if (numericPart.contains(",") && numericPart.contains(".")) {
+            if (numericPart.lastIndexOf(",") > numericPart.lastIndexOf(".")) {
+                return numericPart.replace(".", "").replace(",", ".");
+            }
+            return numericPart.replace(",", "");
+        }
+        return numericPart.replace(",", ".");
     }
 
     public static String detectCurrency(String text) {
