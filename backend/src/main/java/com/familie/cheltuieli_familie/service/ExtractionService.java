@@ -33,6 +33,7 @@ public class ExtractionService {
 
     private static final int MAX_RETRIES = 3;
     private static final long[] RETRY_DELAYS_MS = {2000, 4000};
+    private static final String EXPENSES = "expenses";
 
     interface ExtractionAssistant {
         @SystemMessage("""
@@ -112,7 +113,7 @@ public class ExtractionService {
                     long delay = RETRY_DELAYS_MS[attempt - 1];
                     log.info("Retrying in {} ms...", delay);
                     try {
-                        Thread.sleep(delay);
+                        java.util.concurrent.TimeUnit.MILLISECONDS.sleep(delay);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new AiServiceException("Retry interrupted", ie);
@@ -130,7 +131,7 @@ public class ExtractionService {
 
         try {
             JsonNode root = objectMapper.readTree(jsonResult);
-            JsonNode expensesNode = root.path("expenses");
+            JsonNode expensesNode = root.path(EXPENSES);
             List<ExtractionResponse> responses = new ArrayList<>();
 
             if (expensesNode.isArray()) {
@@ -141,8 +142,8 @@ public class ExtractionService {
                 // Fallback if AI returns a single object instead of array or unexpected format
                 if (root.has("amount")) {
                     responses.add(mapToResponse(root, request.getRawText()));
-                } else if (root.has("expenses") && root.get("expenses").isObject()) {
-                     responses.add(mapToResponse(root.get("expenses"), request.getRawText()));
+                } else if (root.has(EXPENSES) && root.get(EXPENSES).isObject()) {
+                     responses.add(mapToResponse(root.get(EXPENSES), request.getRawText()));
                 }
             }
 
@@ -181,29 +182,7 @@ public class ExtractionService {
         String person = node.path("person").asText("Familie");
 
         // Consistency Validation
-        JsonNode itemsNode = node.path("items");
-        BigDecimal itemsTotal = BigDecimal.ZERO;
-        int itemsCount = 0;
-        if (itemsNode.isArray()) {
-            for (JsonNode item : itemsNode) {
-                BigDecimal price = NormalizerUtil.normalizeAmount(item.path("price").asText("0"));
-                if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
-                    itemsTotal = itemsTotal.add(price);
-                    itemsCount++;
-                }
-            }
-        }
-
-        String validationNote = null;
-        if (itemsCount > 0) {
-            BigDecimal diff = amount.subtract(itemsTotal).abs();
-            if (diff.compareTo(new BigDecimal("0.10")) > 0) {
-                validationNote = String.format("[AVERTISMENT: Suma celor %d articole (%s) nu corespunde cu totalul (%s)]", 
-                        itemsCount, itemsTotal, amount);
-            } else {
-                validationNote = String.format("[VALIDARE REUȘITĂ: Suma celor %d articole corespunde cu totalul]", itemsCount);
-            }
-        }
+        String validationNote = buildValidationNote(node.path("items"), amount);
 
         String finalRawInput = rawText;
         if (validationNote != null) {
@@ -230,6 +209,31 @@ public class ExtractionService {
                 .rawInput(rawText)
                 .validationNote(validationNote)
                 .build();
+    }
+
+    private String buildValidationNote(JsonNode itemsNode, BigDecimal amount) {
+        BigDecimal itemsTotal = BigDecimal.ZERO;
+        int itemsCount = 0;
+        if (itemsNode.isArray()) {
+            for (JsonNode item : itemsNode) {
+                BigDecimal price = NormalizerUtil.normalizeAmount(item.path("price").asText("0"));
+                if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                    itemsTotal = itemsTotal.add(price);
+                    itemsCount++;
+                }
+            }
+        }
+
+        if (itemsCount > 0) {
+            BigDecimal diff = amount.subtract(itemsTotal).abs();
+            if (diff.compareTo(new BigDecimal("0.10")) > 0) {
+                return String.format("[AVERTISMENT: Suma celor %d articole (%s) nu corespunde cu totalul (%s)]",
+                        itemsCount, itemsTotal, amount);
+            } else {
+                return String.format("[VALIDARE REUȘITĂ: Suma celor %d articole corespunde cu totalul]", itemsCount);
+            }
+        }
+        return null;
     }
 
     public String validateOcrContent(String rawOcrText) {

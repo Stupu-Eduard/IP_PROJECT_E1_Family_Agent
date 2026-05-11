@@ -58,23 +58,31 @@ public class HallucinationGuard {
         
         while (aiMatcher.find()) {
             try {
-                BigDecimal aiValue = new BigDecimal(aiMatcher.group(1).replace(",", "."));
-                BigDecimal closestToolValue = null;
-                BigDecimal minDiff = null;
+                String originalMatch = aiMatcher.group(1);
+                BigDecimal aiValue = new BigDecimal(originalMatch.replace(",", "."));
+                correctedResponse = correctSingleNumber(correctedResponse, aiValue, toolNumbers, originalMatch);
+            } catch (Exception e) {
+                // Ignore parsing exceptions for individual numbers; continue validating remaining numbers
+            }
+        }
+        return correctedResponse;
+    }
 
-                for (BigDecimal toolValue : toolNumbers) {
-                    BigDecimal diff = aiValue.subtract(toolValue).abs();
-                    if (minDiff == null || diff.compareTo(minDiff) < 0) {
-                        minDiff = diff;
-                        closestToolValue = toolValue;
-                    }
-                }
+    private String correctSingleNumber(String correctedResponse, BigDecimal aiValue, List<BigDecimal> toolNumbers, String originalMatch) {
+        BigDecimal closestToolValue = null;
+        BigDecimal minDiff = null;
 
-                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
-                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
-                    correctedResponse = correctedResponse.replace(aiMatcher.group(1), closestToolValue.toPlainString());
-                }
-            } catch (Exception ignored) {}
+        for (BigDecimal toolValue : toolNumbers) {
+            BigDecimal diff = aiValue.subtract(toolValue).abs();
+            if (minDiff == null || diff.compareTo(minDiff) < 0) {
+                minDiff = diff;
+                closestToolValue = toolValue;
+            }
+        }
+
+        // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
+        if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
+            return correctedResponse.replace(originalMatch, closestToolValue.toPlainString());
         }
         return correctedResponse;
     }

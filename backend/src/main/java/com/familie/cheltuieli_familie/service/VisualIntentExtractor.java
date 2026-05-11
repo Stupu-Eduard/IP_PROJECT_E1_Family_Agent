@@ -93,7 +93,7 @@ public class VisualIntentExtractor {
                     long delay = RETRY_DELAYS_MS[attempt - 1];
                     log.info("Retrying intent extraction in {} ms...", delay);
                     try {
-                        Thread.sleep(delay);
+                        java.util.concurrent.TimeUnit.MILLISECONDS.sleep(delay);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new IllegalStateException("Retry interrupted", ie);

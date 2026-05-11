@@ -3,7 +3,9 @@ package com.familie.cheltuieli_familie.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class VisualIntentExtractorTest {
@@ -162,5 +166,30 @@ class VisualIntentExtractorTest {
     @Test
     void stripMarkdownFences_shouldHandleNull() {
         assertNull(extractor.stripMarkdownFences(null));
+    }
+
+    @Test
+    void extract_shouldReturnIntentOnValidModelResponse() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(
+            Response.from(AiMessage.from("{\"responseType\":\"chart\",\"chartType\":\"pie\",\"aggregation\":\"sum\",\"groupBy\":\"category\"}"))
+        );
+        ChartQueryIntent intent = extractor.extract("Show me expenses by category");
+        assertEquals("chart", intent.getResponseType());
+        assertEquals("pie", intent.getChartType());
+    }
+
+    @Test
+    void parseIntent_shouldHandleMissingFiltersNode() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"text\"}");
+        assertNotNull(intent.getFilters());
+        assertNull(intent.getFilters().getCategory());
+    }
+
+    @Test
+    void callWithRetry_shouldThrowOnPersistentFailure() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(
+            Response.from(AiMessage.from("invalid json"))
+        );
+        assertThrows(IllegalStateException.class, () -> extractor.extract("query"));
     }
 }

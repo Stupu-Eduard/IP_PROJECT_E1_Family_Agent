@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -57,6 +56,8 @@ class LlmRouterServiceTest {
         try {
             llmRouterService.routeAndChat("Analizează trendul cheltuielilor mele");
         } catch (Exception e) {
+            // AiServices.builder might fail in unit test if not fully mocked,
+            // but we verify the logic flow
         }
 
         verify(routerAssistant).classify("Analizează trendul cheltuielilor mele");
