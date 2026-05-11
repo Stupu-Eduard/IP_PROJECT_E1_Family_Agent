@@ -13,19 +13,19 @@ class BankStatementParserTest {
     private final BankStatementParser parser = new BankStatementParser();
 
     @Test
-    void parseTextShouldExtractTransactionFromBankStatementText() {
+    void parseTextShouldExtractTransactionWithDefaultCurrencyAndType() {
         String rawText = """
-                10/03/2025 Lidl 100.50
+                10/03/2026 Lidl 100.50
                 """;
 
         List<Transaction> transactions = parser.parseText(rawText);
 
         assertNotNull(transactions);
-        assertFalse(transactions.isEmpty());
+        assertEquals(1, transactions.size());
 
         Transaction transaction = transactions.get(0);
 
-        assertEquals(LocalDate.of(2025, 3, 10), transaction.getDate());
+        assertEquals(LocalDate.of(2026, 3, 10), transaction.getDate());
         assertEquals("Lidl", transaction.getDescription());
         assertEquals(100.50, transaction.getAmount());
         assertEquals("RON", transaction.getCurrency());
@@ -33,27 +33,95 @@ class BankStatementParserTest {
     }
 
     @Test
-    void parseTextShouldExtractMultipleTransactions() {
+    void parseTextShouldExtractMultipleTransactionsWithCurrencies() {
         String rawText = """
-                10/03/2025 Lidl 100.50
-                11/03/2025 Netflix 59.99
+                10/03/2026 Lidl 100.50 RON
+                11/03/2026 Netflix 59.99 EUR
+                12/03/2026 Amazon 25,75 USD
                 """;
 
         List<Transaction> transactions = parser.parseText(rawText);
 
-        assertEquals(2, transactions.size());
+        assertEquals(3, transactions.size());
 
-        assertEquals(LocalDate.of(2025, 3, 10), transactions.get(0).getDate());
+        assertEquals(LocalDate.of(2026, 3, 10), transactions.get(0).getDate());
         assertEquals("Lidl", transactions.get(0).getDescription());
         assertEquals(100.50, transactions.get(0).getAmount());
         assertEquals("RON", transactions.get(0).getCurrency());
         assertEquals("EXPENSE", transactions.get(0).getType());
 
-        assertEquals(LocalDate.of(2025, 3, 11), transactions.get(1).getDate());
+        assertEquals(LocalDate.of(2026, 3, 11), transactions.get(1).getDate());
         assertEquals("Netflix", transactions.get(1).getDescription());
         assertEquals(59.99, transactions.get(1).getAmount());
-        assertEquals("RON", transactions.get(1).getCurrency());
+        assertEquals("EUR", transactions.get(1).getCurrency());
         assertEquals("EXPENSE", transactions.get(1).getType());
+
+        assertEquals(LocalDate.of(2026, 3, 12), transactions.get(2).getDate());
+        assertEquals("Amazon", transactions.get(2).getDescription());
+        assertEquals(25.75, transactions.get(2).getAmount());
+        assertEquals("USD", transactions.get(2).getCurrency());
+        assertEquals("EXPENSE", transactions.get(2).getType());
+    }
+
+    @Test
+    void parseTextShouldExtractTransactionTypeFromKeywords() {
+        String rawText = """
+                10/03/2026 Salariu martie 3500 RON
+                11/03/2026 Transfer cont economii 500 RON
+                12/03/2026 Plata card Lidl 100.50 RON
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(3, transactions.size());
+
+        assertEquals("INCOME", transactions.get(0).getType());
+        assertEquals("TRANSFER", transactions.get(1).getType());
+        assertEquals("EXPENSE", transactions.get(2).getType());
+    }
+
+    @Test
+    void parseTextShouldAcceptOcrMistakeR0NAsRon() {
+        String rawText = """
+                10/03/2026 Lidl OCR Test 100.50 R0N
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(1, transactions.size());
+        assertEquals("RON", transactions.get(0).getCurrency());
+        assertEquals("Lidl OCR Test", transactions.get(0).getDescription());
+    }
+
+    @Test
+    void parseTextShouldIgnoreDuplicateTransactions() {
+        String rawText = """
+                10/03/2026 Lidl 100.50 RON
+                10/03/2026 Lidl 100.50 RON
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertEquals(1, transactions.size());
+        assertEquals("Lidl", transactions.get(0).getDescription());
+    }
+
+    @Test
+    void parseTextShouldIgnoreInvalidLines() {
+        String rawText = """
+                Extras de cont
+                Lidl 100.50
+                Total 100.50
+                99/99/2026 Linie cu data invalida 10 RON
+                10/03/2026 12345 100 RON
+                10/03/2026 X 100 RON
+                10/03/2026 Descriere fara suma
+                """;
+
+        List<Transaction> transactions = parser.parseText(rawText);
+
+        assertNotNull(transactions);
+        assertTrue(transactions.isEmpty());
     }
 
     @Test
@@ -65,22 +133,8 @@ class BankStatementParserTest {
     }
 
     @Test
-    void parseTextShouldReturnEmptyListForEmptyText() {
-        List<Transaction> transactions = parser.parseText("");
-
-        assertNotNull(transactions);
-        assertTrue(transactions.isEmpty());
-    }
-
-    @Test
-    void parseTextShouldIgnoreLinesWithoutDate() {
-        String rawText = """
-                Extras de cont
-                Lidl 100.50
-                Total 100.50
-                """;
-
-        List<Transaction> transactions = parser.parseText(rawText);
+    void parseTextShouldReturnEmptyListForBlankText() {
+        List<Transaction> transactions = parser.parseText("   \n   \t ");
 
         assertNotNull(transactions);
         assertTrue(transactions.isEmpty());
