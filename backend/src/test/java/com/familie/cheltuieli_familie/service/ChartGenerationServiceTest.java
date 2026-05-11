@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.dto.response.ChartPayload;
 import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;

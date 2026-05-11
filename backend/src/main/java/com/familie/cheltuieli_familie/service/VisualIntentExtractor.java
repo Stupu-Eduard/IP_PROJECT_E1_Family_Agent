@@ -60,7 +60,7 @@ public class VisualIntentExtractor {
             - groupBy: "person" | "category" | "month" | "year" | "location"
             - seriesBy: "person" | "category" | null
             - title: titlu în română
-            - filters: { category, person, dateRange, location }
+            - filters: { DEFAULT_GROUP_BY, DEFAULT_SERIES_BY, dateRange, location }
             
             Pentru dateRange, folosește: "last_3_months", "this_month", "this_year",
             sau un obiect { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }.
