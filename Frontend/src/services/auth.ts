@@ -4,6 +4,8 @@ import { api } from './api'
 export interface LoginResponseDto {
   message: string
   userName?: string
+  token?: string
+  role?: string
 }
 
 export async function loginWithEmailPassword(email: string, password: string): Promise<LoginResponseDto> {
