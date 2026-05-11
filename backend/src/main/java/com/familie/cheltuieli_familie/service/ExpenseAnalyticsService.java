@@ -57,7 +57,7 @@ public class ExpenseAnalyticsService {
         return repository.findAll()
                 .stream()
                 .filter(e -> e.getAmount().compareTo(threshold) > 0)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<ExpenseEntity> findByPerson(String person, LocalDate from, LocalDate to) {
