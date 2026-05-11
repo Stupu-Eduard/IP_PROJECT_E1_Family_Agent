@@ -26,20 +26,35 @@ class TransactionTest {
     }
 
     @Test
-    void constructorShouldSetFields() {
+    void constructorWithThreeArgumentsShouldSetDefaultCurrencyAndType() {
         Transaction transaction = new Transaction(
                 LocalDate.of(2025, 3, 10),
                 "Lidl",
-                100.5,
-                "RON",
-                "EXPENSE"
+                100.5
         );
 
         assertEquals(LocalDate.of(2025, 3, 10), transaction.getDate());
         assertEquals(100.5, transaction.getAmount());
         assertEquals("Lidl", transaction.getDescription());
-        assertEquals("EXPENSE", transaction.getType());
         assertEquals("RON", transaction.getCurrency());
+        assertEquals("EXPENSE", transaction.getType());
+    }
+
+    @Test
+    void constructorWithFiveArgumentsShouldSetAllFields() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2025, 3, 10),
+                "Lidl",
+                100.5,
+                "EUR",
+                "TRANSFER"
+        );
+
+        assertEquals(LocalDate.of(2025, 3, 10), transaction.getDate());
+        assertEquals(100.5, transaction.getAmount());
+        assertEquals("Lidl", transaction.getDescription());
+        assertEquals("EUR", transaction.getCurrency());
+        assertEquals("TRANSFER", transaction.getType());
     }
 
     @Test
@@ -57,7 +72,7 @@ class TransactionTest {
         assertTrue(result.contains("2025-03-10"));
         assertTrue(result.contains("100.5"));
         assertTrue(result.contains("Lidl"));
-        assertTrue(result.contains("EXPENSE"));
         assertTrue(result.contains("RON"));
+        assertTrue(result.contains("EXPENSE"));
     }
 }
