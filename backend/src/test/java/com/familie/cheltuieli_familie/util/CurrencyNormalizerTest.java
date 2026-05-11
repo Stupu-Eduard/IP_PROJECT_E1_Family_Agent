@@ -30,6 +30,19 @@ class CurrencyNormalizerTest {
         assertEquals(new BigDecimal("123.45"), CurrencyNormalizer.parseRomanianAmount("123,45"));
         assertEquals(new BigDecimal("1234.56"), CurrencyNormalizer.parseRomanianAmount("1,234.56"));
         assertEquals(new BigDecimal("1234.56"), CurrencyNormalizer.parseRomanianAmount("1.234,56"));
+        // Complex cases for decimal separator normalization
+        assertEquals(new BigDecimal("1000.50"), CurrencyNormalizer.parseRomanianAmount("1,000.50"));
+        assertEquals(new BigDecimal("1000.50"), CurrencyNormalizer.parseRomanianAmount("1.000,50"));
+        assertEquals(new BigDecimal("1.000"), CurrencyNormalizer.parseRomanianAmount("1,000"));
+        assertEquals(new BigDecimal("1.000"), CurrencyNormalizer.parseRomanianAmount("1.000"));
+    }
+
+    @Test
+    void testParseRomanianAmount_InvalidNumeric() {
+        // Only symbols, no digits
+        assertNull(CurrencyNormalizer.parseRomanianAmount(",..."));
+        // Multiple dots/commas that result in NumberFormatException
+        assertNull(CurrencyNormalizer.parseRomanianAmount("1.2.3.4"));
     }
 
     @Test

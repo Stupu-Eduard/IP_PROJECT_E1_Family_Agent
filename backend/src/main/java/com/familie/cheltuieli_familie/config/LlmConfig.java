@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.config;
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ExpenseTools;
 import com.familie.cheltuieli_familie.service.QdrantContentRetriever;
+import com.familie.cheltuieli_familie.util.EnvLoader;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
@@ -16,16 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Configuration
 @Slf4j
@@ -37,52 +29,10 @@ public class LlmConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
-    private static Map<String, String> loadDotEnv() {
-        return Arrays.stream(new Path[]{
-                        Paths.get(".env"),
-                        Paths.get("..", ".env"),
-                        Paths.get(System.getProperty("user.dir"), ".env"),
-                        Paths.get(System.getProperty("user.dir"), "..", ".env")
-                })
-                .filter(Files::exists)
-                .map(LlmConfig::parseEnvFile)
-                .filter(map -> !map.isEmpty())
-                .findFirst()
-                .orElse(Collections.emptyMap());
-    }
-
-    private static Map<String, String> parseEnvFile(Path path) {
-        try {
-            return Files.readAllLines(path).stream()
-                    .map(String::trim)
-                    .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-                    .map(line -> line.split("=", 2))
-                    .filter(parts -> parts.length == 2)
-                    .collect(Collectors.toMap(
-                            parts -> parts[0].trim(),
-                            parts -> parts[1].trim(),
-                            (existing, replacement) -> existing
-                    ));
-        } catch (IOException e) {
-            return Collections.emptyMap();
-        }
-    }
-
-    private String resolveKey(String springValue, String envName) {
-        if (springValue != null && !springValue.isEmpty()) {
-            return springValue;
-        }
-        String env = System.getenv(envName);
-        if (env != null && !env.isEmpty()) {
-            return env;
-        }
-        return loadDotEnv().getOrDefault(envName, "");
-    }
-
     @Bean
     @Primary
     public ChatLanguageModel deepseekModel() {
-        String dsKey = resolveKey(deepseekApiKey, "DEEPSEEK_API_KEY");
+        String dsKey = EnvLoader.resolveKey(deepseekApiKey, "DEEPSEEK_API_KEY");
         if (!dsKey.isEmpty()) {
             return OpenAiChatModel.builder()
                     .apiKey(dsKey)
@@ -92,7 +42,7 @@ public class LlmConfig {
                     .timeout(Duration.ofSeconds(60))
                     .build();
         }
-        String orKey = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
+        String orKey = EnvLoader.resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
         if (!orKey.isEmpty()) {
             return OpenAiChatModel.builder()
                     .apiKey(orKey)

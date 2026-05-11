@@ -187,6 +187,118 @@ class ExtractionServiceTest {
     }
 
     @Test
+    void testFallbackToSingleObject() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Paine 10 lei");
+
+        // AI returns a single object instead of an array under "expenses"
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {
+                  "amount": 10,
+                  "category": "Alimente",
+                  "location": "Magazin",
+                  "person": "Eu",
+                  "transactionDate": "2024-03-20"
+                }
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(0, new BigDecimal("10.0").compareTo(responses.get(0).getAmount()));
+    }
+
+    @Test
+    void testFallbackToNestedObject() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Paine 10 lei");
+
+        // AI returns "expenses" as an object instead of an array
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {
+                  "expenses": {
+                    "amount": 10,
+                    "category": "Alimente",
+                    "location": "Magazin",
+                    "person": "Eu",
+                    "transactionDate": "2024-03-20"
+                  }
+                }
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(0, new BigDecimal("10.0").compareTo(responses.get(0).getAmount()));
+    }
+
+    @Test
+    void testAmountInFullNodeString() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Paine 10 lei");
+
+        // amount field is missing, but "10" is the only number in the node
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {
+                  "expenses": [
+                    {
+                      "info": "Paine de 10 lei",
+                      "category": "Alimente",
+                      "location": "Magazin",
+                      "person": "Eu"
+                    }
+                  ]
+                }
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(0, new BigDecimal("10.0").compareTo(responses.get(0).getAmount()));
+    }
+
+    @Test
+    void testItemsValidation_NotArray() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Paine 10 lei");
+
+        // items is not an array
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {
+                  "expenses": [
+                    {
+                      "amount": 10,
+                      "items": "some string"
+                    }
+                  ]
+                }
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertNull(responses.get(0).getValidationNote());
+    }
+
+    @Test
+    void testValidateOcrContent() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from("VALID")));
+        String result = extractionService.validateOcrContent("some ocr text");
+        assertEquals("VALID", result);
+    }
+
+    @Test
     void testMultipleExpensesDiarization() {
         ExtractionRequest req = new ExtractionRequest();
         req.setRawText("Eu am luat paine de 5 lei si Maria a luat flori de 50 lei");

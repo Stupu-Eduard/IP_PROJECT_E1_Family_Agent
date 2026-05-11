@@ -46,6 +46,11 @@ public class CurrencyNormalizer {
             if (numericPart.isEmpty()) {
                 return null;
             }
+            // Remove multiple dots or commas at the end which might come from JSON/text context
+            numericPart = numericPart.replaceAll("[,.]+$", "");
+            if (numericPart.isEmpty()) {
+                return null;
+            }
             return new BigDecimal(normalizeDecimalSeparator(numericPart));
         } catch (NumberFormatException e) {
             return null;

@@ -65,6 +65,12 @@ class DateNormalizerTest {
     }
 
     @Test
+    void testResolveRelativeDate_invalidNumericDate() {
+        // 32.01.2024 is invalid, should fallback to LocalDate.now()
+        assertEquals(LocalDate.now(), DateNormalizer.resolveRelativeDate("32.01.2024"));
+    }
+
+    @Test
     void testResolveRelativeDate_nullAndEmpty() {
         assertEquals(LocalDate.now(), DateNormalizer.resolveRelativeDate(null));
         assertEquals(LocalDate.now(), DateNormalizer.resolveRelativeDate(""));

@@ -48,4 +48,45 @@ class HallucinationGuardTest {
         // THEN
         assertTrue(result.contains("150.50"), "The value 150.20 should have been replaced by 150.50");
     }
+
+    @Test
+    void shouldNotCorrectWhenDiffIsOneOrMore() {
+        // GIVEN
+        String aiResponse = "Ai cheltuit 150.20 RON.";
+        String toolOutput = "Total: 151.20 RON"; // Diff is exactly 1.00
+
+        // WHEN
+        String result = guard.validate(aiResponse, toolOutput);
+
+        // THEN
+        assertTrue(result.contains("150.20"), "Should NOT replace if diff >= 1.00");
+    }
+
+    @Test
+    void shouldNotCorrectWhenInputTooLarge() {
+        // GIVEN
+        StringBuilder largeResponse = new StringBuilder();
+        for (int i = 0; i < 2100; i++) largeResponse.append("a");
+        String aiResponse = largeResponse.toString();
+        String toolOutput = "150.50";
+
+        // WHEN
+        String result = guard.validate(aiResponse, toolOutput);
+
+        // THEN
+        assertEquals(aiResponse, result);
+    }
+
+    @Test
+    void shouldHandleEmptyNumbersInToolOutput() {
+        // GIVEN
+        String aiResponse = "Ai cheltuit 150.20 RON.";
+        String toolOutput = "No numbers here";
+
+        // WHEN
+        String result = guard.validate(aiResponse, toolOutput);
+
+        // THEN
+        assertEquals(aiResponse, result);
+    }
 }

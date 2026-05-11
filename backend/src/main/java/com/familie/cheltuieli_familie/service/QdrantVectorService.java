@@ -36,6 +36,7 @@ public class QdrantVectorService {
     private static final String KEY_ID = "id";
     private static final String QDRANT_RESULT = "result";
     private static final String QDRANT_VALUE_KEY = "value";
+    private static final String QDRANT_MATCH_KEY = "match";
 
     private final QdrantEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
@@ -134,10 +135,10 @@ public class QdrantVectorService {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of(QDRANT_VALUE_KEY, category)));
+            conditions.add(Map.of("key", KEY_CATEGORY, QDRANT_MATCH_KEY, Map.of(QDRANT_VALUE_KEY, category)));
         }
         if (person != null && !person.isEmpty()) {
-            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of(QDRANT_VALUE_KEY, person)));
+            conditions.add(Map.of("key", KEY_PERSON, QDRANT_MATCH_KEY, Map.of(QDRANT_VALUE_KEY, person)));
         }
         if (from != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("gte", from.toString())));
@@ -160,33 +161,9 @@ public class QdrantVectorService {
         Map<String, Object> payload = (Map<String, Object>) result.get("payload");
         double score = ((Number) result.get("score")).doubleValue();
 
-        Long id = null;
-        if (payload != null && payload.get(KEY_ID) != null) {
-            Object idObj = payload.get(KEY_ID);
-            if (idObj instanceof Number) {
-                id = ((Number) idObj).longValue();
-            } else {
-                try {
-                    id = Long.parseLong(idObj.toString());
-                } catch (Exception ignored) {}
-            }
-        }
-
-        BigDecimal amount = null;
-        if (payload != null && payload.get(KEY_AMOUNT) != null) {
-            Object amtObj = payload.get(KEY_AMOUNT);
-            if (amtObj instanceof Number) {
-                amount = BigDecimal.valueOf(((Number) amtObj).doubleValue());
-            } else {
-                try {
-                    amount = new BigDecimal(amtObj.toString());
-                } catch (Exception ignored) {}
-            }
-        }
-
         return EmbeddedExpense.builder()
-                .id(id)
-                .amount(amount)
+                .id(extractIdFromPayload(payload))
+                .amount(extractAmountFromPayload(payload))
                 .category(payload != null ? (String) payload.get(KEY_CATEGORY) : null)
                 .person(payload != null ? (String) payload.get(KEY_PERSON) : null)
                 .location(payload != null ? (String) payload.get(KEY_LOCATION) : null)
@@ -196,11 +173,44 @@ public class QdrantVectorService {
                 .build();
     }
 
+    private Long extractIdFromPayload(Map<String, Object> payload) {
+        if (payload == null || payload.get(KEY_ID) == null) {
+            return null;
+        }
+        Object idObj = payload.get(KEY_ID);
+        if (idObj instanceof Number) {
+            return ((Number) idObj).longValue();
+        }
+        try {
+            return Long.parseLong(idObj.toString());
+        } catch (Exception e) {
+            log.warn("Failed to parse ID from payload: {}", idObj);
+            return null;
+        }
+    }
+
+    private BigDecimal extractAmountFromPayload(Map<String, Object> payload) {
+        if (payload == null || payload.get(KEY_AMOUNT) == null) {
+            return null;
+        }
+        Object amtObj = payload.get(KEY_AMOUNT);
+        if (amtObj instanceof Number) {
+            return BigDecimal.valueOf(((Number) amtObj).doubleValue());
+        }
+        try {
+            return new BigDecimal(amtObj.toString());
+        } catch (Exception e) {
+            log.warn("Failed to parse amount from payload: {}", amtObj);
+            return null;
+        }
+    }
+
     private LocalDate parseLocalDate(String value) {
         if (value == null) return null;
         try {
             return LocalDate.parse(value);
         } catch (Exception e) {
+            log.warn("Failed to parse date: {}", value);
             return null;
         }
     }
@@ -212,7 +222,7 @@ public class QdrantVectorService {
         body.put("limit", 1);
         body.put("with_vector", false);
         body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of(QDRANT_VALUE_KEY, id.toString())))));
+        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, QDRANT_MATCH_KEY, Map.of(QDRANT_VALUE_KEY, id.toString())))));
 
         String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
         HttpHeaders headers = new HttpHeaders();
