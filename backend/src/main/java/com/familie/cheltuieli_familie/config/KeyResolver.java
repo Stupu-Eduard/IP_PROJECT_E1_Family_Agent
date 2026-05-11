@@ -8,13 +8,22 @@ public final class KeyResolver {
     }
 
     public static String resolve(String springValue, String envName) {
+        String value = resolveFromSpringOrEnv(springValue, envName);
+        if (!value.isEmpty()) {
+            return value;
+        }
+        return resolveFromDotEnv(envName);
+    }
+
+    private static String resolveFromSpringOrEnv(String springValue, String envName) {
         if (springValue != null && !springValue.isEmpty()) {
             return springValue;
         }
         String env = System.getenv(envName);
-        if (env != null && !env.isEmpty()) {
-            return env;
-        }
+        return env != null ? env : "";
+    }
+
+    private static String resolveFromDotEnv(String envName) {
         Map<String, String> dotEnv = DotEnvLoader.load();
         return dotEnv.getOrDefault(envName, "");
     }
