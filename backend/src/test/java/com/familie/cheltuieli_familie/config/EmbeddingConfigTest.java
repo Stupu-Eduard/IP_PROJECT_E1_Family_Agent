@@ -10,7 +10,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,12 +60,7 @@ class EmbeddingConfigTest {
         String springValue = "sk-or-...alue";
         String envName = "OPENROUTER_API_KEY";
 
-        String result = ReflectionTestUtils.invokeMethod(
-                embeddingConfig,
-                "resolveKey",
-                springValue,
-                envName
-        );
+        String result = KeyResolver.resolve(springValue, envName);
 
         assertEquals(springValue, result);
     }
@@ -77,19 +71,10 @@ class EmbeddingConfigTest {
         String expectedValue = "***";
 
         try {
-            // Set as system property (resolveKey checks System.getenv first, then falls through)
-            // Since we can't set env vars, the test verifies the fallback chain works
             System.setProperty(envName, expectedValue);
 
-            String result = ReflectionTestUtils.invokeMethod(
-                    embeddingConfig,
-                    "resolveKey",
-                    "",
-                    envName
-            );
+            String result = KeyResolver.resolve("", envName);
 
-            // System.getenv won't see the property, so it falls through to dotenv (empty)
-            // This documents the actual behavior
             assertNotNull(result);
         } finally {
             System.clearProperty(envName);
@@ -101,10 +86,6 @@ class EmbeddingConfigTest {
         Path dotEnvFile = tempDir.resolve(".env");
         Files.writeString(dotEnvFile, "OPENROUTER_API_KEY=sk-or-...tenv\n");
 
-        // Verify DotEnvLoader can parse the file when pointed directly
-        Map<String, String> envMap = DotEnvLoader.load();
-        // Note: DotEnvLoader uses relative paths from user.dir, which may not be tempDir
-        // This test verifies the parser works by checking the actual file content
         assertTrue(Files.exists(dotEnvFile));
         String content = Files.readString(dotEnvFile);
         assertTrue(content.contains("sk-or-...tenv"));
@@ -115,12 +96,7 @@ class EmbeddingConfigTest {
         String emptySpringValue = "";
         String nonExistentEnvName = "NON_EXISTENT_VAR_XYZ_EMBEDDING";
 
-        String result = ReflectionTestUtils.invokeMethod(
-                embeddingConfig,
-                "resolveKey",
-                emptySpringValue,
-                nonExistentEnvName
-        );
+        String result = KeyResolver.resolve(emptySpringValue, nonExistentEnvName);
 
         assertEquals("", result);
     }
@@ -136,7 +112,6 @@ class EmbeddingConfigTest {
                 """;
         Files.writeString(dotEnvFile, dotEnvContent);
 
-        // Verify the file was written correctly
         assertTrue(Files.exists(dotEnvFile));
         String content = Files.readString(dotEnvFile);
         assertTrue(content.contains("OPENROUTER_API_KEY=***"));

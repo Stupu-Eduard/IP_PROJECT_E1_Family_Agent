@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
 
@@ -33,8 +32,6 @@ public class ExpenseVectorRepositoryImpl implements ExpenseVectorRepository {
 
     @Override
     public void saveVector(ExpenseEntity entity, float[] vector) {
-        String url = qdrantUrl + "?wait=true";
-
         if (entity.getId() == null) {
             throw new VectorStoreException("Cannot save vector: entity has no ID yet");
         }
@@ -68,8 +65,6 @@ public class ExpenseVectorRepositoryImpl implements ExpenseVectorRepository {
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             return response.getStatusCode() == HttpStatus.OK;
-        } catch (HttpClientErrorException.NotFound e) {
-            return false;
         } catch (Exception e) {
             return false;
         }
