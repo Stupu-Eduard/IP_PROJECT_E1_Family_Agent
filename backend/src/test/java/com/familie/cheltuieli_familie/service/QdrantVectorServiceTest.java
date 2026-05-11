@@ -129,4 +129,109 @@ class QdrantVectorServiceTest {
 
         assertFalse(exists);
     }
+
+    @Test
+    void testSearchWithNoFilters() {
+        when(embeddingModel.embed(anyString())).thenReturn(Response.from(Embedding.from(new float[2048])));
+
+        ReflectionTestUtils.setField(qdrantVectorService, "host", "localhost");
+        ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
+        ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
+
+        Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
+                "score", 0.95,
+                "payload", Map.of(
+                        "id", 1,
+                        "amount", 100.0,
+                        "category", "Food"
+                )
+        )));
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
+                "query", 5, null, null, null, null);
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals("Food", results.get(0).getCategory());
+        verify(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    void testSearchWithSingleFilter() {
+        when(embeddingModel.embed(anyString())).thenReturn(Response.from(Embedding.from(new float[2048])));
+
+        ReflectionTestUtils.setField(qdrantVectorService, "host", "localhost");
+        ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
+        ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
+
+        Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
+                "score", 0.95,
+                "payload", Map.of(
+                        "id", 1,
+                        "amount", 100.0,
+                        "category", "Food"
+                )
+        )));
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
+                "query", 5, "Food", null, null, null);
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals("Food", results.get(0).getCategory());
+        verify(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    void testExistsInVectorStoreWithException() {
+        ReflectionTestUtils.setField(qdrantVectorService, "host", "localhost");
+        ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
+        ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
+                .thenThrow(new RuntimeException("Qdrant error"));
+
+        boolean exists = qdrantVectorService.existsInVectorStore(1L);
+
+        assertFalse(exists);
+    }
+
+    @Test
+    void testMapRestResultWithStringIdAndAmount() {
+        when(embeddingModel.embed(anyString())).thenReturn(Response.from(Embedding.from(new float[2048])));
+
+        ReflectionTestUtils.setField(qdrantVectorService, "host", "localhost");
+        ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
+        ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
+
+        Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
+                "score", 0.85,
+                "payload", Map.of(
+                        "id", "42",
+                        "amount", "99.50",
+                        "category", "Food",
+                        "person", "Familie",
+                        "location", "Kaufland",
+                        "date", LocalDate.now().toString(),
+                        "text_segment", "Test"
+                )
+        )));
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+
+        List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
+                "query", 5, "Food", null, null, null);
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(42L, results.get(0).getId());
+        assertEquals(new BigDecimal("99.50"), results.get(0).getAmount());
+    }
 }

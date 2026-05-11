@@ -108,26 +108,12 @@ public class QdrantVectorService {
             body.put("filter", filter);
         }
 
-        String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
-                if (results != null) {
-                    return results.stream()
-                            .map(this::mapRestResultToEmbeddedExpense)
-                            .toList();
-                }
-            }
-        } catch (Exception e) {
-            log.error("Qdrant search failed: {}", e.getMessage());
+        List<Map<String, Object>> results = executeQdrantSearch(body);
+        if (results != null) {
+            return results.stream()
+                    .map(this::mapRestResultToEmbeddedExpense)
+                    .toList();
         }
-
         return List.of();
     }
 
@@ -201,6 +187,23 @@ public class QdrantVectorService {
         }
     }
 
+    private List<Map<String, Object>> executeQdrantSearch(Map<String, Object> body) {
+        String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                return (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
+            }
+        } catch (Exception e) {
+            log.error("Qdrant search failed: {}", e.getMessage());
+        }
+        return null;
+    }
+
     public boolean existsInVectorStore(Long id) {
         Map<String, Object> body = new HashMap<>();
         body.put("vector", new float[2048]);
@@ -209,21 +212,7 @@ public class QdrantVectorService {
         body.put("with_payload", true);
         body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, MATCH, Map.of(VALUE, id.toString())))));
 
-        String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
-                return results != null && !results.isEmpty();
-            }
-        } catch (Exception e) {
-            log.error("Qdrant exists check failed: {}", e.getMessage());
-        }
-        return false;
+        List<Map<String, Object>> results = executeQdrantSearch(body);
+        return results != null && !results.isEmpty();
     }
 }
