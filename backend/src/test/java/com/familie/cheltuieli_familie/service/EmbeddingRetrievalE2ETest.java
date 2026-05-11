@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -101,7 +102,7 @@ class EmbeddingRetrievalE2ETest {
 
         // Small delay for Qdrant to index
         try {
-            Thread.sleep(500);
+            TimeUnit.MILLISECONDS.sleep(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -129,7 +130,7 @@ class EmbeddingRetrievalE2ETest {
         qdrantVectorService.storeExpense(expense);
 
         try {
-            Thread.sleep(500);
+            TimeUnit.MILLISECONDS.sleep(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -156,7 +157,7 @@ class EmbeddingRetrievalE2ETest {
         qdrantVectorService.storeExpense(expense);
 
         try {
-            Thread.sleep(500);
+            TimeUnit.MILLISECONDS.sleep(500);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

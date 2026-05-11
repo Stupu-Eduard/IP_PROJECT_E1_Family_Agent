@@ -112,7 +112,7 @@ public class ExtractionService {
                     long delay = RETRY_DELAYS_MS[attempt - 1];
                     log.info("Retrying in {} ms...", delay);
                     try {
-                        Thread.sleep(delay);
+                        java.util.concurrent.TimeUnit.MILLISECONDS.sleep(delay);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         throw new AiServiceException("Retry interrupted", ie);
