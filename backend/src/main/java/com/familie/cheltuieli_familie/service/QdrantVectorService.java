@@ -201,7 +201,7 @@ public class QdrantVectorService {
         } catch (Exception e) {
             log.error("Qdrant search failed: {}", e.getMessage());
         }
-        return null;
+        return List.of();
     }
 
     public boolean existsInVectorStore(Long id) {
