@@ -31,3 +31,7 @@ langchain4j:
       api-key: ${OPENROUTER_API_KEY}
       base-url: https://openrouter.ai/api/v1
       model-name: nvidia/nemotron-4-340b-instruct
+    embedding-model:
+      api-key: ${OPENROUTER_API_KEY}
+      base-url: https://openrouter.ai/api/v1
+      model-name: nvidia/llama-nemotron-embed-vl-1b-v2:free

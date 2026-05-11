@@ -17,12 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
@@ -35,36 +30,6 @@ public class LlmConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
-    private static Map<String, String> loadDotEnv() {
-        Map<String, String> envMap = new HashMap<>();
-        Path[] candidates = new Path[]{
-                Paths.get(".env"),
-                Paths.get("..", ".env"),
-                Paths.get(System.getProperty("user.dir"), ".env"),
-                Paths.get(System.getProperty("user.dir"), "..", ".env")
-        };
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                try {
-                    for (String line : Files.readAllLines(candidate)) {
-                        line = line.trim();
-                        if (line.isEmpty() || line.startsWith("#")) {
-                            continue;
-                        }
-                        int idx = line.indexOf('=');
-                        if (idx > 0) {
-                            envMap.put(line.substring(0, idx), line.substring(idx + 1));
-                        }
-                    }
-                    return envMap;
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-        return envMap;
-    }
-
     private String resolveKey(String springValue, String envName) {
         if (springValue != null && !springValue.isEmpty()) {
             return springValue;
@@ -73,7 +38,8 @@ public class LlmConfig {
         if (env != null && !env.isEmpty()) {
             return env;
         }
-        return loadDotEnv().getOrDefault(envName, "");
+        Map<String, String> dotEnv = DotEnvLoader.load();
+        return dotEnv.getOrDefault(envName, "");
     }
 
     @Bean
@@ -81,25 +47,23 @@ public class LlmConfig {
     public ChatLanguageModel deepseekModel() {
         String dsKey = resolveKey(deepseekApiKey, "DEEPSEEK_API_KEY");
         if (!dsKey.isEmpty()) {
-            return OpenAiChatModel.builder()
-                    .apiKey(dsKey)
-                    .baseUrl("https://api.deepseek.com")
-                    .modelName("deepseek-chat")
-                    .temperature(0.1)
-                    .timeout(Duration.ofSeconds(60))
-                    .build();
+            return buildOpenAiModel(dsKey, "https://api.deepseek.com", "deepseek-chat");
         }
         String orKey = resolveKey(openRouterApiKey, "OPENROUTER_API_KEY");
         if (!orKey.isEmpty()) {
-            return OpenAiChatModel.builder()
-                    .apiKey(orKey)
-                    .baseUrl("https://openrouter.ai/api/v1")
-                    .modelName("deepseek/deepseek-chat")
-                    .temperature(0.1)
-                    .timeout(Duration.ofSeconds(60))
-                    .build();
+            return buildOpenAiModel(orKey, "https://openrouter.ai/api/v1", "deepseek/deepseek-chat");
         }
         throw new IllegalStateException("DEEPSEEK_API_KEY or OPENROUTER_API_KEY is required.");
+    }
+
+    private ChatLanguageModel buildOpenAiModel(String apiKey, String baseUrl, String modelName) {
+        return OpenAiChatModel.builder()
+                .apiKey(apiKey)
+                .baseUrl(baseUrl)
+                .modelName(modelName)
+                .temperature(0.1)
+                .timeout(Duration.ofSeconds(60))
+                .build();
     }
 
     @Bean
