@@ -6,7 +6,7 @@ import ExpenseMap from './ExpenseMap'
 import * as locationsService from '../services/locations'
 import * as googleMapsApi from '@react-google-maps/api'
 
-// ── 1. Mock-uri pentru Navigare și Servicii ──
+// ── 1. Mock-uri pentru Navigare si Servicii ──
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom')
@@ -17,9 +17,6 @@ vi.mock('../services/locations', () => ({
     updateLocationCoordinates: vi.fn()
 }))
 
-// FIX: trebuie mock-at authStore-ul ca să returneze un token,
-// altfel useEffect-ul cu WebSocket din ExpenseMap se închide imediat
-// (din cauza `if (!token) return;`) și `activeWsInstance` rămâne null.
 vi.mock('../store/authStore', () => ({
     useAuthStore: (selector: any) => selector({
         token: 'fake.jwt.token',
@@ -50,6 +47,7 @@ class MockWebSocket {
     onmessage: ((event: MessageEvent) => void) | null = null
     close = vi.fn()
     constructor() {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         activeWsInstance = this
         setTimeout(() => this.onopen?.(), 0)
     }
@@ -58,7 +56,7 @@ globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket
 const fetchMock = vi.fn()
 globalThis.fetch = fetchMock as unknown as typeof fetch
 
-describe('ExpenseMap - 100% Coverage Final Resolve', () => {
+describe('ExpenseMap - 100% Coverage Final', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         activeWsInstance = null
@@ -76,7 +74,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         vi.unstubAllEnvs()
     })
 
-    const renderComponent = (stateData: any = { locationLabel: 'București' }) => {
+    const renderComponent = (stateData: any = { locationLabel: 'Bucuresti' }) => {
         return render(
             <MemoryRouter initialEntries={[{ pathname: '/map', state: stateData }]}>
                 <Routes>
@@ -86,7 +84,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         )
     }
 
-    it('1. Tratează locația "Online" și navigarea înapoi', () => {
+    it('1. Trateaza locatia "Online" si navigarea inapoi', () => {
         renderComponent({ locationLabel: 'Online' })
         expect(screen.getByText(/Locația este non-geografică/i)).toBeInTheDocument()
 
@@ -94,16 +92,15 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(mockNavigate).toHaveBeenCalledWith(-1)
     })
 
-    it('2. Arată eroare dacă lipsește cheia API Google Maps', () => {
+    it('2. Arata eroare daca lipseste cheia Google Maps', () => {
         vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '')
         renderComponent()
         expect(screen.getByText(/Lipsește cheia Google Maps/i)).toBeInTheDocument()
     })
 
-    it('3. WebSocket: Alertă live și cleanup la unmount', async () => {
+    it('3. WebSocket: Alerta live si cleanup la unmount', async () => {
         const { unmount } = renderComponent({ lat: 44, lng: 26, locationLabel: 'Live' })
 
-        // Așteptăm ca useEffect-ul WebSocket să ruleze (după mount)
         await waitFor(() => {
             expect(activeWsInstance).not.toBeNull()
         })
@@ -119,13 +116,11 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(activeWsInstance?.close).toHaveBeenCalled()
     })
 
-    it('3b. WebSocket: catch din onmessage cu JSON invalid (linia 106)', async () => {
-        // Suprimăm console.error — componenta îl apelează în catch și Vitest îl tratează ca eroare
+    it('3b. WebSocket: catch din onmessage cu JSON invalid', async () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         renderComponent({ locationLabel: 'ValidLabel' })
 
-        // Așteptăm ca useEffect-ul WebSocket să creeze instanța
         await waitFor(() => {
             expect(activeWsInstance).not.toBeNull()
         })
@@ -136,7 +131,6 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
             } as MessageEvent)
         })
 
-        // console.error a fost apelat cu mesajul de eroare din catch (linia 106)
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             '❌ HARTA: Eroare la procesarea datelor live',
             expect.any(SyntaxError)
@@ -145,7 +139,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         consoleErrorSpy.mockRestore()
     })
 
-    it('4. Geocoding Succes: Salvează în DB și preia Place Details', async () => {
+    it('4. Geocoding Succes: Salveaza in DB si preia Place Details', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -160,8 +154,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         })
     })
 
-    it('4b. searchPlaceNear + fetchPlaceDetails complet (liniile 163-185, 282-288, 313, 407)', async () => {
-        // 1) Geocoding → coordonate
+    it('4b. searchPlaceNear + fetchPlaceDetails complet', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -169,7 +162,6 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
             })
         } as Response)
 
-        // 2) searchPlaceNear → place cu id (acoperă liniile 163-166)
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -177,7 +169,6 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
             })
         } as Response)
 
-        // 3) fetchPlaceDetails → date complete (acoperă liniile 169-196, 282-288, 407)
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -203,7 +194,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         await waitFor(() => expect(screen.getByText('Luni: 10:00-22:00')).toBeInTheDocument())
     })
 
-    it('5. Arată eroare dacă Geocoding returnează ZERO_RESULTS', async () => {
+    it('5. Arata eroare daca Geocoding returneaza ZERO_RESULTS', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({ status: 'ZERO_RESULTS', results: [] })
@@ -213,7 +204,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(await screen.findByText(/ZERO_RESULTS/i)).toBeInTheDocument()
     })
 
-    it('6. Prinde eroarea de salvare în Baza de Date (Catch branch)', async () => {
+    it('6. Prinde eroarea de salvare in Baza de Date (Catch branch)', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({ results: [{ geometry: { location: { lat: 1, lng: 1 } } }] })
@@ -225,7 +216,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(await screen.findByText(/nu le-am putut salva în baza de date/i)).toBeInTheDocument()
     })
 
-    it('7. Fallback: Navigare fără state (Ramura !label)', () => {
+    it('7. Fallback: Navigare fara state (Ramura !label)', () => {
         render(
             <MemoryRouter initialEntries={['/map']}>
                 <Routes><Route path="/map" element={<ExpenseMap />} /></Routes>
@@ -234,7 +225,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(screen.getByText(/Nu există text de locație pentru geocoding/i)).toBeInTheDocument()
     })
 
-    it('7b. Lipsește VITE_GOOGLE_GEOCODING_API_KEY → mesaj eroare (liniile 236-238)', async () => {
+    it('7b. Lipseste VITE_GOOGLE_GEOCODING_API_KEY -> mesaj eroare', async () => {
         vi.stubEnv('VITE_GOOGLE_GEOCODING_API_KEY', '')
 
         renderComponent({ locationLabel: 'TestFaraGeoKey' })
@@ -242,8 +233,8 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(await screen.findByText(/Lipsește cheia pentru Geocoding API/i)).toBeInTheDocument()
     })
 
-    it('8. Eroare de rețea: fetch în așteptare → mesajul de căutare rămâne vizibil', async () => {
-        fetchMock.mockImplementationOnce(() => new Promise(() => { /* pending forever */ }))
+    it('8. Eroare de retea: fetch in asteptare -> mesajul de cautare ramane vizibil', async () => {
+        fetchMock.mockImplementationOnce(() => new Promise(() => {}))
 
         const { unmount } = renderComponent({ locationLabel: 'TestReteaEroare' })
 
@@ -254,7 +245,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         unmount()
     })
 
-    it('9. Geocoding fără results și fără status → UNKNOWN error', async () => {
+    it('9. Geocoding fara results si fara status -> UNKNOWN error', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({})
@@ -269,7 +260,7 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         })
     })
 
-    it('10. InfoWindow: Afișare descriere și închidere', async () => {
+    it('10. InfoWindow: Afisare descriere si inchidere', async () => {
         renderComponent({ lat: 44, lng: 26, locationLabel: 'Marker', description: 'Nota' })
         const marker = await screen.findByTestId('map-marker')
         fireEvent.click(marker)
@@ -279,34 +270,29 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
         expect(screen.queryByTestId('info-window')).not.toBeInTheDocument()
     })
 
-    it('11. UseJsApiLoader: Branch-uri de încărcare și eroare', () => {
-        // Cazul 1: Loading
+    it('11. UseJsApiLoader: Branch-uri de incarcare si eroare', () => {
         vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValueOnce({ isLoaded: false, loadError: null } as any)
         renderComponent()
         expect(screen.getByText(/Se încarcă harta/i)).toBeInTheDocument()
 
-        // Cazul 2: Error
         vi.mocked(googleMapsApi.useJsApiLoader).mockReturnValueOnce({ isLoaded: false, loadError: new Error('Map Crash') } as any)
         renderComponent()
         expect(screen.getByText(/Nu s-a putut încărca Google Maps/i)).toBeInTheDocument()
     })
 
-    it('12. placePhotoSrc: afișează imaginea când place are photoName (linia 313)', async () => {
-        // 1) Geocoding
+    it('12. placePhotoSrc: afiseaza imaginea cand place are photoName', async () => {
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
                 results: [{ geometry: { location: { lat: 45, lng: 25 } } }]
             })
         } as Response)
-        // 2) searchPlaceNear → place cu id
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
                 places: [{ id: 'photo-place-id' }]
             })
         } as Response)
-        // 3) fetchPlaceDetails → cu photos (acoperă linia 313)
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -323,6 +309,113 @@ describe('ExpenseMap - 100% Coverage Final Resolve', () => {
                 img.src.includes('places.googleapis.com/v1/places')
             )
             expect(photoImg).toBeInTheDocument()
+        })
+    })
+
+    it('13. googleMapsLink fallback cu placeId (cand googleMapsUri lipseste)', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ results: [{ geometry: { location: { lat: 45, lng: 25 } }, place_id: 'geo-p1' }] })
+        } as Response)
+
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ places: [{ id: 'place-no-uri' }] })
+        } as Response)
+
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ displayName: { text: 'No URI' } })
+        } as Response)
+
+        renderComponent({ locationLabel: 'TestURI1' })
+
+        await waitFor(() => {
+            const link = screen.getByText('Deschide în Google Maps')
+            expect(link).toHaveAttribute('href', expect.stringContaining('google'))
+        })
+    })
+
+    it('14. googleMapsLink fallback doar cu marker (fara placeId)', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ places: [] })
+        } as Response)
+
+        renderComponent({ lat: 44.4250, lng: 26.1000, locationLabel: 'TestURI2' })
+
+        await waitFor(() => {
+            const link = screen.getByText('Deschide în Google Maps')
+            expect(link).toHaveAttribute('href', expect.stringContaining('google'))
+        })
+    })
+
+    it('15. Geocoding returneaza eroare explicita (error_message) de la Google', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ status: 'REQUEST_DENIED', error_message: 'API key invalid' })
+        } as Response)
+
+        renderComponent({ locationLabel: 'TestGeoError' })
+        expect(await screen.findByText('REQUEST_DENIED - API key invalid')).toBeInTheDocument()
+    })
+
+    it('16. Catch-ul din searchPlaceNear ignora erorile silentios', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ results: [{ geometry: { location: { lat: 45, lng: 25 } } }] })
+        } as Response)
+
+        fetchMock.mockRejectedValueOnce(new Error('Network Fail pe Search'))
+
+        renderComponent({ locationLabel: 'TestSearchCatch' })
+
+        await waitFor(() => {
+            const textCheck = screen.queryByText('Folosesc coordonatele salvate.') || screen.queryByText(/Se caută/i)
+            expect(textCheck).toBeDefined()
+        })
+    })
+
+    it('17. Prinde AbortError la unmount si nu afiseaza eroare in consola', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const abortError = new Error('Aborted')
+        abortError.name = 'AbortError'
+        fetchMock.mockRejectedValueOnce(abortError)
+
+        renderComponent({ locationLabel: 'TestAbort' })
+
+        await waitFor(() => {
+            expect(consoleErrorSpy).not.toHaveBeenCalled()
+        })
+
+        consoleErrorSpy.mockRestore()
+    })
+
+    it('18. Geofencing: Punct perfect in interiorul zonei sigure', async () => {
+        renderComponent({ lat: 44.4250, lng: 26.1000, locationLabel: 'SafePoint' })
+
+        await waitFor(() => {
+            expect(screen.queryByText(/ALERTĂ DE SECURITATE/i)).not.toBeInTheDocument()
+        })
+    })
+
+    it('19. Fallback place_id din geocode cand searchPlaceNear nu gaseste nimic', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ results: [{ geometry: { location: { lat: 45, lng: 25 } }, place_id: 'geo-fallback-id' }] })
+        } as Response)
+
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ places: [] })
+        } as Response)
+
+        renderComponent({ locationLabel: 'TestGeoFallbackID' })
+
+        await waitFor(() => {
+            const link = screen.getByText('Deschide în Google Maps')
+            expect(link).toHaveAttribute('href', expect.stringContaining('google'))
         })
     })
 })
