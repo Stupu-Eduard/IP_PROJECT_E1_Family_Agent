@@ -13,15 +13,23 @@ import static org.junit.jupiter.api.Assertions.*;
 class KeyResolverTest {
 
     private Path envFile;
+    private boolean envFileExistedBeforeTest;
+    private String originalEnvFileContent;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         envFile = Path.of(".env").toAbsolutePath().normalize();
+        envFileExistedBeforeTest = Files.exists(envFile);
+        originalEnvFileContent = envFileExistedBeforeTest ? Files.readString(envFile) : null;
     }
 
     @AfterEach
     void tearDown() throws IOException {
-        Files.deleteIfExists(envFile);
+        if (envFileExistedBeforeTest) {
+            Files.writeString(envFile, originalEnvFileContent);
+        } else {
+            Files.deleteIfExists(envFile);
+        }
     }
 
     @Test
