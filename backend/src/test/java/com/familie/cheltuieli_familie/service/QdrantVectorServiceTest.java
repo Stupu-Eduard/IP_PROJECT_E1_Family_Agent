@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -81,7 +82,7 @@ class QdrantVectorServiceTest {
                 )
         )));
 
-        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
@@ -90,7 +91,7 @@ class QdrantVectorServiceTest {
         assertNotNull(results);
         assertEquals(1, results.size());
         assertEquals("Food", results.get(0).getCategory());
-        verify(restTemplate).postForEntity(anyString(), any(), eq(Map.class));
+        verify(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
@@ -104,13 +105,13 @@ class QdrantVectorServiceTest {
                 "payload", Map.of("id", "1")
         )));
 
-        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         boolean exists = qdrantVectorService.existsInVectorStore(1L);
 
         assertTrue(exists);
-        verify(restTemplate).postForEntity(anyString(), any(), eq(Map.class));
+        verify(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
@@ -121,7 +122,7 @@ class QdrantVectorServiceTest {
 
         Map<String, Object> mockResponse = Map.of("result", List.of());
 
-        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         boolean exists = qdrantVectorService.existsInVectorStore(999L);

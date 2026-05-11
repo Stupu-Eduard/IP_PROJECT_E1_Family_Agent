@@ -12,6 +12,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -112,7 +113,8 @@ public class QdrantVectorService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
                 if (results != null) {
@@ -160,8 +162,8 @@ public class QdrantVectorService {
         Long id = null;
         if (payload != null && payload.get(KEY_ID) != null) {
             Object idObj = payload.get(KEY_ID);
-            if (idObj instanceof Number) {
-                id = ((Number) idObj).longValue();
+            if (idObj instanceof Number number) {
+                id = number.longValue();
             } else {
                 id = Long.parseLong(idObj.toString());
             }
@@ -170,8 +172,8 @@ public class QdrantVectorService {
         BigDecimal amount = null;
         if (payload != null && payload.get(KEY_AMOUNT) != null) {
             Object amtObj = payload.get(KEY_AMOUNT);
-            if (amtObj instanceof Number) {
-                amount = BigDecimal.valueOf(((Number) amtObj).doubleValue());
+            if (amtObj instanceof Number number) {
+                amount = BigDecimal.valueOf(number.doubleValue());
             } else {
                 amount = new BigDecimal(amtObj.toString());
             }
@@ -212,7 +214,8 @@ public class QdrantVectorService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
                 return results != null && !results.isEmpty();
