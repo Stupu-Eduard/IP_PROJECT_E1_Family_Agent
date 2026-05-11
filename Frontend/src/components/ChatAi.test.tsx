@@ -166,9 +166,11 @@ describe('ChatAI Component', () => {
         vi.mocked(api.post).mockResolvedValueOnce({
             data: {
                 type: 'chart',
-                chartType: 'bar',
-                title: 'Cheltuieli pe categorii',
-                data: [{ name: 'Mâncare', value: 320 }, { name: 'Transport', value: 90 }],
+                payload: {
+                    chartType: 'bar',
+                    title: 'Cheltuieli pe categorii',
+                    data: [{ name: 'Mâncare', value: 320 }, { name: 'Transport', value: 90 }],
+                },
             },
         })
 
@@ -212,8 +214,6 @@ describe('ChatAI Component', () => {
     })
 
     it('12. Backend trimite payload malformat → AgentResponseRenderer afișează fallback', async () => {
-        // Dacă backend-ul returnează un obiect fără câmpul `type` discriminator,
-        // sau cu un type necunoscut, randerul afișează fallback elegant în loc să crape.
         vi.mocked(api.post).mockResolvedValueOnce({
             data: { type: 'unknown-type', payload: 'something' },
         })
@@ -228,7 +228,6 @@ describe('ChatAI Component', () => {
             fireEvent.submit(input)
         })
 
-        // AgentResponseRenderer e mock-uit la începutul fișierului — verificăm că primește payload-ul brut
         await waitFor(() => {
             expect(screen.getByTestId('agent-renderer-unknown-type')).toBeInTheDocument()
         })
@@ -249,11 +248,8 @@ describe('ChatAI Component', () => {
             fireEvent.submit(input)
         })
 
-        // Textul mesajului user apare în DOM ca string simplu, NU prin renderer
-        // (mesajul user nu are data-testid="agent-renderer-text" în jurul lui)
         const userBubble = screen.getByText('Mesaj user')
         expect(userBubble).toBeInTheDocument()
-        // Cel mai apropiat părinte cu data-testid nu este renderer-ul
         expect(userBubble.closest('[data-testid="agent-renderer-text"]')).toBeNull()
     })
 
@@ -261,8 +257,10 @@ describe('ChatAI Component', () => {
         vi.mocked(api.post).mockResolvedValueOnce({
             data: {
                 type: 'chart',
-                chartType: 'line',
-                data: [{ name: 'A', value: 1 }],
+                payload: {
+                    chartType: 'line',
+                    data: [{ name: 'A', value: 1 }],
+                },
             },
         })
 
@@ -278,7 +276,6 @@ describe('ChatAI Component', () => {
 
         await waitFor(() => {
             const rendererNode = screen.getByTestId('agent-renderer-chart')
-            // Bula părinte (div imediat care conține renderer-ul) are background transparent
             const bubble = rendererNode.parentElement as HTMLElement
             expect(bubble.style.background).toBe('transparent')
             expect(bubble.style.padding).toBe('0px')
@@ -286,13 +283,6 @@ describe('ChatAI Component', () => {
     })
 
     it('15. Butonul Send: handler-ul onMouseEnter respectă condiția input.trim() && !isTyping', async () => {
-        // Acoperă branch-ul `if (input.trim() && !isTyping)` din onMouseEnter.
-        // jsdom + React nu propagă evenimente mouse pe button-uri `disabled`,
-        // așa că butonul Send (care e disabled când input e gol sau botul scrie)
-        // nu primește handler-ul prin fireEvent normal. Soluție: invocăm direct
-        // prop-ul React prin fiber-ul intern pentru a forța execuția handler-ului
-        // în toate combinațiile de stare.
-
         let resolveApi: (val: unknown) => void = () => {}
         const pendingPromise = new Promise(resolve => { resolveApi = resolve })
         vi.mocked(api.post).mockReturnValueOnce(pendingPromise as never)
@@ -303,7 +293,6 @@ describe('ChatAI Component', () => {
         const input = screen.getByRole('textbox') as HTMLInputElement
         const sendBtn = screen.getAllByRole('button')[1] as HTMLButtonElement
 
-        // Extract handler-ul React onMouseEnter direct din fiber (ocolește disabled)
         const getMouseEnterHandler = () => {
             const propsKey = Object.keys(sendBtn).find(k => k.startsWith('__reactProps$'))
             if (!propsKey) throw new Error('React props not found on element')
@@ -311,33 +300,26 @@ describe('ChatAI Component', () => {
             return props.onMouseEnter
         }
 
-        // Caz 1: input gol, isTyping=false → input.trim() === '' (falsy) → fundalul NU se schimbă
-        sendBtn.style.background = 'var(--color-ink)' // baseline
+        sendBtn.style.background = 'var(--color-ink)'
         getMouseEnterHandler()({ currentTarget: sendBtn })
         expect(sendBtn.style.background).toBe('var(--color-ink)')
 
-        // Caz 2: input plin, isTyping=false → ambele truthy → fundalul SE schimbă
         fireEvent.change(input, { target: { value: 'mesaj' } })
         getMouseEnterHandler()({ currentTarget: sendBtn })
         expect(sendBtn.style.background).toBe('var(--color-primary)')
 
-        // Trigger mouseLeave handler (acoperă onMouseLeave complet)
         fireEvent.mouseLeave(sendBtn)
         expect(sendBtn.style.background).toBe('var(--color-ink)')
 
-        // Trimitem mesajul → botul intră în isTyping (promise nu se rezolvă încă)
         await act(async () => {
             fireEvent.submit(input)
         })
 
-        // Caz 3: input plin, isTyping=true → input.trim() truthy DAR !isTyping false
-        //         → condiție falsă → fundalul NU se schimbă
         fireEvent.change(input, { target: { value: 'alt mesaj' } })
-        sendBtn.style.background = 'var(--color-ink)' // reset
+        sendBtn.style.background = 'var(--color-ink)'
         getMouseEnterHandler()({ currentTarget: sendBtn })
         expect(sendBtn.style.background).toBe('var(--color-ink)')
 
-        // Curățăm starea
         await act(async () => {
             resolveApi({ data: { type: 'text', text: 'ok' } })
             await pendingPromise

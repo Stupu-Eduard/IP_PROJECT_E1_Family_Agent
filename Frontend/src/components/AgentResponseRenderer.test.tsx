@@ -83,28 +83,30 @@ describe('AgentResponseRenderer — Type Guards (100% coverage)', () => {
         it('7. Returnează true pentru ChartResponse valid', () => {
             expect(isChartResponse({
                 type: 'chart',
-                chartType: 'bar',
-                data: [{ name: 'a', value: 1 }],
+                payload: { chartType: 'bar', data: [{ name: 'a', value: 1 }] },
             })).toBe(true)
         })
         it('8. Returnează false pentru null', () => {
             expect(isChartResponse(null)).toBe(false)
         })
         it('9. Returnează false pentru type greșit', () => {
-            expect(isChartResponse({ type: 'text', chartType: 'bar', data: [{ name: 'a', value: 1 }] })).toBe(false)
+            expect(isChartResponse({
+                type: 'text',
+                payload: { chartType: 'bar', data: [{ name: 'a', value: 1 }] },
+            })).toBe(false)
         })
-        it('10. Returnează false dacă data nu e array', () => {
-            expect(isChartResponse({ type: 'chart', chartType: 'bar', data: 'not-array' })).toBe(false)
+        it('10. Returnează false dacă payload lipsește', () => {
+            expect(isChartResponse({ type: 'chart' })).toBe(false)
         })
         it('11. Returnează false dacă data e gol', () => {
-            expect(isChartResponse({ type: 'chart', chartType: 'bar', data: [] })).toBe(false)
+            expect(isChartResponse({ type: 'chart', payload: { chartType: 'bar', data: [] } })).toBe(false)
         })
         it('12. Returnează false dacă chartType lipsește sau nu e string', () => {
-            expect(isChartResponse({ type: 'chart', data: [{ name: 'a', value: 1 }] })).toBe(false)
-            expect(isChartResponse({ type: 'chart', chartType: 42, data: [{ name: 'a', value: 1 }] })).toBe(false)
+            expect(isChartResponse({ type: 'chart', payload: { data: [{ name: 'a', value: 1 }] } })).toBe(false)
+            expect(isChartResponse({ type: 'chart', payload: { chartType: 42, data: [{ name: 'a', value: 1 }] } })).toBe(false)
         })
         it('13. Returnează false pentru chartType nesuportat', () => {
-            expect(isChartResponse({ type: 'chart', chartType: 'donut', data: [{ name: 'a', value: 1 }] })).toBe(false)
+            expect(isChartResponse({ type: 'chart', payload: { chartType: 'donut', data: [{ name: 'a', value: 1 }] } })).toBe(false)
         })
     })
 
@@ -145,9 +147,11 @@ describe('InlineChart Component', () => {
     it('21. Randează un chart LINE cu titlu', () => {
         const r: ChartResponse = {
             type: 'chart',
-            chartType: 'line',
-            title: 'Cheltuieli pe zi',
-            data: [{ name: 'Lun', value: 100 }, { name: 'Mar', value: 200 }],
+            payload: {
+                chartType: 'line',
+                title: 'Cheltuieli pe zi',
+                data: [{ name: 'Lun', value: 100 }, { name: 'Mar', value: 200 }],
+            },
         }
         render(<InlineChart response={r} />)
         expect(screen.getByTestId('inline-chart')).toBeInTheDocument()
@@ -158,21 +162,24 @@ describe('InlineChart Component', () => {
     it('22. Randează un chart BAR fără titlu (nu apare bara de titlu)', () => {
         const r: ChartResponse = {
             type: 'chart',
-            chartType: 'bar',
-            data: [{ name: 'Mâncare', value: 320 }, { name: 'Transport', value: 90 }],
+            payload: {
+                chartType: 'bar',
+                data: [{ name: 'Mâncare', value: 320 }, { name: 'Transport', value: 90 }],
+            },
         }
         render(<InlineChart response={r} />)
         expect(screen.getByTestId('inline-chart')).toBeInTheDocument()
-        // Fără titlu, header-ul de titlu nu apare
         expect(screen.queryByText('Cheltuieli pe zi')).not.toBeInTheDocument()
     })
 
     it('23. Randează un chart AREA', () => {
         const r: ChartResponse = {
             type: 'chart',
-            chartType: 'area',
-            title: 'Trend',
-            data: [{ name: 'A', value: 1 }, { name: 'B', value: 2 }],
+            payload: {
+                chartType: 'area',
+                title: 'Trend',
+                data: [{ name: 'A', value: 1 }, { name: 'B', value: 2 }],
+            },
         }
         render(<InlineChart response={r} />)
         expect(screen.getByTestId('inline-chart')).toBeInTheDocument()
@@ -182,18 +189,19 @@ describe('InlineChart Component', () => {
     it('24. Randează un chart PIE cu mai multe culori (Cell loop)', () => {
         const r: ChartResponse = {
             type: 'chart',
-            chartType: 'pie',
-            title: 'Distribuție',
-            // 7 elemente forțează wrap-ul (idx % palette.length)
-            data: [
-                { name: 'A', value: 10 },
-                { name: 'B', value: 20 },
-                { name: 'C', value: 15 },
-                { name: 'D', value: 5 },
-                { name: 'E', value: 25 },
-                { name: 'F', value: 8 },
-                { name: 'G', value: 12 },
-            ],
+            payload: {
+                chartType: 'pie',
+                title: 'Distribuție',
+                data: [
+                    { name: 'A', value: 10 },
+                    { name: 'B', value: 20 },
+                    { name: 'C', value: 15 },
+                    { name: 'D', value: 5 },
+                    { name: 'E', value: 25 },
+                    { name: 'F', value: 8 },
+                    { name: 'G', value: 12 },
+                ],
+            },
         }
         render(<InlineChart response={r} />)
         expect(screen.getByTestId('inline-chart')).toBeInTheDocument()
@@ -244,7 +252,6 @@ describe('InlineMap Component', () => {
 
     it('28. InfoWindow afișează doar label dacă nu există descriere', () => {
         render(<InlineMap response={mapResponse} />)
-        // pin-ul 2 (Mega) nu are description
         fireEvent.click(screen.getAllByTestId('map-marker')[1])
         expect(screen.getByText('Mega')).toBeInTheDocument()
         expect(screen.queryByText('120 lei')).not.toBeInTheDocument()
@@ -299,7 +306,6 @@ describe('InlineMap Component', () => {
     })
 
     it('33b. Afișează fallback și când env este complet absent (acoperă mapsApiKey ?? "")', () => {
-        // Forțăm `undefined` peste import.meta.env pentru a acoperi branch-ul `??`
         const env = import.meta.env as Record<string, string | undefined>
         const originalEnv = env.VITE_GOOGLE_MAPS_API_KEY
         delete env.VITE_GOOGLE_MAPS_API_KEY
@@ -351,7 +357,6 @@ describe('AgentResponseRenderer — Switch / Discriminator', () => {
     })
 
     it('39. Randează fallback pentru text malformat (type=text dar text non-string)', () => {
-        // Forțăm payload invalid (din backend pot veni date murdare)
         const malformed = { type: 'text', text: 42 } as unknown as AgentResponse
         render(<AgentResponseRenderer response={malformed} />)
         expect(screen.getByTestId('agent-fallback')).toBeInTheDocument()
@@ -361,24 +366,26 @@ describe('AgentResponseRenderer — Switch / Discriminator', () => {
     it('40. Randează ChartResponse (line) prin componenta InlineChart', () => {
         const r: ChartResponse = {
             type: 'chart',
-            chartType: 'line',
-            title: 'Evoluție',
-            data: [{ name: 'A', value: 1 }, { name: 'B', value: 2 }],
+            payload: {
+                chartType: 'line',
+                title: 'Evoluție',
+                data: [{ name: 'A', value: 1 }, { name: 'B', value: 2 }],
+            },
         }
         render(<AgentResponseRenderer response={r} />)
         expect(screen.getByTestId('inline-chart')).toBeInTheDocument()
         expect(screen.getByText('Evoluție')).toBeInTheDocument()
     })
 
-    it('41. Randează fallback pentru ChartResponse cu date lipsă', () => {
-        const malformed = { type: 'chart', chartType: 'bar', data: [] } as unknown as AgentResponse
+    it('41. Randează fallback pentru ChartResponse cu payload lipsă', () => {
+        const malformed = { type: 'chart' } as unknown as AgentResponse
         render(<AgentResponseRenderer response={malformed} />)
         expect(screen.getByTestId('agent-fallback')).toBeInTheDocument()
         expect(screen.getByText(/Date insuficiente pentru afișarea graficului/i)).toBeInTheDocument()
     })
 
     it('42. Randează fallback pentru ChartResponse cu chartType invalid', () => {
-        const malformed = { type: 'chart', chartType: 'unknown-chart', data: [{ name: 'x', value: 1 }] } as unknown as AgentResponse
+        const malformed = { type: 'chart', payload: { chartType: 'unknown-chart', data: [{ name: 'x', value: 1 }] } } as unknown as AgentResponse
         render(<AgentResponseRenderer response={malformed} />)
         expect(screen.getByTestId('agent-fallback')).toBeInTheDocument()
     })

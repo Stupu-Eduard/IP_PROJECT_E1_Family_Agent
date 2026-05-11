@@ -17,6 +17,8 @@ import type {
     MapPin,
 } from '../types/AgentResponseDTO';
 
+// ── Type Guards ───────────────────────────────────────────────────────────────
+
 export function isTextResponse(r: unknown): r is { type: 'text'; text: string } {
     return !!r && typeof r === 'object'
         && (r as { type?: unknown }).type === 'text'
@@ -25,11 +27,14 @@ export function isTextResponse(r: unknown): r is { type: 'text'; text: string } 
 
 export function isChartResponse(r: unknown): r is ChartResponse {
     if (!r || typeof r !== 'object') return false;
-    const obj = r as { type?: unknown; data?: unknown; chartType?: unknown };
+    const obj = r as { type?: unknown; payload?: unknown };
     if (obj.type !== 'chart') return false;
-    if (!Array.isArray(obj.data) || obj.data.length === 0) return false;
-    if (typeof obj.chartType !== 'string') return false;
-    return ['line', 'bar', 'pie', 'area'].includes(obj.chartType);
+    if (!obj.payload || typeof obj.payload !== 'object') return false;
+    const payload = obj.payload as { chartType?: unknown; data?: unknown };
+    if (typeof payload.chartType !== 'string') return false;
+    if (!['bar', 'line', 'pie', 'area'].includes(payload.chartType)) return false;
+    if (!Array.isArray(payload.data) || payload.data.length === 0) return false;
+    return true;
 }
 
 export function isMapResponse(r: unknown): r is MapResponse {
@@ -38,6 +43,8 @@ export function isMapResponse(r: unknown): r is MapResponse {
     if (obj.type !== 'map') return false;
     return Array.isArray(obj.pins) && obj.pins.length > 0;
 }
+
+// ── AgentFallback ─────────────────────────────────────────────────────────────
 
 interface FallbackProps {
     message?: string;
@@ -64,6 +71,7 @@ export const AgentFallback: React.FC<FallbackProps> = ({ message }) => (
     </div>
 );
 
+// ── InlineChart ───────────────────────────────────────────────────────────────
 
 const CHART_PALETTE = ['#C97B4B', '#2D2926', '#9A8A7C', '#4CAF7D', '#B8A99A', '#EDE9E3'];
 
@@ -72,7 +80,12 @@ interface InlineChartProps {
 }
 
 export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
-    const { chartType, title, data } = response;
+    const { chartType, title, data, dataKeys } = response.payload;
+
+    // Determină seriile de afișat — single sau multi-series
+    const seriesKeys = dataKeys && dataKeys.length > 0
+        ? dataKeys
+        : ['value'];
 
     const tooltipStyle = {
         contentStyle: {
@@ -96,7 +109,11 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                         <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
-                        <Line type="monotone" dataKey="value" stroke="#C97B4B" strokeWidth={2} dot={{ r: 3, fill: '#C97B4B' }} activeDot={{ r: 5 }} />
+                        {seriesKeys.map((key, idx) => (
+                            <Line key={key} type="monotone" dataKey={key}
+                                  stroke={CHART_PALETTE[idx % CHART_PALETTE.length]}
+                                  strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        ))}
                     </LineChart>
                 );
 
@@ -107,7 +124,11 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                         <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
-                        <Bar dataKey="value" fill="#C97B4B" radius={[4, 4, 0, 0]} />
+                        {seriesKeys.map((key, idx) => (
+                            <Bar key={key} dataKey={key}
+                                 fill={CHART_PALETTE[idx % CHART_PALETTE.length]}
+                                 radius={[4, 4, 0, 0]} />
+                        ))}
                     </BarChart>
                 );
 
@@ -115,16 +136,23 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                 return (
                     <AreaChart data={data as ChartDataPoint[]} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                         <defs>
-                            <linearGradient id="inlineChartGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#C97B4B" stopOpacity={0.35} />
-                                <stop offset="95%" stopColor="#C97B4B" stopOpacity={0} />
-                            </linearGradient>
+                            {seriesKeys.map((key, idx) => (
+                                <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={CHART_PALETTE[idx % CHART_PALETTE.length]} stopOpacity={0.35} />
+                                    <stop offset="95%" stopColor={CHART_PALETTE[idx % CHART_PALETTE.length]} stopOpacity={0} />
+                                </linearGradient>
+                            ))}
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
                         <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
-                        <Area type="monotone" dataKey="value" stroke="#C97B4B" strokeWidth={2} fill="url(#inlineChartGradient)" />
+                        {seriesKeys.map((key, idx) => (
+                            <Area key={key} type="monotone" dataKey={key}
+                                  stroke={CHART_PALETTE[idx % CHART_PALETTE.length]}
+                                  strokeWidth={2}
+                                  fill={`url(#gradient-${key})`} />
+                        ))}
                     </AreaChart>
                 );
 
@@ -132,7 +160,8 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                 return (
                     <PieChart>
                         <Tooltip {...tooltipStyle} />
-                        <Pie data={data as ChartDataPoint[]} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={28}>
+                        <Pie data={data as ChartDataPoint[]} dataKey={seriesKeys[0] ?? 'value'}
+                             nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={28}>
                             {(data as ChartDataPoint[]).map((_, idx) => (
                                 <Cell key={`cell-${idx}`} fill={CHART_PALETTE[idx % CHART_PALETTE.length]} />
                             ))}
@@ -154,17 +183,26 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
             }}
         >
             {title && (
-                <div
-                    style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: 'var(--color-ink)',
-                        padding: '0 6px 6px',
-                        borderBottom: '1px solid var(--color-border)',
-                        marginBottom: 4,
-                    }}
-                >
+                <div style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: 'var(--color-ink)',
+                    padding: '0 6px 6px',
+                    borderBottom: '1px solid var(--color-border)',
+                    marginBottom: 4,
+                }}>
                     {title}
+                </div>
+            )}
+            {/* Mesajul explicativ de la backend (opțional) */}
+            {response.message && (
+                <div style={{
+                    fontSize: 11,
+                    color: 'var(--color-muted)',
+                    padding: '0 6px 6px',
+                    fontStyle: 'italic',
+                }}>
+                    {response.message}
                 </div>
             )}
             <div style={{ width: '100%', height: 160 }}>
@@ -176,6 +214,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
     );
 };
 
+// ── InlineMap ─────────────────────────────────────────────────────────────────
 
 interface InlineMapProps {
     response: MapResponse;
@@ -205,44 +244,36 @@ export const InlineMap: React.FC<InlineMapProps> = ({ response }) => {
 
     if (!isLoaded) {
         return (
-            <div
-                data-testid="inline-map-loading"
-                style={{
-                    padding: '8px 11px',
-                    fontSize: 11.5,
-                    color: 'var(--color-muted)',
-                    background: '#fff',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 9,
-                }}
-            >
+            <div data-testid="inline-map-loading" style={{
+                padding: '8px 11px',
+                fontSize: 11.5,
+                color: 'var(--color-muted)',
+                background: '#fff',
+                border: '1px solid var(--color-border)',
+                borderRadius: 9,
+            }}>
                 Se încarcă harta...
             </div>
         );
     }
 
     return (
-        <div
-            data-testid="inline-map"
-            style={{
-                width: '100%',
-                background: '#fff',
-                borderRadius: 9,
-                padding: 6,
-                border: '1px solid var(--color-border)',
-            }}
-        >
+        <div data-testid="inline-map" style={{
+            width: '100%',
+            background: '#fff',
+            borderRadius: 9,
+            padding: 6,
+            border: '1px solid var(--color-border)',
+        }}>
             {title && (
-                <div
-                    style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: 'var(--color-ink)',
-                        padding: '2px 4px 6px',
-                        borderBottom: '1px solid var(--color-border)',
-                        marginBottom: 4,
-                    }}
-                >
+                <div style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: 'var(--color-ink)',
+                    padding: '2px 4px 6px',
+                    borderBottom: '1px solid var(--color-border)',
+                    marginBottom: 4,
+                }}>
                     {title}
                 </div>
             )}
@@ -259,11 +290,8 @@ export const InlineMap: React.FC<InlineMapProps> = ({ response }) => {
                     }}
                 >
                     {pins.map((p: MapPin, idx: number) => (
-                        <Marker
-                            key={`pin-${idx}`}
-                            position={{ lat: p.lat, lng: p.lng }}
-                            onClick={() => setOpenIdx(idx)}
-                        />
+                        <Marker key={`pin-${idx}`} position={{ lat: p.lat, lng: p.lng }}
+                                onClick={() => setOpenIdx(idx)} />
                     ))}
                     {openIdx !== null && pins[openIdx] && (
                         <InfoWindow
@@ -286,35 +314,38 @@ export const InlineMap: React.FC<InlineMapProps> = ({ response }) => {
     );
 };
 
+// ── AgentResponseRenderer ─────────────────────────────────────────────────────
+
 interface AgentResponseRendererProps {
     response: AgentResponse | null | undefined;
 }
 
 const AgentResponseRenderer: React.FC<AgentResponseRendererProps> = ({ response }) => {
-    // Lipsă date complet
     if (!response) {
         return <AgentFallback message="Răspunsul agentului este gol sau lipsește." />;
     }
 
-    // Discriminare pe câmpul `type`
     switch ((response as { type?: string }).type) {
-        case 'text':
+        case 'text': {
             if (!isTextResponse(response)) {
                 return <AgentFallback message="Răspuns text malformat." />;
             }
             return <span data-testid="agent-text">{response.text}</span>;
+        }
 
-        case 'chart':
+        case 'chart': {
             if (!isChartResponse(response)) {
                 return <AgentFallback message="Date insuficiente pentru afișarea graficului." />;
             }
             return <InlineChart response={response} />;
+        }
 
-        case 'map':
+        case 'map': {
             if (!isMapResponse(response)) {
                 return <AgentFallback message="Date insuficiente pentru afișarea hărții." />;
             }
             return <InlineMap response={response} />;
+        }
 
         default:
             return <AgentFallback message="Tip de răspuns necunoscut." />;
