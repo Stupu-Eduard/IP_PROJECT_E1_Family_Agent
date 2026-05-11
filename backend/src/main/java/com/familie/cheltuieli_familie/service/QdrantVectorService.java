@@ -132,10 +132,10 @@ public class QdrantVectorService {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of("value", category)));
+            conditions.add(Map.of("key", KEY_CATEGORY, QDRANT_MATCH, Map.of(QDRANT_VALUE, category)));
         }
         if (person != null && !person.isEmpty()) {
-            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of("value", person)));
+            conditions.add(Map.of("key", KEY_PERSON, QDRANT_MATCH, Map.of(QDRANT_VALUE, person)));
         }
         if (from != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("gte", from.toString())));
@@ -204,7 +204,7 @@ public class QdrantVectorService {
         body.put("limit", 1);
         body.put("with_vector", false);
         body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))));
+        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, QDRANT_MATCH, Map.of(QDRANT_VALUE, id.toString())))));
 
         String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
         HttpHeaders headers = new HttpHeaders();
