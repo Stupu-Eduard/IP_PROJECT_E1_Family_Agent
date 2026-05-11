@@ -5,7 +5,6 @@ import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
 import com.familie.cheltuieli_familie.model.ChartQueryResult;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

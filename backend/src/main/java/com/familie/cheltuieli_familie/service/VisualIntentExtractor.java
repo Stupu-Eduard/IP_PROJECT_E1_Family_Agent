@@ -31,8 +31,8 @@ public class VisualIntentExtractor {
     private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("text", "chart");
     private static final Set<String> ALLOWED_CHART_TYPES = Set.of("bar", "pie", "line");
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("sum", "count", "avg");
-    private static final Set<String> ALLOWED_GROUP_BY = Set.of(DEFAULT_GROUP_BY, "person", "month", "year", "location");
-    private static final Set<String> ALLOWED_SERIES_BY = Set.of(DEFAULT_SERIES_BY, "category");
+    private static final Set<String> ALLOWED_GROUP_BY = Set.of(DEFAULT_GROUP_BY, DEFAULT_SERIES_BY, "month", "year", "location");
+    private static final Set<String> ALLOWED_SERIES_BY = Set.of(DEFAULT_SERIES_BY, DEFAULT_GROUP_BY);
 
     interface IntentAssistant {
         @SystemMessage("""

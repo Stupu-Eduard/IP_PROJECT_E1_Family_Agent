@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
