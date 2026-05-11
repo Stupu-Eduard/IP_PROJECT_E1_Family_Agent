@@ -66,13 +66,4 @@ public class RagRetrievalService {
         return context.toString();
     }
 
-    private String formatExpenseForScoring(EmbeddedExpense expense) {
-        return String.format("Categorie: %s, Sumă: %s, Locație: %s, Persoană: %s, Dată: %s, Detalii: %s",
-                expense.getCategory(),
-                expense.getAmount(),
-                expense.getLocation(),
-                expense.getPerson(),
-                expense.getDate(),
-                expense.getRawInput());
-    }
 }
