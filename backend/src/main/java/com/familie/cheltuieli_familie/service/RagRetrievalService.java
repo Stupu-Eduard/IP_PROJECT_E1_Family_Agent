@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -47,12 +46,12 @@ public class RagRetrievalService {
         List<EmbeddedExpense> topResults = results.stream()
                 .sorted(Comparator.comparingDouble(EmbeddedExpense::getScore).reversed())
                 .limit(5)
-                .collect(Collectors.toList());
+                .toList();
 
         StringBuilder context = new StringBuilder("Cheltuieli anterioare relevante:\n");
         for (int i = 0; i < topResults.size(); i++) {
             EmbeddedExpense expense = topResults.get(i);
-            context.append(String.format("%d. %s: %.2f RON la %s pe data de %s (Persoană: %s, Scor: %.4f)\n",
+            context.append(String.format("%d. %s: %.2f RON la %s pe data de %s (Persoană: %s, Scor: %.4f)%n",
                     i + 1,
                     expense.getCategory(),
                     expense.getAmount(),
