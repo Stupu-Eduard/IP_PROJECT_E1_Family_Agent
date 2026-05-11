@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,7 @@ public final class DotEnvLoader {
     public static Map<String, String> load() {
         for (Path candidate : CANDIDATES) {
             Map<String, String> envMap = tryLoad(candidate);
-            if (envMap != null) {
+            if (!envMap.isEmpty()) {
                 return envMap;
             }
         }
@@ -31,7 +32,7 @@ public final class DotEnvLoader {
 
     private static Map<String, String> tryLoad(Path path) {
         if (!Files.exists(path)) {
-            return null;
+            return Collections.emptyMap();
         }
         try {
             Map<String, String> envMap = new HashMap<>();
@@ -40,7 +41,7 @@ public final class DotEnvLoader {
             }
             return envMap;
         } catch (IOException e) {
-            return null;
+            return Collections.emptyMap();
         }
     }
 
