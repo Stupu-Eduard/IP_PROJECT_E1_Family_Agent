@@ -29,17 +29,16 @@ export default function Login() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // ── Mock JWT (NEATINS) ────────────────────────────────────────────────────
-  const createMockJwt = () => {
+  const createMockJwt = (userName: string) => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const assignedRole = email.toLowerCase() === 'copil@example.com' ? 'Child' : 'Parent';
     const payload = btoa(JSON.stringify({
       sub: email, role: assignedRole,
+      name: userName,
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     }));
     return `${header}.${payload}.mock_signature`;
   };
-
   // ── handleLogin (NEATINS) ─────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +46,8 @@ export default function Login() {
     try {
       await loginSchema.validate({ email, password });
       setIsLoading(true);
-      await loginWithEmailPassword(email, password);
-      login(createMockJwt());
+      const response = await loginWithEmailPassword(email, password);
+      login(createMockJwt(response?.userName || ''));
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       if (err instanceof yup.ValidationError) setError(err.message);

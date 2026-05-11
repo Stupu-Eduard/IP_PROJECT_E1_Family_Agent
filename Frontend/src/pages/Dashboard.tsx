@@ -194,7 +194,7 @@ export default function Dashboard() {
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split('.')[1]))
-            setUserName(payload.sub || payload.name || payload.userName || '')
+            setUserName(payload.name || payload.sub || '')
           } catch {
             setUserName('')
           }
