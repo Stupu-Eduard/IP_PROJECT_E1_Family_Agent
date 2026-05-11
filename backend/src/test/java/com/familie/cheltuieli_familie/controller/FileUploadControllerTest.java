@@ -37,7 +37,7 @@ class FileUploadControllerTest {
     private ExtractionService extractionService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testUploadPdf() throws Exception {

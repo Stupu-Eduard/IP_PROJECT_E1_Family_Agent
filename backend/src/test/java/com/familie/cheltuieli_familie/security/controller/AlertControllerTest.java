@@ -28,7 +28,7 @@ class AlertControllerTest {
     private AlertService alertService;
 
     @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testGetAlerts() throws Exception {
