@@ -1,30 +1,27 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.entity.TransactionEntity;
+import com.familie.cheltuieli_familie.entity.ExpenseOCREntity;
 import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
-import com.familie.cheltuieli_familie.repository.TransactionRepository;
-import com.familie.cheltuieli_familie.validation.TransactionValidator;
-import com.familie.cheltuieli_familie.validation.ValidationException;
+import com.familie.cheltuieli_familie.repository.ExpenseOCRRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class StorageManager implements StorageService {
 
-    private final TransactionRepository transactionRepository;
-    private final TransactionValidator validator;
+    private final ExpenseOCRRepository expenseRepository;
 
-    public StorageManager(TransactionRepository transactionRepository, TransactionValidator validator) {
-        this.transactionRepository = transactionRepository;
-        this.validator = validator;
+    public StorageManager(ExpenseOCRRepository expenseRepository) {
+        this.expenseRepository = expenseRepository;
     }
 
     @Override
     public StorageResult save(List<Transaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
-            System.out.println("No transactions received for storage.");
             return new StorageResult(0, 0, 0);
         }
 
@@ -33,30 +30,44 @@ public class StorageManager implements StorageService {
 
         for (Transaction transaction : transactions) {
             try {
-                validator.validate(transaction);
+                if (!isValid(transaction)) {
+                    failed++;
+                    continue;
+                }
 
-                TransactionEntity entity = new TransactionEntity(
-                        transaction.getDate(),
-                        transaction.getAmount(),
+                ExpenseOCREntity expense = new ExpenseOCREntity(
+                        BigDecimal.valueOf(transaction.getAmount()),
                         transaction.getDescription(),
-                        transaction.getType(),
-                        transaction.getCurrency()
+                        transaction.getDate() != null ? transaction.getDate().atStartOfDay() : LocalDateTime.now(),
+                        transaction.getCurrency() != null ? transaction.getCurrency() : "RON",
+                        transaction.getType() != null ? transaction.getType() : "EXPENSE",
+                        "OCR"
                 );
 
-                transactionRepository.save(entity);
+                expenseRepository.save(expense);
                 saved++;
 
-                System.out.println("Saved transaction: " + transaction);
-
-            } catch (ValidationException e) {
-                failed++;
-                System.out.println("Validation error: " + e.getMessage());
             } catch (Exception e) {
                 failed++;
-                System.out.println("Unexpected storage error: " + e.getMessage());
             }
         }
 
         return new StorageResult(transactions.size(), saved, failed);
+    }
+
+    private boolean isValid(Transaction transaction) {
+        if (transaction == null) {
+            return false;
+        }
+
+        if (transaction.getAmount() <= 0) {
+            return false;
+        }
+
+        if (transaction.getDescription() == null || transaction.getDescription().trim().isEmpty()) {
+            return false;
+        }
+
+        return true;
     }
 }

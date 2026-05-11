@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import lombok.extern.slf4j.Slf4j;
 import nu.pattern.OpenCV;
 import org.opencv.core.*;
 import org.opencv.imgproc.CLAHE;
@@ -12,17 +11,15 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.ByteArrayInputStream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 @Service
 public class OCRPreProcessor {
     static {
@@ -118,33 +115,17 @@ public class OCRPreProcessor {
         return result;
     }
 
-    private File createSecureTempFile(String prefix, String suffix) throws IOException {
-        Path projectRoot = java.nio.file.Paths.get(System.getProperty("user.dir"));
-        Path secureDir = Files.createTempDirectory(projectRoot, "secure-temp");
-        Path secureFile = Files.createTempFile(secureDir, prefix, suffix);
-        return secureFile.toFile();
-    }
-
     public List<BufferedImage> processPdf(File pdfFile, String bank) throws Exception {
         try (PDDocument document = Loader.loadPDF(pdfFile)) {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             List<BufferedImage> results = new ArrayList<>();
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-                File tempFile = createSecureTempFile("page_" + page, ".png");
+                Path tempPath = Files.createTempFile("page_" + page, ".png");
+                File tempFile = tempPath.toFile();
                 javax.imageio.ImageIO.write(image, "png", tempFile);
                 BufferedImage processed = processImage(tempFile, bank);
-                File parentDir = tempFile.getParentFile();
-                boolean isFileDeleted = tempFile.delete();
-                if (!isFileDeleted) {
-                    log.warn("Atenție: Nu s-a putut șterge fișierul temporar {}", tempFile.getAbsolutePath());
-                }
-                if(parentDir != null){
-                    boolean isDirDeleted = parentDir.delete();
-                    if (!isDirDeleted) {
-                        log.warn("Atenție: Nu s-a putut șterge directorul temporar {}", parentDir.getAbsolutePath());
-                    }
-                }
+                Files.deleteIfExists(tempPath);
                 results.add(processed);
                 System.out.println("Preprocessed page: " + (page + 1));
             }

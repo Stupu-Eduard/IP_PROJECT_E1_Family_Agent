@@ -1,37 +1,41 @@
 package com.familie.cheltuieli_familie.model;
 
-public class Transaction {
-    private String date;
-    private double amount;
+import java.io.Serializable;
+import java.time.LocalDate;
+
+public class Transaction implements Serializable {
+
+    private LocalDate date;
     private String description;
-    private String type;
-    private String currency;
+    private double amount;
+    private String currency = "RON";
+    private String type = "EXPENSE";
 
     public Transaction() {
     }
 
-    public Transaction(String date, double amount, String description, String type, String currency) {
+    public Transaction(LocalDate date, String description, double amount) {
         this.date = date;
-        this.amount = amount;
         this.description = description;
-        this.type = type;
-        this.currency = currency;
+        this.amount = amount;
+        this.currency = "RON";
+        this.type = "EXPENSE";
     }
 
-    public String getDate() {
+    public Transaction(LocalDate date, String description, double amount, String currency, String type) {
+        this.date = date;
+        this.description = description;
+        this.amount = amount;
+        this.currency = currency;
+        this.type = type;
+    }
+
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(String date) {
+    public void setDate(LocalDate date) {
         this.date = date;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public void setAmount(double amount) {
-        this.amount = amount;
     }
 
     public String getDescription() {
@@ -42,12 +46,12 @@ public class Transaction {
         this.description = description;
     }
 
-    public String getType() {
-        return type;
+    public double getAmount() {
+        return amount;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setAmount(double amount) {
+        this.amount = amount;
     }
 
     public String getCurrency() {
@@ -58,10 +62,23 @@ public class Transaction {
         this.currency = currency;
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+
     @Override
     public String toString() {
-        return "Transaction{" + "data este '" + date + '\'' + ", suma este " + amount +
-                ", description='" + description + '\'' + ", type='" + type + '\'' +
-                ", currency='" + currency + '\'' + '}';
+        return "Transaction{" +
+                "date=" + date +
+                ", description='" + description + '\'' +
+                ", amount=" + amount +
+                ", currency='" + currency + '\'' +
+                ", type='" + type + '\'' +
+                '}';
     }
 }

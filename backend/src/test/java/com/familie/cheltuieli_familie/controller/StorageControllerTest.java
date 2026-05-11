@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
@@ -24,7 +25,13 @@ class StorageControllerTest {
     @Test
     void saveTransactionsShouldReturnStorageResult() throws Exception {
         List<Transaction> transactions = List.of(
-                new Transaction("2025-03-10", 100.5, "Lidl", "expense", "RON")
+                new Transaction(
+                        LocalDate.of(2025, 3, 10),
+                        "Lidl",
+                        100.5,
+                        "RON",
+                        "EXPENSE"
+                )
         );
 
         StorageResult result = new StorageResult(1, 1, 0);
@@ -39,7 +46,7 @@ class StorageControllerTest {
                                            "date": "2025-03-10",
                                            "amount": 100.5,
                                            "description": "Lidl",
-                                           "type": "expense",
+                                           "type": "EXPENSE",
                                            "currency": "RON"
                                         }
                                     ]

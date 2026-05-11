@@ -1,79 +1,53 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.io.File;
-import java.util.Collections;
+import java.time.LocalDate;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class ExtractionPipelineServiceTest {
 
-    private ExtractionPipelineService pipelineService;
-    private TextBasedPdfExtractor textExtractor;
-    private BankOcrService ocrProcessor;
-    private BankStatementParser bankParser;
-    private StorageService storageService;
-
-    private ExtractionPipelineService createService(
-            TextBasedPdfExtractor textExtractor,
-            BankOcrService ocrProcessor,
-            BankStatementParser bankParser,
-            StorageService storageService) {
-        return new ExtractionPipelineService(textExtractor, ocrProcessor, bankParser, storageService);
-    }
-
-    @BeforeEach
-    void setUp() {
-        textExtractor = Mockito.mock(TextBasedPdfExtractor.class);
-        ocrProcessor = Mockito.mock(BankOcrService.class);
-        bankParser = Mockito.mock(BankStatementParser.class);
-        storageService = Mockito.mock(StorageService.class);
-
-        pipelineService = createService(textExtractor, ocrProcessor, bankParser, storageService);
-    }
-
     @Test
-    void processDocument_ShouldProcessDigitalDocument_WhenTextBased() throws Exception {
-        File file = new File("test.pdf");
-        String bank = "revolut";
+    void processDocumentShouldExtractTextAndParseTransactions() throws Exception {
+        TextBasedPdfExtractor textExtractor = mock(TextBasedPdfExtractor.class);
+        BankStatementParser parser = new BankStatementParser();
 
-        when(textExtractor.isTextBased(file)).thenReturn(true);
-        when(textExtractor.extractText(file)).thenReturn("01/01/2026 Cumparaturi Mega 150.50");
-        when(bankParser.parseText("01/01/2026 Cumparaturi Mega 150.50"))
-                .thenReturn(Collections.singletonList(new Transaction("2026-01-01", 150.5, "Cumparaturi Mega", "expense", "RON")));
-        when(storageService.save(any(List.class))).thenReturn(new StorageResult());
+        ExtractionPipelineService service = new ExtractionPipelineService(
+                textExtractor,
+                parser
+        );
 
-        List<Transaction> result = pipelineService.processDocument(file, bank);
+        File fakePdf = File.createTempFile("fake-text-pdf-", ".pdf");
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("2026-01-01", result.get(0).getDate());
-    }
+        when(textExtractor.extractText(fakePdf)).thenReturn("""
+                10/03/2025 Lidl 100.50
+                11/03/2025 Netflix 59.99
+                """);
 
-    @Test
-    void processDocument_ShouldProcessScannedDocument_WhenNotTextBased() throws Exception {
-        File file = new File("test.pdf");
-        String bank = "revolut";
+        List<Transaction> transactions = service.processDocument(fakePdf, "unknown");
 
-        when(textExtractor.isTextBased(file)).thenReturn(false);
-        when(ocrProcessor.extractText(file, bank)).thenReturn("01/01/2026 Cumparaturi Mega 150.50");
-        when(bankParser.parseText("01/01/2026 Cumparaturi Mega 150.50"))
-                .thenReturn(Collections.singletonList(new Transaction("2026-01-01", 150.5, "Cumparaturi Mega", "expense", "RON")));
-        when(storageService.save(any(List.class))).thenReturn(new StorageResult());
+        assertNotNull(transactions);
+        assertEquals(2, transactions.size());
 
-        List<Transaction> result = pipelineService.processDocument(file, bank);
+        assertEquals(LocalDate.of(2025, 3, 10), transactions.get(0).getDate());
+        assertEquals("Lidl", transactions.get(0).getDescription());
+        assertEquals(100.50, transactions.get(0).getAmount());
+        assertEquals("RON", transactions.get(0).getCurrency());
+        assertEquals("EXPENSE", transactions.get(0).getType());
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("2026-01-01", result.get(0).getDate());
+        assertEquals(LocalDate.of(2025, 3, 11), transactions.get(1).getDate());
+        assertEquals("Netflix", transactions.get(1).getDescription());
+        assertEquals(59.99, transactions.get(1).getAmount());
+        assertEquals("RON", transactions.get(1).getCurrency());
+        assertEquals("EXPENSE", transactions.get(1).getType());
+
+        verify(textExtractor, times(1)).extractText(fakePdf);
+
+        fakePdf.delete();
     }
 }

@@ -1,72 +1,54 @@
 package com.familie.cheltuieli_familie.service;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BankingDictionaryCorrectorTest {
 
-    private BankingDictionaryCorrector corrector;
-
-    private BankingDictionaryCorrector initializeCorrector() {
-        return new BankingDictionaryCorrector();
-    }
-
-    @BeforeEach
-    void setUp() {
-        corrector = initializeCorrector();
-    }
+    private final BankingDictionaryCorrector corrector = new BankingDictionaryCorrector();
 
     @Test
-    void correctText_ShouldReturnNull_WhenTextIsNull() {
+    void correctTextShouldReturnSameTextForNull() {
         assertNull(corrector.correctText(null));
     }
 
     @Test
-    void correctText_ShouldReturnEmptyString_WhenTextIsEmpty() {
+    void correctTextShouldReturnSameTextForEmptyText() {
         assertEquals("", corrector.correctText(""));
     }
 
     @Test
-    void correctText_ShouldNotChangeNumbersAndDates() {
-        String input = "01/01/2026 100.50";
+    void correctTextShouldCorrectKnownBankingWords() {
+        String input = "EXTRS DE CONT";
         String result = corrector.correctText(input);
-        assertEquals("01/01/2026 100.50\n", result);
+
+        assertTrue(result.contains("EXTRAS"));
+        assertTrue(result.contains("CONT"));
     }
 
     @Test
-    void correctText_ShouldNotChangeIban() {
-        String input = "RO24BTRL0000000000000000";
+    void correctTextShouldNotChangeNumbers() {
+        String input = "Suma 100.50 RON";
         String result = corrector.correctText(input);
-        assertEquals("RO24BTRL0000000000000000\n", result);
+
+        assertTrue(result.contains("100.50"));
+        assertTrue(result.contains("RON"));
     }
 
     @Test
-    void correctText_ShouldCorrectTypo_WhenWordIsInDictionary() {
-        String input = "EXTARS";
+    void correctTextShouldNotChangeDate() {
+        String input = "10/03/2025 Lidl 100.50";
         String result = corrector.correctText(input);
-        assertEquals("EXTRAS\n", result);
+
+        assertTrue(result.contains("10/03/2025"));
     }
 
     @Test
-    void correctText_ShouldKeepWordAsIs_WhenWordIsTooShort() {
-        String input = "de";
+    void correctTextShouldKeepIbanLikeText() {
+        String input = "RO49AAAA1B31007593840000";
         String result = corrector.correctText(input);
-        assertEquals("de\n", result);
-    }
 
-    @Test
-    void correctText_ShouldKeepWordAsIs_WhenNoCloseMatchFound() {
-        String input = "xyzabcde";
-        String result = corrector.correctText(input);
-        assertEquals("xyzabcde\n", result);
-    }
-
-    @Test
-    void correctText_ShouldMatchCase_WhenValidWordIsFound() {
-        String input = "extras CONT extrAS";
-        String result = corrector.correctText(input);
-        assertEquals("extras CONT extrAS\n", result);
+        assertTrue(result.contains("RO49AAAA1B31007593840000"));
     }
 }

@@ -1,83 +1,162 @@
 package com.familie.cheltuieli_familie.validation;
 
 import com.familie.cheltuieli_familie.model.Transaction;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.time.LocalDate;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class TransactionValidatorTest {
 
-    private TransactionValidator validator;
+    private final TransactionValidator validator = new TransactionValidator();
 
-    private TransactionValidator createValidator() {
-        return new TransactionValidator();
-    }
-
-    @BeforeEach
-    void setUp() {
-        validator = createValidator();
+    @Test
+    void validateShouldAcceptValidTransaction() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10), // Data
+                "Lidl",                    // Descriere
+                100.50,                    // Suma
+                "RON",                     // Moneda
+                "EXPENSE"                  // Tipul
+        );
+        assertDoesNotThrow(() -> validator.validate(transaction));
     }
 
     @Test
-    void validate_ShouldThrowException_WhenTransactionIsNull() {
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(null);
-        });
+    void validateShouldRejectNullTransaction() {
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(null)
+        );
+        assertEquals("Transaction este null.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldThrowException_WhenDateIsBlank() {
-        Transaction transaction = new Transaction(null, 100.0, "Description", "expense", "RON");
-
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(transaction);
-        });
+    void validateShouldRejectMissingDate() {
+        Transaction transaction = new Transaction(
+                null,                      // Data lipseste
+                "Lidl",
+                100.50,
+                "RON",
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction date lipseste.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldThrowException_WhenAmountIsZero() {
-        Transaction transaction = new Transaction("2026-01-01", 0.0, "Description", "expense", "RON");
-
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(transaction);
-        });
+    void validateShouldRejectZeroAmount() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "Lidl",
+                0.0,                       // Suma este zero
+                "RON",
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction amount nu poate fii 0.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldThrowException_WhenDescriptionIsBlank() {
-        Transaction transaction = new Transaction("2026-01-01", 100.0, "", "expense", "RON");
-
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(transaction);
-        });
+    void validateShouldRejectNullDescription() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                null,                      // Descrierea lipseste
+                100.50,
+                "RON",
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction description lipseste.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldThrowException_WhenTypeIsBlank() {
-        Transaction transaction = new Transaction("2026-01-01", 100.0, "Description", "", "RON");
-
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(transaction);
-        });
+    void validateShouldRejectBlankDescription() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "   ",                     // Descrierea e spatiu gol
+                100.50,
+                "RON",
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction description lipseste.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldThrowException_WhenCurrencyIsBlank() {
-        Transaction transaction = new Transaction("2026-01-01", 100.0, "Description", "expense", "");
-
-        assertThrows(ValidationException.class, () -> {
-            validator.validate(transaction);
-        });
+    void validateShouldRejectMissingType() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "Lidl",
+                100.50,
+                "RON",
+                null                       // Tipul lipseste
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction type lipseste.", exception.getMessage());
     }
 
     @Test
-    void validate_ShouldNotThrowException_WhenTransactionIsValid() {
-        Transaction transaction = new Transaction("2026-01-01", 100.0, "Description", "expense", "RON");
+    void validateShouldRejectBlankType() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "Lidl",
+                100.50,
+                "RON",
+                "   "                      // Tipul e spatiu gol
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction type lipseste.", exception.getMessage());
+    }
 
-        assertDoesNotThrow(() -> {
-            validator.validate(transaction);
-        });
+    @Test
+    void validateShouldRejectMissingCurrency() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "Lidl",
+                100.50,
+                null,                      // Moneda lipseste
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction currency lipseste.", exception.getMessage());
+    }
+
+    @Test
+    void validateShouldRejectBlankCurrency() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2026, 3, 10),
+                "Lidl",
+                100.50,
+                "   ",                     // Moneda e spatiu gol
+                "EXPENSE"
+        );
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> validator.validate(transaction)
+        );
+        assertEquals("Transaction currency lipseste.", exception.getMessage());
     }
 }

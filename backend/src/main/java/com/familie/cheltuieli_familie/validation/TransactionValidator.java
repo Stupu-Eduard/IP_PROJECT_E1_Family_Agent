@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.validation;
 
 import com.familie.cheltuieli_familie.model.Transaction;
-import com.familie.cheltuieli_familie.validation.ValidationException;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -12,7 +11,7 @@ public class TransactionValidator {
             throw new ValidationException("Transaction este null.");
         }
 
-        if (isBlank(transaction.getDate())) {
+        if (transaction.getDate() == null) {
             throw new ValidationException("Transaction date lipseste.");
         }
 
