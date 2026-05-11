@@ -59,4 +59,14 @@ public class OcrService {
             throw new AiServiceException("Failed to process PDF for OCR", e);
         }
     }
+    public String extractTextFromImage(File imageFile) {
+        try {
+            String text = tesseract.doOCR(imageFile);
+            log.info("OCR completed for image: {}", imageFile.getName());
+            return text;
+        } catch (TesseractException e) {
+            log.error("OCR failed for image", e);
+            throw new AiServiceException("Failed to process image for OCR", e);
+        }
+    }
 }
