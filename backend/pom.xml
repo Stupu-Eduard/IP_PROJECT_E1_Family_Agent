@@ -208,7 +208,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>
+                    <argLine>@{argLine}
                         -XX:+EnableDynamicAgentLoading
                         -Dmockito.mockmaker=subclass
                         --add-opens java.base/java.lang=ALL-UNNAMED
