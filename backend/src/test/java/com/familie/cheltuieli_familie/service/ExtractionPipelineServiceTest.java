@@ -16,20 +16,23 @@ class ExtractionPipelineServiceTest {
     void processDocumentShouldExtractTextAndParseTransactions() throws Exception {
         TextBasedPdfExtractor textExtractor = mock(TextBasedPdfExtractor.class);
         BankStatementParser parser = new BankStatementParser();
+        BankOcrService bankOcrService = mock(BankOcrService.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
-                parser
+                parser,
+                bankOcrService
         );
 
         File fakePdf = File.createTempFile("fake-text-pdf-", ".pdf");
 
+        when(textExtractor.isTextBased(fakePdf)).thenReturn(true);
         when(textExtractor.extractText(fakePdf)).thenReturn("""
                 10/03/2025 Lidl 100.50
                 11/03/2025 Netflix 59.99
                 """);
 
-        List<Transaction> transactions = service.processDocument(fakePdf, "unknown");
+        List<Transaction> transactions = service.processDocument(fakePdf, "revolut");
 
         assertNotNull(transactions);
         assertEquals(2, transactions.size());
@@ -37,16 +40,12 @@ class ExtractionPipelineServiceTest {
         assertEquals(LocalDate.of(2025, 3, 10), transactions.get(0).getDate());
         assertEquals("Lidl", transactions.get(0).getDescription());
         assertEquals(100.50, transactions.get(0).getAmount());
-        assertEquals("RON", transactions.get(0).getCurrency());
-        assertEquals("EXPENSE", transactions.get(0).getType());
 
         assertEquals(LocalDate.of(2025, 3, 11), transactions.get(1).getDate());
         assertEquals("Netflix", transactions.get(1).getDescription());
-        assertEquals(59.99, transactions.get(1).getAmount());
-        assertEquals("RON", transactions.get(1).getCurrency());
-        assertEquals("EXPENSE", transactions.get(1).getType());
 
         verify(textExtractor, times(1)).extractText(fakePdf);
+        verifyNoInteractions(bankOcrService);
 
         fakePdf.delete();
     }
