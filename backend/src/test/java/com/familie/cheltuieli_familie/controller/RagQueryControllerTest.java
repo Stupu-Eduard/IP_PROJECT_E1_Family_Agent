@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
@@ -27,7 +28,7 @@ class RagQueryControllerTest {
     private RagRetrievalService ragRetrievalService;
 
     @MockBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testRagQuery() throws Exception {

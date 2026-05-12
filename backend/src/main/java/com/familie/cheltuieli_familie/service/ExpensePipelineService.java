@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.exception.PipelineException;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;

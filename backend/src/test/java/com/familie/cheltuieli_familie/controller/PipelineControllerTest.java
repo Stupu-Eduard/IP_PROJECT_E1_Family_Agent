@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -28,7 +29,7 @@ class PipelineControllerTest {
     private ExpensePipelineService pipelineService;
 
     @MockBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testProcess() throws Exception {

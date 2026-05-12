@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -44,6 +45,9 @@ class GlobalExceptionHandlerTest {
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
     @MockBean
     private com.familie.cheltuieli_familie.repository.UserSessionRepository userSessionRepository;
+
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testAmountNotFoundException() throws Exception {
