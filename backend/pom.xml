@@ -9,7 +9,7 @@
         <relativePath/>
     </parent>
     <groupId>com.proiect</groupId>
-    <artifactId>family-agent</artifactId>
+    <artifactId>cheltuieli-familie</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>family-agent</name>
     <description>Family Agent Project</description>
