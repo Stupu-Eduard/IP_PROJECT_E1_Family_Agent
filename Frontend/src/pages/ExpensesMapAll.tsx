@@ -56,9 +56,41 @@ const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
   }
 }
 
+import { useAuthStore } from '../store/authStore';
+
 export default function ExpensesMapAll() {
   const navigate = useNavigate();
   const location = useLocation();
+  const token = useAuthStore((state) => state.token);
+
+  // --- STATE PENTRU LOCAȚIE LIVE (THE PIPE) ---
+  const [liveLocation, setLiveLocation] = useState<{ lat: number, lng: number, isRestricted?: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    console.log('📡 HARTA LIVE: Se inițializează fluxul live prin THE PIPE...');
+
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
+
+    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
+
+    socket.onopen = () => console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.lat && data.lng) {
+          console.log('📍 HARTA LIVE: Poziție nouă primită:', data);
+          setLiveLocation({ lat: data.lat, lng: data.lng, isRestricted: data.isRestricted });
+        }
+      } catch (e) {
+        console.error('❌ HARTA LIVE: Eroare date WebSocket', e);
+      }
+    };
+
+    return () => socket.close();
+  }, [token]);
+  // --------------------------------------------
 
   const locationState = (location.state || {}) as any;
   const hasInjectedExpenses = Object.prototype.hasOwnProperty.call(locationState, 'expenses');
@@ -419,6 +451,19 @@ export default function ExpensesMapAll() {
                     }}
                     options={{ drawingControl: false, polygonOptions: { fillColor: '#FF0000', fillOpacity: 0.08, strokeWeight: 2 } }}
                   />
+
+                  {/* --- MARKER LOCAȚIE LIVE (COPIL) --- */}
+                  {liveLocation && (
+                    <Marker
+                      position={{ lat: liveLocation.lat, lng: liveLocation.lng }}
+                      icon={{
+                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                        scaledSize: new (window as any).google.maps.Size(40, 40)
+                      }}
+                      title="Locație Live Copil"
+                      zIndex={1000}
+                    />
+                  )}
 
                   <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
                     {(clusterer: any) => (
