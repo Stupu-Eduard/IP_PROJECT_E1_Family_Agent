@@ -15,7 +15,6 @@ import dev.langchain4j.service.UserMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,7 +27,6 @@ import java.util.List;
 public class ExtractionService {
 
     private final ChatLanguageModel chatLanguageModel;
-    private final SyncService syncService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final int MAX_RETRIES = 3;
@@ -125,7 +123,6 @@ public class ExtractionService {
         throw new AiServiceException("Eroare internă la procesarea AI după " + MAX_RETRIES + " încercări. Ultima eroare: " + lastError);
     }
 
-    @Transactional
     public List<ExtractionResponse> process(ExtractionRequest request) {
         String jsonResult = callExtractionWithRetry(request.getRawText());
 
@@ -176,7 +173,18 @@ public class ExtractionService {
             throw new AmountNotFoundException("Nu s-a putut identifica suma unei tranzacții.");
         }
 
-        LocalDate transactionDate = NormalizerUtil.normalizeDate(rawText);
+        LocalDate transactionDate;
+        String dateStr = node.path("transactionDate").asText(null);
+        if (dateStr != null) {
+            try {
+                transactionDate = LocalDate.parse(dateStr);
+            } catch (Exception e) {
+                transactionDate = NormalizerUtil.normalizeDate(rawText);
+            }
+        } else {
+            transactionDate = NormalizerUtil.normalizeDate(rawText);
+        }
+
         String category = node.path("category").asText("Altele");
         String location = node.path("location").asText("Necunoscut");
         String person = node.path("person").asText("Familie");
@@ -197,8 +205,6 @@ public class ExtractionService {
                 .date(transactionDate)
                 .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
                 .build();
-
-        syncService.syncExpense(entity);
 
         return ExtractionResponse.builder()
                 .amount(amount)

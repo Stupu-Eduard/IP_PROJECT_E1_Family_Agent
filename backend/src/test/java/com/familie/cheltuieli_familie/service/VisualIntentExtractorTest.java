@@ -27,7 +27,7 @@ class VisualIntentExtractorTest {
 
     @BeforeEach
     void setUp() {
-        extractor = new VisualIntentExtractor(chatLanguageModel);
+        extractor = new VisualIntentExtractor(chatLanguageModel, 3, new long[]{2000, 4000}, "category", "person");
     }
 
     @Test

@@ -31,6 +31,9 @@ class GlobalExceptionHandlerTest {
     @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
+    @MockBean
+    private com.familie.cheltuieli_familie.service.SyncService syncService;
+
     @Test
     void testAmountNotFoundException() throws Exception {
         when(extractionService.process(any())).thenThrow(new RuntimeException("AI processing failed"));

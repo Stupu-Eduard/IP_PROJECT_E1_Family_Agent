@@ -17,7 +17,22 @@ spring:
 qdrant:
   host: localhost
   port: 6333
+  grpc-port: 6334
   collection-name: expenses
+  collection:
+    vector-size: 2048
+    distance: Cosine
+    index-type: keyword
+
+ocr:
+  language: eng
+
+ai:
+  intent-extraction:
+    max-retries: 3
+    retry-delays-ms: 2000,4000
+    default-group-by: category
+    default-series-by: person
 
 # LangChain4j Config referencing .env values
 langchain4j:
@@ -26,6 +41,8 @@ langchain4j:
       api-key: ${DEEPSEEK_API_KEY}
       base-url: https://api.deepseek.com/v1
       model-name: deepseek-chat
+      temperature: 0.1
+      timeout: 60
   open-router:
     chat-model:
       api-key: ${OPENROUTER_API_KEY}
@@ -35,3 +52,4 @@ langchain4j:
       api-key: ${OPENROUTER_API_KEY}
       base-url: https://openrouter.ai/api/v1
       model-name: nvidia/llama-nemotron-embed-vl-1b-v2:free
+      dimensions: 2048

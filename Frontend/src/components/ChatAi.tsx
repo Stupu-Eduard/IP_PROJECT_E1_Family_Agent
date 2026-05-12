@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, X, MessageSquare } from 'lucide-react';
-import api from '../api/api';
+import { api } from '../services/api';
 import AgentResponseRenderer from './AgentResponseRenderer';
 import type { AgentResponse } from '../types/AgentResponseDTO';
 
@@ -52,7 +52,15 @@ const ChatAI: React.FC = () => {
                 response: data as AgentResponse,
                 sender: 'bot',
             }]);
-        } catch {
+        } catch (error: any) {
+            console.error('Chat API error:', error);
+
+            // 401 este deja gestionat de interceptorul din services/api.ts
+            // (logout + redirect la /login), deci nu facem nimic suplimentar aici.
+            if (error?.response?.status === 401) {
+                // Interceptorul se ocupă de logout/redirect.
+            }
+
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 response: { type: 'text', text: 'Eroare la conectarea cu asistentul. Încearcă din nou.' },

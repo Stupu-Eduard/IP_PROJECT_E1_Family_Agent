@@ -26,7 +26,7 @@ public class ExpenseEntity {
     private String location;
     private String person;
 
-    @Column(name = "transaction_date")
+    @Column(name = "expense_date")
     private LocalDate date;
 
     @Column(name = "raw_input", length = 1000)

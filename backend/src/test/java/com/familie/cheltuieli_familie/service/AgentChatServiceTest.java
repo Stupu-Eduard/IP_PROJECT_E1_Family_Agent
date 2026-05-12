@@ -59,14 +59,14 @@ class AgentChatServiceTest {
         String ragAnswer = "You spent 500 RON last month.";
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
         assertInstanceOf(TextResponseDTO.class, result);
         assertEquals("text", result.getType());
         assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithContext(userMessage);
+        verify(ragRetrievalService).askWithHybridContext(userMessage);
         verifyNoInteractions(chartGenerationService);
     }
 
@@ -81,13 +81,13 @@ class AgentChatServiceTest {
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
         when(chartGenerationService.generate(intent)).thenThrow(new RuntimeException("Chart failed"));
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
         assertInstanceOf(TextResponseDTO.class, result);
         assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithContext(userMessage);
+        verify(ragRetrievalService).askWithHybridContext(userMessage);
     }
 
     @Test
@@ -96,7 +96,7 @@ class AgentChatServiceTest {
         String ragAnswer = "Fallback answer";
 
         when(visualIntentExtractor.extract(userMessage)).thenThrow(new RuntimeException("Extraction failed"));
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
@@ -113,7 +113,7 @@ class AgentChatServiceTest {
         String ragAnswer = "Answer";
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 

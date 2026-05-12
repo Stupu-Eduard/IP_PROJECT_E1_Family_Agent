@@ -26,6 +26,9 @@ class EmbeddingConfigTest {
     void testEmbeddingModelBeanCreationWithValidKey() {
         String validKey = "sk-or-...2345";
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", validKey);
+        ReflectionTestUtils.setField(embeddingConfig, "baseUrl", "https://openrouter.ai/api/v1");
+        ReflectionTestUtils.setField(embeddingConfig, "modelName", "nvidia/llama-nemotron-embed-vl-1b-v2:free");
+        ReflectionTestUtils.setField(embeddingConfig, "dimensions", 2048);
 
         EmbeddingModel embeddingModel = embeddingConfig.embeddingModel();
 
@@ -122,6 +125,9 @@ class EmbeddingConfigTest {
     void testEmbeddingModelConfigurationDefaults() {
         String validKey = "sk-or-...nfig";
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", validKey);
+        ReflectionTestUtils.setField(embeddingConfig, "baseUrl", "https://openrouter.ai/api/v1");
+        ReflectionTestUtils.setField(embeddingConfig, "modelName", "nvidia/llama-nemotron-embed-vl-1b-v2:free");
+        ReflectionTestUtils.setField(embeddingConfig, "dimensions", 2048);
 
         EmbeddingModel model = embeddingConfig.embeddingModel();
 

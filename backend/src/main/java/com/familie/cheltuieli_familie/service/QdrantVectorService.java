@@ -51,6 +51,9 @@ public class QdrantVectorService {
     @Value("${qdrant.collection-name:expenses}")
     private String collectionName;
 
+    @Value("${qdrant.collection.vector-size:2048}")
+    private int vectorSize;
+
     public QdrantVectorService(QdrantEmbeddingStore embeddingStore, EmbeddingModel embeddingModel, RestTemplate restTemplate) {
         this.embeddingStore = embeddingStore;
         this.embeddingModel = embeddingModel;
@@ -206,7 +209,7 @@ public class QdrantVectorService {
 
     public boolean existsInVectorStore(Long id) {
         Map<String, Object> body = new HashMap<>();
-        body.put("vector", new float[2048]);
+        body.put("vector", new float[vectorSize]);
         body.put("limit", 1);
         body.put("with_vector", false);
         body.put("with_payload", true);

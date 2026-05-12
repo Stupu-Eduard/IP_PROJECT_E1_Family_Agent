@@ -1,7 +1,9 @@
 package com.familie.cheltuieli_familie.model;
 
+import jakarta.persistence.Column;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -67,5 +69,13 @@ class ExpenseEntityTest {
         expense.onCreate();
         
         assertEquals(existing, expense.getCreatedAt());
+    }
+
+    @Test
+    void testDateColumnMapping() throws NoSuchFieldException {
+        Field dateField = ExpenseEntity.class.getDeclaredField("date");
+        Column columnAnnotation = dateField.getAnnotation(Column.class);
+        assertNotNull(columnAnnotation);
+        assertEquals("expense_date", columnAnnotation.name());
     }
 }

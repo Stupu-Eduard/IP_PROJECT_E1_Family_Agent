@@ -2,38 +2,79 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
+import com.familie.cheltuieli_familie.exception.AiServiceException;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.service.ExtractionService;
+import com.familie.cheltuieli_familie.service.OcrService;
 import com.familie.cheltuieli_familie.service.PdfExtractionService;
+import com.familie.cheltuieli_familie.service.SyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
-
+import java.nio.file.Files;
 import java.util.List;
 
 @RestController
 @RequestMapping("/v1/upload")
 @Slf4j
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class FileUploadController {
 
     private final PdfExtractionService pdfExtractionService;
     private final ExtractionService extractionService;
+    private final SyncService syncService;
+    private final OcrService ocrService;
 
     @PostMapping("/pdf")
     public ResponseEntity<List<ExtractionResponse>> uploadPdf(@RequestParam("file") MultipartFile file) throws IOException {
         log.info("Received PDF upload: {}", file.getOriginalFilename());
-        String extractedText = pdfExtractionService.extractText(file);
+        String extractedText;
+        try {
+            extractedText = pdfExtractionService.extractText(file);
+            if (extractedText == null || extractedText.isBlank()) {
+                throw new AiServiceException("PDF extraction returned empty text");
+            }
+        } catch (AiServiceException e) {
+            log.warn("PDF text extraction failed or returned empty, falling back to OCR: {}", e.getMessage());
+            File tempFile = Files.createTempFile("upload-", ".pdf").toFile();
+            file.transferTo(tempFile);
+            try {
+                extractedText = ocrService.extractTextFromPdf(tempFile);
+            } finally {
+                if (!tempFile.delete()) {
+                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+                }
+            }
+        }
+
         ExtractionRequest request = new ExtractionRequest();
         request.setRawText(extractedText);
-        return ResponseEntity.ok(extractionService.process(request));
+        List<ExtractionResponse> responses = extractionService.process(request);
+
+        for (ExtractionResponse response : responses) {
+            ExpenseEntity entity = ExpenseEntity.builder()
+                    .amount(response.getAmount())
+                    .category(response.getCategory())
+                    .location(response.getLocation())
+                    .person(response.getPerson())
+                    .date(response.getTransactionDate())
+                    .rawInput(response.getRawInput())
+                    .build();
+            syncService.syncExpense(entity);
+        }
+
+        return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/audio")

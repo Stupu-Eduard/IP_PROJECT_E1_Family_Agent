@@ -43,6 +43,11 @@ class ExpensePipelineServiceTest {
     void testProcessRawInput_Success() throws Exception {
         ExtractionResponse extractionResponse = ExtractionResponse.builder()
                 .amount(new BigDecimal("100.00"))
+                .category("Food")
+                .location("Kaufland")
+                .person("Alice")
+                .transactionDate(java.time.LocalDate.of(2024, 3, 15))
+                .rawInput("text")
                 .build();
         when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
@@ -56,12 +61,18 @@ class ExpensePipelineServiceTest {
         assertEquals(1L, result.get(0));
         verify(thePipeHandler, times(1)).broadcast(anyString());
         verify(validationService, times(1)).validatePersistence(1L);
+        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
     }
 
     @Test
     void testProcessRawInput_whenBroadcastFails_continuesProcessing() throws Exception {
         ExtractionResponse extractionResponse = ExtractionResponse.builder()
                 .amount(new BigDecimal("10.00"))
+                .category("Transport")
+                .location("Metro")
+                .person("Bob")
+                .transactionDate(java.time.LocalDate.of(2024, 4, 1))
+                .rawInput("text")
                 .build();
         when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
@@ -77,5 +88,6 @@ class ExpensePipelineServiceTest {
         assertEquals(2L, result.get(0));
         // Verificam ca eroarea a fost capturata si procesarea a continuat
         verify(thePipeHandler, never()).broadcast(anyString());
+        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
     }
 }

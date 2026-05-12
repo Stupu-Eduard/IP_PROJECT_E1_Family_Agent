@@ -29,9 +29,16 @@ public class QdrantConfig {
     @Value("${qdrant.collection-name:expenses}")
     private String collectionName;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Value("${qdrant.collection.vector-size:2048}")
+    private int vectorSize;
 
-    private static final String KEYWORD_TYPE = "keyword";
+    @Value("${qdrant.collection.distance:Cosine}")
+    private String distance;
+
+    @Value("${qdrant.collection.index-type:keyword}")
+    private String indexType;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Bean
     public QdrantEmbeddingStore embeddingStore() {
@@ -56,11 +63,11 @@ public class QdrantConfig {
             log.info("Qdrant collection '{}' not found, creating it...", collectionName);
         }
 
-        // Create collection with 2048 dimensions and Cosine distance
+        // Create collection with configured dimensions and distance
         Map<String, Object> body = new HashMap<>();
         body.put("vectors", Map.of(
-                "size", 2048,
-                "distance", "Cosine"
+                "size", vectorSize,
+                "distance", distance
         ));
 
         HttpHeaders headers = new HttpHeaders();
@@ -69,13 +76,13 @@ public class QdrantConfig {
 
         try {
             restTemplate.put(url, entity);
-            log.info("Successfully created Qdrant collection '{}' with 2048 dimensions and Cosine distance.", collectionName);
+            log.info("Successfully created Qdrant collection '{}' with {} dimensions and {} distance.", collectionName, vectorSize, distance);
             
             // Create indexes for metadata
-            createPayloadIndex("date", KEYWORD_TYPE);
-            createPayloadIndex("person", KEYWORD_TYPE);
-            createPayloadIndex("category", KEYWORD_TYPE);
-            createPayloadIndex("location", KEYWORD_TYPE);
+            createPayloadIndex("date", indexType);
+            createPayloadIndex("person", indexType);
+            createPayloadIndex("category", indexType);
+            createPayloadIndex("location", indexType);
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());

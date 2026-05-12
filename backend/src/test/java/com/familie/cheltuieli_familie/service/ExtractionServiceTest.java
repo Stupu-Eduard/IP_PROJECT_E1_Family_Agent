@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -56,7 +57,6 @@ class ExtractionServiceTest {
 
         Response<AiMessage> mockResponse = Response.from(AiMessage.from(VALID_JSON_RSP));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         List<ExtractionResponse> responses = extractionService.process(req);
@@ -71,8 +71,8 @@ class ExtractionServiceTest {
 
         // Verify the LLM was called
         verify(chatLanguageModel, times(1)).generate(anyList());
-        // Verify sync was triggered
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        // Verify sync was NEVER triggered
+        verifyNoInteractions(syncService);
     }
 
     @Test
@@ -88,8 +88,6 @@ class ExtractionServiceTest {
                         {"expenses": [{"amount": 100, "category": "mancare", "location": "Mega Image", "person": "Familie", "transactionDate": "2024-03-15"}]}
                         """)));
 
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-
         List<ExtractionResponse> responses = extractionService.process(req);
 
         assertNotNull(responses);
@@ -98,6 +96,7 @@ class ExtractionServiceTest {
         assertEquals("mancare", responses.get(0).getCategory());
         // Verify 3 LLM calls due to retries
         verify(chatLanguageModel, times(3)).generate(anyList());
+        verifyNoInteractions(syncService);
     }
 
     @Test
@@ -109,12 +108,12 @@ class ExtractionServiceTest {
                 {"expenses": [{"amount": "o sută jumate", "category": "mancare", "location": "restaurant", "person": "Familie", "transactionDate": "2024-01-10"}]}
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
         assertNotNull(responses);
         assertEquals(0, new BigDecimal("150.0").compareTo(responses.get(0).getAmount()));
+        verifyNoInteractions(syncService);
     }
 
     @Test
@@ -141,7 +140,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -149,6 +147,7 @@ class ExtractionServiceTest {
         ExtractionResponse response = responses.get(0);
         assertTrue(response.getValidationNote().contains("REUȘITĂ"));
         assertTrue(response.getValidationNote().contains("2 articole"));
+        verifyNoInteractions(syncService);
     }
 
     @Test
@@ -175,7 +174,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -184,6 +182,7 @@ class ExtractionServiceTest {
         assertTrue(response.getValidationNote().contains("AVERTISMENT"));
         assertTrue(response.getValidationNote().contains("15")); // sum
         assertTrue(response.getValidationNote().contains("20")); // total
+        verifyNoInteractions(syncService);
     }
 
     @Test
@@ -212,7 +211,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -220,5 +218,44 @@ class ExtractionServiceTest {
         assertEquals(2, responses.size());
         assertEquals("Eu", responses.get(0).getPerson());
         assertEquals("Maria", responses.get(1).getPerson());
+        verifyNoInteractions(syncService);
+    }
+
+    @Test
+    void testUsesLlmExtractedDate() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Am platit 100 lei la Mega Image");
+
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {"expenses": [{"amount": 100, "category": "mancare", "location": "Mega Image", "person": "Familie", "transactionDate": "2024-03-15"}]}
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(LocalDate.of(2024, 3, 15), responses.get(0).getTransactionDate());
+        verifyNoInteractions(syncService);
+    }
+
+    @Test
+    void testFallsBackToNormalizerWhenLlmDateMissing() {
+        ExtractionRequest req = new ExtractionRequest();
+        req.setRawText("Am platit 100 lei la Mega Image azi");
+
+        Response<AiMessage> mockResponse = Response.from(AiMessage.from("""
+                {"expenses": [{"amount": 100, "category": "mancare", "location": "Mega Image", "person": "Familie"}]}
+                """));
+        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+
+        List<ExtractionResponse> responses = extractionService.process(req);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        // When LLM date is missing, NormalizerUtil.normalizeDate is called.
+        // "azi" should resolve to today.
+        assertEquals(LocalDate.now(), responses.get(0).getTransactionDate());
+        verifyNoInteractions(syncService);
     }
 }

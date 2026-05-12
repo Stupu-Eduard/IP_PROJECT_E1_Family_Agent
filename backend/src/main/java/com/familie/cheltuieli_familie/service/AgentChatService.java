@@ -26,14 +26,14 @@ public class AgentChatService {
                 return chartGenerationService.generate(intent);
             }
 
-            // Default to text response via existing RAG pipeline
-            String textAnswer = ragRetrievalService.askWithContext(userMessage);
+            // Default to text response via hybrid RAG pipeline
+            String textAnswer = ragRetrievalService.askWithHybridContext(userMessage);
             return new TextResponseDTO(textAnswer);
 
         } catch (Exception e) {
-            log.warn("Chart pipeline failed for query '{}', falling back to text RAG: {}",
+            log.warn("Chart pipeline failed for query '{}', falling back to hybrid text RAG: {}",
                     userMessage, e.getMessage());
-            String textAnswer = ragRetrievalService.askWithContext(userMessage);
+            String textAnswer = ragRetrievalService.askWithHybridContext(userMessage);
             return new TextResponseDTO(textAnswer);
         }
     }
