@@ -1,4 +1,5 @@
 package com.familie.cheltuieli_familie.controller;
+
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
@@ -9,40 +10,55 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 @AutoConfigureMockMvc(addFilters = false)
-@WebMvcTest(ExtractionController.class)
+@WebMvcTest(controllers = ExtractionController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @ActiveProfiles("test")
 class ExtractionControllerTest {
+
     @Autowired
     private MockMvc mockMvc;
+
     @MockBean
     private ExtractionService extractionService;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.StorageService storageService;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
+
     @MockBean
     private dev.langchain4j.model.chat.ChatLanguageModel chatLanguageModel;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.SyncService syncService;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.TextBasedPdfExtractor textExtractor;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.BankOcrService bankOcrService;
+
     @MockBean
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
+
     @MockBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
+
     @Test
     void testExtractDetails() throws Exception {
         ExtractionResponse response = ExtractionResponse.builder()
@@ -61,6 +77,7 @@ class ExtractionControllerTest {
                 .andExpect(jsonPath("$[0].amount").value(150.00))
                 .andExpect(jsonPath("$[0].category").value("Mâncare"));
     }
+
     @Test
     void testValidateOcr() throws Exception {
         when(extractionService.validateOcrContent(anyString())).thenReturn("VALID");
@@ -70,6 +87,7 @@ class ExtractionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("VALID"));
     }
+
     @Test
     void testExtractValidationError() throws Exception {
         mockMvc.perform(post("/v1/extract")

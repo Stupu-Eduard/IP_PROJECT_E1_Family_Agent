@@ -43,8 +43,6 @@ class GlobalExceptionHandlerTest {
     private com.familie.cheltuieli_familie.service.BankOcrService bankOcrService;
     @MockBean
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
-    @MockBean
-    private com.familie.cheltuieli_familie.repository.UserSessionRepository userSessionRepository;
 
     @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
