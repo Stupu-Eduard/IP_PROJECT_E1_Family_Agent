@@ -3,6 +3,7 @@ import * as yup from 'yup';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
+import { api } from '../services/api';
 import type { RegisterDTO } from '../types/AuthDTO';
 
 // ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
@@ -56,14 +57,14 @@ export default function RegisterForm() {
 
     const token           = useAuthStore((state) => state.token);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-    const login           = useAuthStore((state) => state.login);
+    const loginStore      = useAuthStore((state) => state.login);
 
     // ── Redirect dacă autentificat (NEATINS) ───────────────────────────────
     if (isAuthenticated && token && !isTokenExpired(token)) {
         return <Navigate to="/dashboard" replace />;
     }
 
-    // ── handleRegister (NEATINS) ───────────────────────────────────────────
+    // ── handleRegister (API REALĂ) ───────────────────────────────────────────
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -71,23 +72,11 @@ export default function RegisterForm() {
             await registerSchema.validate({ name, email, password, confirmPassword });
             setIsLoading(true);
             const payload: RegisterDTO = { name, email, password };
-            const mockApiCall = new Promise<{ token: string }>((resolve, reject) => {
-                setTimeout(() => {
-                    if (payload.email === 'test@example.com' || payload.email === 'copil@example.com') {
-                        reject(new Error('Eroare 409: Acest email este deja asociat unui cont.'));
-                    } else {
-                        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-                        const payloadData = btoa(JSON.stringify({
-                            sub: payload.email, role: 'Parent',
-                            exp: Math.floor(Date.now() / 1000) + 60 * 60,
-                        }));
-                        resolve({ token: `${header}.${payloadData}.mock_signature` });
-                    }
-                }, 1500);
-            });
-            const response = await mockApiCall;
-            login(response.token);
-            navigate('/dashboard', { replace: true });
+            const response = await api.post<{ token: string }>('/api/v1/auth/register', payload);
+            if (response.data.token) {
+                loginStore(response.data.token);
+                navigate('/dashboard', { replace: true });
+            }
         } catch (err: unknown) {
             if (err instanceof yup.ValidationError) setError(err.message);
             else if (err instanceof Error) setError(err.message);
@@ -204,7 +193,7 @@ export default function RegisterForm() {
                             <input
                                 type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••" disabled={isLoading}
-                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}   
                             />
                             <PasswordStrength value={password} />
                         </div>
@@ -215,7 +204,7 @@ export default function RegisterForm() {
                             <input
                                 type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="••••••••" disabled={isLoading}
-                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}   
                             />
                         </div>
 

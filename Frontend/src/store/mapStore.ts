@@ -18,7 +18,8 @@ export const useMapStore = create<MapState>((set,) => ({
         if (sse) return; // Nu deschidem două țevi deodată
 
         // Adresa de backend (Pipe-ul creat în Spring Boot)
-        const url = `http://localhost:8080/api/v1/parent/location-stream?parentId=${parentId}&token=${token}`;
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+        const url = `${baseUrl}/api/v1/parent/location-stream?parentId=${parentId}&token=${token}`;
 
         sse = new EventSource(url);
 
