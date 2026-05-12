@@ -6,7 +6,7 @@ import com.familie.cheltuieli_familie.service.ExtractionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,23 +24,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ExtractionControllerTest {
     @Autowired
     private MockMvc mockMvc;
-    @MockitoBean
+    @MockBean
     private ExtractionService extractionService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.StorageService storageService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
-    @MockitoBean
+    @MockBean
     private dev.langchain4j.model.chat.ChatLanguageModel chatLanguageModel;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.SyncService syncService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.TextBasedPdfExtractor textExtractor;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.BankOcrService bankOcrService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
     @Test
     void testExtractDetails() throws Exception {

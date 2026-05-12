@@ -11,7 +11,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -33,10 +33,10 @@ class AiExpenseControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private ExpenseJpaRepository repository;
 
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
 
     @Test
