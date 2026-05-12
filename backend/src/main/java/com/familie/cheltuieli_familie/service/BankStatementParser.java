@@ -26,9 +26,7 @@ public class BankStatementParser {
     private static final int MAX_DESCRIPTION_LENGTH = 120;
 
     public List<Transaction> parseText(String ocrText) {
-
         List<Transaction> transactions = new ArrayList<>();
-
         Set<String> uniqueTransactions = new HashSet<>();
 
         if (ocrText == null || ocrText.isBlank()) {
@@ -36,78 +34,79 @@ public class BankStatementParser {
         }
 
         String[] lines = ocrText.split("\\r?\\n");
-
         logger.info("START PARSARE | Linii: {}", lines.length);
 
         for (String line : lines) {
-
-            try {
-                line = cleanLine(line);
-
-                if (line.isBlank()) {
-                    continue;
-                }
-
-                ParsedDate parsedDate = extractDate(line);
-                if (parsedDate == null) {
-                    continue;
-                }
-
-                ParsedAmount parsedAmount = extractAmountAndCurrency(line);
-                if (parsedAmount == null || parsedAmount.amount <= 0) {
-                    continue;
-                }
-
-                String description = extractDescription(
-                        line,
-                        parsedDate.endIndex,
-                        parsedAmount.amountStartIndex
-                );
-                description = normalizeDiacritics(description);
-
-                if (!isValidDescription(description)) {
-                    continue;
-                }
-
-                String currency = parsedAmount.currency != null
-                        ? parsedAmount.currency
-                        : extractCurrencyFromLine(line);
-
-                String type = extractType(line);
-
-                String key = buildTransactionKey(
-                        parsedDate.date,
-                        description,
-                        parsedAmount.amount,
-                        currency,
-                        type
-                );
-
-                if (uniqueTransactions.contains(key)) {
-                    logger.warn("DUPLICAT IGNORAT: {}", key);
-                    continue;
-                }
-
-                uniqueTransactions.add(key);
-
-                Transaction transaction = new Transaction(
-                        parsedDate.date,
-                        description,
-                        parsedAmount.amount,
-                        currency,
-                        type
-                );
-
-                transactions.add(transaction);
-
-            } catch (Exception e) {
-                logger.warn("Linie ignorata: {} | {}", line, e.getMessage());
-            }
+            processSingleLine(line, transactions, uniqueTransactions);
         }
 
         logger.info("FINAL PARSARE | Total: {}", transactions.size());
-
         return transactions;
+    }
+
+    private void processSingleLine(String line, List<Transaction> transactions, Set<String> uniqueTransactions) {
+        try {
+            line = cleanLine(line);
+
+            if (line.isBlank()) {
+                return;
+            }
+
+            ParsedDate parsedDate = extractDate(line);
+            if (parsedDate == null) {
+                return;
+            }
+
+            ParsedAmount parsedAmount = extractAmountAndCurrency(line);
+            if (parsedAmount == null || parsedAmount.amount <= 0) {
+                return;
+            }
+
+            String description = extractDescription(
+                    line,
+                    parsedDate.endIndex,
+                    parsedAmount.amountStartIndex
+            );
+            description = normalizeDiacritics(description);
+
+            if (!isValidDescription(description)) {
+                return;
+            }
+
+            String currency = parsedAmount.currency != null
+                    ? parsedAmount.currency
+                    : extractCurrencyFromLine(line);
+
+            String type = extractType(line);
+
+            String key = buildTransactionKey(
+                    parsedDate.date,
+                    description,
+                    parsedAmount.amount,
+                    currency,
+                    type
+            );
+
+            if (uniqueTransactions.contains(key)) {
+                logger.warn("DUPLICAT IGNORAT: {}", key);
+                return;
+            }
+
+            uniqueTransactions.add(key);
+
+            Transaction transaction = new Transaction(
+                    parsedDate.date,
+                    description,
+                    parsedAmount.amount,
+                    currency,
+                    type
+            );
+
+            transactions.add(transaction);
+
+        } catch (Exception e) {
+            logger.warn("Linie ignorata: {} | {}", line, e.getMessage());
+        }
     }
 
     private String cleanLine(String line) {
@@ -309,7 +308,7 @@ public class BankStatementParser {
                 upperLine.contains("POS") ||
                 upperLine.contains("RETRAGERE") ||
                 upperLine.contains("COMISION")) {
-            return "EXPENSE";
+            return DEFAULT_TYPE;
         }
 
         return DEFAULT_TYPE;

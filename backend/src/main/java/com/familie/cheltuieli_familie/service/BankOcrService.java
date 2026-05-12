@@ -7,6 +7,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -17,6 +19,7 @@ import java.nio.file.Files;
 public class BankOcrService {
     private final OCRPreProcessor preProcessor;
     private final BankingDictionaryCorrector corrector;
+    private static final Logger logger = LoggerFactory.getLogger(BankOcrService.class);
 
     public BankOcrService(OCRPreProcessor preProcessor, BankingDictionaryCorrector corrector) {
         this.preProcessor = preProcessor;
@@ -34,9 +37,12 @@ public class BankOcrService {
 
             StringBuilder result = new StringBuilder();
 
+            java.nio.file.Path secureTempDir = Files.createTempDirectory("bank_ocr_");
+
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-                File tempFile = File.createTempFile("page_" + page, ".png");
+                java.nio.file.Path tempPath = Files.createTempFile(secureTempDir, "page_" + page, ".png");
+                File tempFile = tempPath.toFile();
 
                 try {
                     javax.imageio.ImageIO.write(image, "png", tempFile);
@@ -44,9 +50,9 @@ public class BankOcrService {
                     String pageText = tesseract.doOCR(processed);
                     String correctedText = corrector.correctText(pageText);
                     result.append(correctedText).append("\n");
-                    System.out.println("Processed page: " + page);
+                    logger.info("Processed page: {}", page);
                 } finally {
-                    Files.deleteIfExists(tempFile.toPath());
+                    org.springframework.util.FileSystemUtils.deleteRecursively(secureTempDir);
                 }
             }
 

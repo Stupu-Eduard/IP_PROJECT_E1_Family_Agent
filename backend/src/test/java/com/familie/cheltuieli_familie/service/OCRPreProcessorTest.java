@@ -1,108 +1,85 @@
 package com.familie.cheltuieli_familie.service;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
 
 class OCRPreProcessorTest {
 
     @TempDir
     Path tempDir;
 
+    private OCRPreProcessor preProcessor;
+    private File validImageFile;
+    private File validPdfFile;
+
+    @BeforeEach
+    void setUp() throws IOException {
+        preProcessor = new OCRPreProcessor();
+
+        validImageFile = tempDir.resolve("test_image.png").toFile();
+        BufferedImage img = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+        ImageIO.write(img, "png", validImageFile);
+
+        validPdfFile = tempDir.resolve("test_doc.pdf").toFile();
+        try (PDDocument doc = new PDDocument()) {
+            doc.addPage(new PDPage());
+            doc.save(validPdfFile);
+        }
+    }
+
     @Test
-    void processImageShouldReturnBufferedImage() throws Exception {
-
-        OCRPreProcessor preProcessor =
-                Mockito.spy(new OCRPreProcessor());
-
-        BufferedImage fakeImage =
-                new BufferedImage(
-                        100,
-                        100,
-                        BufferedImage.TYPE_INT_RGB
-                );
-
-        doReturn(fakeImage)
-                .when(preProcessor)
-                .processImage(any(File.class), anyString());
-
-        File testFile =
-                tempDir.resolve("test.png").toFile();
-
-        testFile.createNewFile();
-
-        BufferedImage result =
-                preProcessor.processImage(testFile, "default");
-
+    void processImage_ShouldHandleRevolut() throws IOException {
+        BufferedImage result = preProcessor.processImage(validImageFile, "revolut");
         assertNotNull(result);
-        assertEquals(100, result.getWidth());
-        assertEquals(100, result.getHeight());
+    }
+
+    @Test
+    void processImage_ShouldHandleBT() throws IOException {
+        BufferedImage result = preProcessor.processImage(validImageFile, "bt");
+        assertNotNull(result);
+    }
+
+    @Test
+    void processImage_ShouldHandleING() throws IOException {
+        BufferedImage result = preProcessor.processImage(validImageFile, "ing");
+        assertNotNull(result);
+    }
+
+    @Test
+    void processImage_ShouldHandleDefaultBank() throws IOException {
+        BufferedImage result = preProcessor.processImage(validImageFile, "unknown_bank");
+        assertNotNull(result);
     }
 
     @Test
     void processImageShouldThrowExceptionForInvalidFile() {
+        File invalidFile = new File("does-not-exist.png");
 
-        OCRPreProcessor preProcessor =
-                new OCRPreProcessor();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            preProcessor.processImage(invalidFile, "default");
+        });
 
-        File invalidFile =
-                new File("does-not-exist.png");
-
-        assertFalse(invalidFile.exists());
-
-        Exception exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            if (!invalidFile.exists()) {
-                                throw new IllegalArgumentException(
-                                        "Couldn't read the image from the file"
-                                );
-                            }
-                        }
-                );
-
-        assertTrue(
-                exception.getMessage()
-                        .contains("Couldn't read the image")
-        );
+        assertTrue(exception.getMessage().contains("Couldn't read the image"));
     }
 
     @Test
     void processPdfShouldReturnProcessedImages() throws Exception {
-
-        OCRPreProcessor preProcessor =
-                Mockito.spy(new OCRPreProcessor());
-
-        BufferedImage fakeImage =
-                new BufferedImage(
-                        200,
-                        200,
-                        BufferedImage.TYPE_INT_RGB
-                );
-
-        doReturn(fakeImage)
-                .when(preProcessor)
-                .processImage(any(File.class), anyString());
-
-        List<BufferedImage> results =
-                List.of(fakeImage, fakeImage);
+        List<BufferedImage> results = preProcessor.processPdf(validPdfFile, "revolut");
 
         assertNotNull(results);
-
-        assertEquals(2, results.size());
-
-        assertEquals(200, results.get(0).getWidth());
-        assertEquals(200, results.get(1).getHeight());
+        assertEquals(1, results.size(), "Should process exactly 1 page from our dummy PDF");
+        assertNotNull(results.get(0), "The processed image should not be null");
     }
 }

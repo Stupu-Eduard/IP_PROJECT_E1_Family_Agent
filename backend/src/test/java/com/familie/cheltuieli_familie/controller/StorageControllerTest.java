@@ -24,15 +24,6 @@ class StorageControllerTest {
 
     @Test
     void saveTransactionsShouldReturnStorageResult() throws Exception {
-        List<Transaction> transactions = List.of(
-                new Transaction(
-                        LocalDate.of(2025, 3, 10),
-                        "Lidl",
-                        100.5,
-                        "RON",
-                        "EXPENSE"
-                )
-        );
 
         StorageResult result = new StorageResult(1, 1, 0);
 

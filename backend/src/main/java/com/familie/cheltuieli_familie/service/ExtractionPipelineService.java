@@ -18,7 +18,7 @@ public class ExtractionPipelineService {
         this.bankStatementParser = bankStatementParser;
     }
 
-    public List<Transaction> processDocument(File file, String bank) throws Exception {
+    public List<Transaction> processDocument(File file) throws java.io.IOException {
         String rawText = textBasedPdfExtractor.extractText(file);
         return bankStatementParser.parseText(rawText);
     }

@@ -56,18 +56,9 @@ public class StorageManager implements StorageService {
     }
 
     private boolean isValid(Transaction transaction) {
-        if (transaction == null) {
-            return false;
-        }
-
-        if (transaction.getAmount() <= 0) {
-            return false;
-        }
-
-        if (transaction.getDescription() == null || transaction.getDescription().trim().isEmpty()) {
-            return false;
-        }
-
-        return true;
+        return transaction != null
+                && transaction.getAmount() > 0
+                && transaction.getDescription() != null
+                && !transaction.getDescription().trim().isEmpty();
     }
 }

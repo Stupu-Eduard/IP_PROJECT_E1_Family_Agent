@@ -9,6 +9,8 @@ import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -24,6 +26,7 @@ import java.util.List;
 public class OCRPreProcessor {
 
     private static volatile boolean openCvLoaded = false;
+    private static final Logger logger = LoggerFactory.getLogger(OCRPreProcessor.class);
 
     private static synchronized void ensureOpenCvLoaded() {
         if (!openCvLoaded) {
@@ -174,36 +177,34 @@ public class OCRPreProcessor {
         return result;
     }
 
-    public List<BufferedImage> processPdf(File pdfFile, String bank) throws Exception {
+    public List<BufferedImage> processPdf(File pdfFile, String bank) throws IOException {
 
         ensureOpenCvLoaded();
 
         try (PDDocument document = Loader.loadPDF(pdfFile)) {
-
             PDFRenderer pdfRenderer = new PDFRenderer(document);
-
             List<BufferedImage> results = new ArrayList<>();
 
-            for (int page = 0; page < document.getNumberOfPages(); page++) {
+            Path secureTempDir = Files.createTempDirectory("pdf_preprocess_");
 
-                BufferedImage image =
-                        pdfRenderer.renderImageWithDPI(page, 300);
+            try {
+                for (int page = 0; page < document.getNumberOfPages(); page++) {
+                    BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
 
-                Path tempPath =
-                        Files.createTempFile("page_" + page, ".png");
+                    Path tempPath = Files.createTempFile(secureTempDir, "page_" + page, ".png");
+                    File tempFile = tempPath.toFile();
 
-                File tempFile = tempPath.toFile();
-
-                ImageIO.write(image, "png", tempFile);
-
-                BufferedImage processed =
-                        processImage(tempFile, bank);
-
-                Files.deleteIfExists(tempPath);
-
-                results.add(processed);
-
-                System.out.println("Preprocessed page: " + (page + 1));
+                    try {
+                        ImageIO.write(image, "png", tempFile);
+                        BufferedImage processed = processImage(tempFile, bank);
+                        results.add(processed);
+                        logger.info("Preprocessed page: {}", (page + 1));
+                    } finally {
+                        Files.deleteIfExists(tempPath);
+                    }
+                }
+            } finally {
+                org.springframework.util.FileSystemUtils.deleteRecursively(secureTempDir);
             }
 
             return results;

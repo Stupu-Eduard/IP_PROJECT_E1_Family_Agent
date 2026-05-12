@@ -59,24 +59,18 @@ public class ExtractionController {
             tempFile = createSecureTempFile("upload_", ".pdf");
             multipartFile.transferTo(tempFile);
 
-            List<Transaction> transactions = orchestrator.processDocument(tempFile, bank);
+            List<Transaction> transactions = orchestrator.processDocument(tempFile);
             return ResponseEntity.ok(transactions);
 
         } catch (Exception e) {
             log.error("Eroare la procesarea documentului: {}", e.getMessage(), e);
-            throw new RuntimeException("Eroare la procesarea documentului: " + e.getMessage());
+            throw new IllegalStateException("Eroare la procesarea documentului: " + e.getMessage(), e);
         } finally {
-            if (tempFile != null && tempFile.exists()) {
-                File parentDir = tempFile.getParentFile();
-                boolean isFileDeleted = tempFile.delete();
-                if (!isFileDeleted) {
-                    log.warn("Atenție: Nu s-a putut șterge fișierul temporar {}", tempFile.getAbsolutePath());
-                }
-                if(parentDir != null){
-                    boolean isDirDeleted = parentDir.delete();
-                    if (!isDirDeleted) {
-                        log.warn("Atenție: Nu s-a putut șterge directorul temporar {}", parentDir.getAbsolutePath());
-                    }
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile.toPath());
+                } catch (IOException e) {
+                    log.warn("Nu s-a putut sterge fisierul temporar: {}", tempFile.getAbsolutePath(), e);
                 }
             }
         }

@@ -29,7 +29,7 @@ class ExtractionPipelineServiceTest {
                 11/03/2025 Netflix 59.99
                 """);
 
-        List<Transaction> transactions = service.processDocument(fakePdf, "unknown");
+        List<Transaction> transactions = service.processDocument(fakePdf);
 
         assertNotNull(transactions);
         assertEquals(2, transactions.size());
