@@ -53,8 +53,12 @@ public class RagRetrievalService {
         StringBuilder context = new StringBuilder();
         context.append("Rezultate semantice din Qdrant:\n");
         for (EmbeddedExpense e : semanticResults) {
-            context.append(String.format("- ID %d: %s, %s RON, %s, scor: %.2f\n",
-                    e.getId(), e.getCategory(), e.getAmount(), e.getDate(), e.getScore()));
+            context.append(String.format("- ID %s: %s, %s RON, %s, scor: %.2f\n",
+                    e.getId() != null ? e.getId() : "N/A",
+                    e.getCategory(),
+                    e.getAmount(),
+                    e.getDate(),
+                    e.getScore()));
         }
         context.append("\nDate exacte din baza de date:\n");
         for (Expense e : dbRecords) {

@@ -182,4 +182,28 @@ class RagRetrievalServiceTest {
         assertEquals("No relevant expenses found.", result);
         verify(ragAssistant).chat(argThat(arg -> arg.contains("Rezultate semantice din Qdrant") && arg.contains("Date exacte din baza de date")));
     }
+
+    @Test
+    void askWithHybridContext_shouldHandleNullSemanticIds() {
+        String query = "Show latest expenses";
+        List<EmbeddedExpense> semanticResults = List.of(
+                EmbeddedExpense.builder()
+                        .id(null)
+                        .category("food")
+                        .amount(new BigDecimal("45.50"))
+                        .date(LocalDate.of(2024, 2, 2))
+                        .score(0.73)
+                        .build()
+        );
+
+        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(semanticResults);
+        when(expenseJpaRepository.findAllById(Collections.emptyList())).thenReturn(Collections.emptyList());
+        when(ragAssistant.chat(anyString())).thenReturn("ok");
+
+        String result = ragRetrievalService.askWithHybridContext(query);
+
+        assertEquals("ok", result);
+        verify(expenseJpaRepository).findAllById(Collections.emptyList());
+        verify(ragAssistant).chat(argThat(arg -> arg.contains("- ID N/A: food, 45.50 RON, 2024-02-02, scor: 0.73")));
+    }
 }
