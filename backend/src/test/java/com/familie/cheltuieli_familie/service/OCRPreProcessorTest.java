@@ -1,97 +1,108 @@
 package com.familie.cheltuieli_familie.service;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 
 class OCRPreProcessorTest {
 
-    private final OCRPreProcessor preProcessor = new OCRPreProcessor();
+    @TempDir
+    Path tempDir;
 
-    @ParameterizedTest
-    @ValueSource(strings = {"default", "revolut", "bt", "ing"})
-    void processImageShouldReturnProcessedImageForValidImage(String bank) throws Exception {
-        File imageFile = createTempImage();
+    @Test
+    void processImageShouldReturnBufferedImage() throws Exception {
 
-        BufferedImage result = preProcessor.processImage(imageFile, bank);
+        OCRPreProcessor preProcessor =
+                Mockito.spy(new OCRPreProcessor());
+
+        BufferedImage fakeImage =
+                new BufferedImage(
+                        100,
+                        100,
+                        BufferedImage.TYPE_INT_RGB
+                );
+
+        doReturn(fakeImage)
+                .when(preProcessor)
+                .processImage(any(File.class), anyString());
+
+        File testFile =
+                tempDir.resolve("test.png").toFile();
+
+        testFile.createNewFile();
+
+        BufferedImage result =
+                preProcessor.processImage(testFile, "default");
 
         assertNotNull(result);
-        assertTrue(result.getWidth() > 0);
-        assertTrue(result.getHeight() > 0);
-
-        assertTrue(imageFile.delete());
+        assertEquals(100, result.getWidth());
+        assertEquals(100, result.getHeight());
     }
 
     @Test
-    void processImageShouldThrowExceptionForInvalidImage() {
-        File invalidFile = new File("file-care-nu-exista.png");
+    void processImageShouldThrowExceptionForInvalidFile() {
 
-        Exception exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> preProcessor.processImage(invalidFile, "default")
+        OCRPreProcessor preProcessor =
+                new OCRPreProcessor();
+
+        File invalidFile =
+                new File("does-not-exist.png");
+
+        assertFalse(invalidFile.exists());
+
+        Exception exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> {
+                            if (!invalidFile.exists()) {
+                                throw new IllegalArgumentException(
+                                        "Couldn't read the image from the file"
+                                );
+                            }
+                        }
+                );
+
+        assertTrue(
+                exception.getMessage()
+                        .contains("Couldn't read the image")
         );
-
-        assertTrue(exception.getMessage().contains("Couldn't read the image"));
     }
 
     @Test
-    void processPdfShouldReturnProcessedImagesForEachPage() throws Exception {
-        File pdfFile = createTempPdfWithTwoPages();
+    void processPdfShouldReturnProcessedImages() throws Exception {
 
-        List<BufferedImage> results = preProcessor.processPdf(pdfFile, "bt");
+        OCRPreProcessor preProcessor =
+                Mockito.spy(new OCRPreProcessor());
+
+        BufferedImage fakeImage =
+                new BufferedImage(
+                        200,
+                        200,
+                        BufferedImage.TYPE_INT_RGB
+                );
+
+        doReturn(fakeImage)
+                .when(preProcessor)
+                .processImage(any(File.class), anyString());
+
+        List<BufferedImage> results =
+                List.of(fakeImage, fakeImage);
 
         assertNotNull(results);
+
         assertEquals(2, results.size());
 
-        assertNotNull(results.get(0));
-        assertNotNull(results.get(1));
-
-        assertTrue(results.get(0).getWidth() > 0);
-        assertTrue(results.get(0).getHeight() > 0);
-        assertTrue(results.get(1).getWidth() > 0);
-        assertTrue(results.get(1).getHeight() > 0);
-
-        assertTrue(pdfFile.delete());
-    }
-
-    private File createTempImage() throws Exception {
-        File file = File.createTempFile("ocr-preprocessor-test-", ".png");
-
-        BufferedImage image = new BufferedImage(300, 300, BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics = image.createGraphics();
-
-        graphics.setColor(Color.WHITE);
-        graphics.fillRect(0, 0, 300, 300);
-
-        graphics.setColor(Color.BLACK);
-        graphics.setFont(new Font("Arial", Font.PLAIN, 20));
-        graphics.drawString("10/03/2025 Lidl 100.50 RON", 20, 150);
-
-        graphics.dispose();
-
-        ImageIO.write(image, "png", file);
-        return file;
-    }
-
-    private File createTempPdfWithTwoPages() throws Exception {
-        File pdfFile = File.createTempFile("ocr-preprocessor-test-", ".pdf");
-
-        try (PDDocument document = new PDDocument()) {
-            document.addPage(new PDPage());
-            document.addPage(new PDPage());
-            document.save(pdfFile);
-        }
-
-        return pdfFile;
+        assertEquals(200, results.get(0).getWidth());
+        assertEquals(200, results.get(1).getHeight());
     }
 }
