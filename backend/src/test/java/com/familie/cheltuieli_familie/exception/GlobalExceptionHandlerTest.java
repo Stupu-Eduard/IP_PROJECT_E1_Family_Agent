@@ -8,9 +8,9 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -26,23 +26,23 @@ class GlobalExceptionHandlerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private ExtractionService extractionService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.StorageService storageService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.ExtractionPipelineService extractionPipelineService;
-    @MockitoBean
+    @MockBean
     private dev.langchain4j.model.chat.ChatLanguageModel chatLanguageModel;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.SyncService syncService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.TextBasedPdfExtractor textExtractor;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.BankOcrService bankOcrService;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
-    @MockitoBean
+    @MockBean
     private com.familie.cheltuieli_familie.repository.UserSessionRepository userSessionRepository;
 
     @Test
