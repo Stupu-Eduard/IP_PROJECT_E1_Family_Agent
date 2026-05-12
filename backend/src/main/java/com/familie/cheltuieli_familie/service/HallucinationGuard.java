@@ -36,12 +36,12 @@ public class HallucinationGuard {
     }
 
     private String validateNumbers(String aiResponse, String toolOutput) {
-        if (aiResponse != null && aiResponse.length() > MAX_INPUT_LENGTH) {
-            log.warn("AI response exceeds max length, skipping number validation");
+        if (aiResponse == null || aiResponse.length() > MAX_INPUT_LENGTH) {
+            if (aiResponse != null) log.warn("AI response exceeds max length, skipping number validation");
             return aiResponse;
         }
-        if (toolOutput != null && toolOutput.length() > MAX_INPUT_LENGTH) {
-            log.warn("Tool output exceeds max length, skipping number validation");
+        if (toolOutput == null || toolOutput.length() > MAX_INPUT_LENGTH) {
+            if (toolOutput != null) log.warn("Tool output exceeds max length, skipping number validation");
             return aiResponse;
         }
 
@@ -57,29 +57,34 @@ public class HallucinationGuard {
         String correctedResponse = aiResponse;
         
         while (aiMatcher.find()) {
-            try {
-                BigDecimal aiValue = new BigDecimal(aiMatcher.group(1).replace(",", "."));
-                BigDecimal closestToolValue = null;
-                BigDecimal minDiff = null;
+            String originalMatch = aiMatcher.group(1);
+            BigDecimal aiValue = new BigDecimal(originalMatch.replace(",", "."));
+            correctedResponse = correctSingleNumber(correctedResponse, aiValue, toolNumbers, originalMatch);
+        }
+        return correctedResponse;
+    }
 
-                for (BigDecimal toolValue : toolNumbers) {
-                    BigDecimal diff = aiValue.subtract(toolValue).abs();
-                    if (minDiff == null || diff.compareTo(minDiff) < 0) {
-                        minDiff = diff;
-                        closestToolValue = toolValue;
-                    }
-                }
+    private String correctSingleNumber(String correctedResponse, BigDecimal aiValue, List<BigDecimal> toolNumbers, String originalMatch) {
+        BigDecimal closestToolValue = null;
+        BigDecimal minDiff = null;
 
-                // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
-                if (minDiff != null && minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
-                    correctedResponse = correctedResponse.replace(aiMatcher.group(1), closestToolValue.toPlainString());
-                }
-            } catch (Exception ignored) {}
+        for (BigDecimal toolValue : toolNumbers) {
+            BigDecimal diff = aiValue.subtract(toolValue).abs();
+            if (minDiff == null || diff.compareTo(minDiff) < 0) {
+                minDiff = diff;
+                closestToolValue = toolValue;
+            }
+        }
+
+        // Corecție automată dacă AI-ul a rotunjit greșit sau a halucinat cifra (sub 1 RON diferență)
+        if (minDiff.compareTo(BigDecimal.ZERO) > 0 && minDiff.compareTo(new BigDecimal("1.00")) < 0) {
+            return correctedResponse.replace(originalMatch, closestToolValue.toPlainString());
         }
         return correctedResponse;
     }
 
     private String validateSemantic(String aiResponse, String toolOutput) {
+        if (toolOutput == null) return aiResponse;
         String toolLower = toolOutput.toLowerCase();
         boolean toolUp = toolLower.contains(SEMANTIC_INCREASE_EN) || toolLower.contains(SEMANTIC_INCREASE_RO);
         boolean toolDown = toolLower.contains(SEMANTIC_DECREASE_EN) || toolLower.contains(SEMANTIC_DECREASE_RO);
