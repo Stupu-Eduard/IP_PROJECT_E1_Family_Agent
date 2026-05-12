@@ -1,1 +1,1 @@
-https://family-agent.me/login
+https://family-agent.me
