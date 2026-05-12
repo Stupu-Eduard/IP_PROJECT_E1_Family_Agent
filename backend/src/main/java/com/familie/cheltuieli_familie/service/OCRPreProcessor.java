@@ -186,7 +186,9 @@ public class OCRPreProcessor {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             List<BufferedImage> results = new ArrayList<>();
 
-            Path secureTempDir = Files.createTempDirectory("pdf_preprocess_");
+            Path baseTempDir = java.nio.file.Paths.get(System.getProperty("user.dir"), "secure-temp");
+            Files.createDirectories(baseTempDir);
+            Path secureTempDir = Files.createTempDirectory(baseTempDir, "pdf_preprocess_");
 
             try {
                 for (int page = 0; page < document.getNumberOfPages(); page++) {

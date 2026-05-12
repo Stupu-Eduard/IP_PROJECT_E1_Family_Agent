@@ -37,7 +37,9 @@ public class BankOcrService {
 
             StringBuilder result = new StringBuilder();
 
-            java.nio.file.Path secureTempDir = Files.createTempDirectory("bank_ocr_");
+            java.nio.file.Path baseTempDir = java.nio.file.Paths.get(System.getProperty("user.dir"), "secure-temp");
+            Files.createDirectories(baseTempDir);
+            java.nio.file.Path secureTempDir = Files.createTempDirectory(baseTempDir, "bank_ocr_");
 
             try {
                 for (int page = 0; page < document.getNumberOfPages(); page++) {
