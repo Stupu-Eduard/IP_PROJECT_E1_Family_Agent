@@ -1,35 +1,19 @@
 import '@testing-library/jest-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import LoginForm from './LoginForm'
-import * as jwtUtils from '../utils/jwt'
+import { useAuthStore } from '../store/authStore'
 import { loginWithEmailPassword } from '../services/auth'
+import * as jwtUtils from '../utils/jwt'
 
-// Mocking pentru React Router
-const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual('react-router-dom')
-    return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-        Navigate: ({ to }: { to: string }) => <div data-testid="navigate-component">{to}</div>
-    }
-})
-
-// State-ul mock-uit pentru Store
-let mockAuthData = {
-    login: vi.fn(),
-    isAuthenticated: false,
-    token: null
-}
-
+// ── Mock-uri identice cu cele din fișierele existente ──────────────────────
 vi.mock('../store/authStore', () => ({
-    useAuthStore: (selector: any) => selector(mockAuthData),
+    useAuthStore: vi.fn(),
 }))
 
 vi.mock('../utils/jwt', () => ({
-    isTokenExpired: vi.fn()
+    isTokenExpired: vi.fn(() => false),
 }))
 
 vi.mock('../services/auth', () => ({
@@ -37,86 +21,159 @@ vi.mock('../services/auth', () => ({
     getLoginErrorMessage: vi.fn(() => 'A apărut o eroare neașteptată.'),
 }))
 
-// Helper pentru a construi un fake JWT cu un payload arbitrar
-function buildFakeJwt(payload: Record<string, unknown>): string {
-    const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }))
-    const body   = btoa(JSON.stringify(payload))
-    return `${header}.${body}.signature`
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return { ...actual, useNavigate: () => mockNavigate }
+})
+
+// ── Helper-e ────────────────────────────────────────────────────────────────
+const mockLogin = vi.fn()
+
+const setupUnauthenticated = () => {
+    ;(useAuthStore as any).mockImplementation((selector: any) =>
+        selector({ token: null, isAuthenticated: false, login: mockLogin }),
+    )
 }
 
-describe('LoginForm - Optimizare Coverage 100%', () => {
+const renderComponent = () =>
+    render(
+        <MemoryRouter initialEntries={['/login']}>
+            <Routes>
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+            </Routes>
+        </MemoryRouter>,
+    )
+
+describe('LoginForm – ramuri lipsă (coverage 100%)', () => {
     beforeEach(() => {
         vi.clearAllMocks()
-        mockAuthData.isAuthenticated = false
-        mockAuthData.token = null
+        setupUnauthenticated()
         vi.mocked(jwtUtils.isTokenExpired).mockReturnValue(false)
-        // FIX: răspunsul mock-uit de bază trebuie să conțină `token`,
-        // altfel LoginForm intră pe ramura else și afișează "Token lipsă."
         ;(loginWithEmailPassword as any).mockResolvedValue({
             message: 'ok',
             userName: 'Test',
-            token: buildFakeJwt({ role: 'Parent', sub: 'default@test.com' })
+            token: 'fake.jwt.token',
         })
     })
 
-    const renderComponent = () => render(<BrowserRouter><LoginForm /></BrowserRouter>)
-
-    it('1. Redirecționare: Ar trebui să trimită la dashboard dacă este deja logat', () => {
-        mockAuthData.isAuthenticated = true
-        mockAuthData.token = 'valid-token'
+    // ── A. Token prezent DAR expirat → NU redirecționează ───────────────────
+    // Ramura: `if (isAuthenticated && token && !isTokenExpired(token))` → false
+    // deoarece isTokenExpired returnează true.
+    it('A. Nu redirecționează dacă tokenul existent este expirat', () => {
+        ;(useAuthStore as any).mockImplementation((selector: any) =>
+            selector({ token: 'expired.token', isAuthenticated: true, login: mockLogin }),
+        )
+        vi.mocked(jwtUtils.isTokenExpired).mockReturnValue(true)  // ← token expirat
 
         renderComponent()
 
-        expect(screen.getByTestId('navigate-component')).toHaveTextContent('/dashboard')
+        // Formularul de login trebuie să fie afișat, nu dashboard-ul
+        expect(screen.getByPlaceholderText(/username@exemplu.com/i)).toBeInTheDocument()
+        expect(screen.queryByText('Dashboard Page')).not.toBeInTheDocument()
     })
 
-    it('2. RBAC: Ar trebui să creeze un JWT cu rol de Copil pentru email-ul specific', async () => {
-        renderComponent()
-        const emailInput = screen.getByPlaceholderText('username@exemplu.com')
-        const passwordInput = screen.getByPlaceholderText('••••••••')
-        const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
-
-        // FIX: serverul (mock-uit) este cel care construiește JWT-ul cu rol Child
-        // pentru contul de copil. LoginForm doar primește acest token și-l trimite
-        // în loginStore (mockAuthData.login).
-        const childToken = buildFakeJwt({ role: 'Child', sub: 'copil@example.com' })
+    // ── B. Răspuns fără token → ramura `else` → "Token lipsă." ──────────────
+    // Ramura: `if (response.token) { ... } else { setError('...Token lipsă.') }`
+    it('B. Afișează "Token lipsă" când serverul returnează răspuns fără câmpul token', async () => {
         ;(loginWithEmailPassword as any).mockResolvedValueOnce({
             message: 'ok',
-            userName: 'Copil',
-            token: childToken,
-            role: 'Child',
+            userName: 'Test',
+            // token lipsă intenționat
         })
 
-        fireEvent.change(emailInput, { target: { value: 'copil@example.com' } })
-        fireEvent.change(passwordInput, { target: { value: 'password123' } })
+        const { container } = renderComponent()
+        const emailInput = screen.getByPlaceholderText(/username@exemplu.com/i)
+        const passInput  = screen.getByPlaceholderText(/••••••••/i)
+        const form = emailInput.closest('form')!
+
+        fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+        fireEvent.change(passInput,  { target: { value: 'password123' } })
 
         await act(async () => {
-            fireEvent.click(submitButton)
+            fireEvent.submit(form)
         })
 
         await waitFor(() => {
-            expect(mockAuthData.login).toHaveBeenCalled()
-            // Verificăm dacă token-ul trimis în store conține rolul Child
-            const tokenSent = vi.mocked(mockAuthData.login).mock.calls[0][0]
-            const payload = JSON.parse(atob(tokenSent.split('.')[1]))
-            expect(payload.role).toBe('Child')
+            // Div-ul de eroare conține mesajul despre token lipsă
+            const errorDiv = container.querySelector('[style*="254, 242, 242"]') ??
+                container.querySelector('[style*="FEF2F2"]') ??
+                container.querySelector('[style*="#FEF2F2"]')
+            // Căutăm textul direct în document dacă selector-ul de culoare nu funcționează
+            expect(screen.getByText(/Token lipsă/i)).toBeInTheDocument()
+        }, { timeout: 3000 })
+    })
+
+    // ── C. Câmpuri goale → eroare validare Yup (email obligatoriu) ───────────
+    // Acoperă ramura `catch (err)` → `err instanceof yup.ValidationError`
+    it('C. Afișează eroare validare când email-ul lipsește', async () => {
+        const { container } = renderComponent()
+        const form = screen.getByPlaceholderText(/username@exemplu.com/i).closest('form')!
+
+        await act(async () => {
+            fireEvent.submit(form)
+        })
+
+        await waitFor(() => {
+            // Yup aruncă ValidationError → setError(err.message)
+            // Mesajul poate fi "obligatorie" sau "validă" în funcție de ordinea validării
+            const errorText = container.textContent ?? ''
+            expect(
+                errorText.includes('obligatorie') || errorText.includes('validă') || errorText.includes('minimum'),
+            ).toBe(true)
         }, { timeout: 2000 })
     })
 
-    it('3. Eroare Server: Ar trebui să afișeze mesaj de eroare la eșecul promisiunii', async () => {
+    // ── D. isLoading dezactivează câmpurile în timp ce cererea e în curs ─────
+    // Acoperă branch-ul `disabled={isLoading}` pe ambele input-uri
+    it('D. Câmpurile sunt dezactivate în timp ce loginul se procesează', async () => {
+        let resolveLogin: ((value: any) => void) | null = null
+        ;(loginWithEmailPassword as any).mockReturnValueOnce(
+            new Promise((resolve) => { resolveLogin = resolve }),
+        )
+
         renderComponent()
+        const emailInput = screen.getByPlaceholderText(/username@exemplu.com/i)
+        const passInput  = screen.getByPlaceholderText(/••••••••/i)
+        const form = emailInput.closest('form')!
 
-        fireEvent.change(screen.getByPlaceholderText('username@exemplu.com'), { target: { value: 'error@test.com' } })
-        fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'password123' } })
+        fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+        fireEvent.change(passInput,  { target: { value: 'password123' } })
+        fireEvent.submit(form)
 
-        const submitButton = screen.getByRole('button', { name: /Intră în cont/i })
+        // Starea de loading
+        expect(await screen.findByText(/Se procesează/i)).toBeInTheDocument()
+        expect(emailInput).toBeDisabled()
+        expect(passInput).toBeDisabled()
 
-        ;(loginWithEmailPassword as any).mockRejectedValueOnce({ response: { data: { error: 'Email sau parolă incorectă.' } } })
+        // Rezolvăm promise-ul ca să nu lăsăm state updates nesupravegheate
         await act(async () => {
-            fireEvent.click(submitButton)
+            resolveLogin?.({ message: 'ok', userName: 'Test', token: 'fake.jwt.token' })
+        })
+    })
+
+    // ── E. Eroare non-ValidationError din loginStore (getLoginErrorMessage) ──
+    // Acoperă ramura `else setError(getLoginErrorMessage(err))` în catch
+    it('E. Afișează mesaj generic când loginStore aruncă o excepție non-ValidationError', async () => {
+        mockLogin.mockImplementationOnce(() => {
+            throw new Error('server_error')   // instanceof Error, nu ValidationError
         })
 
-        // Aici acoperim ramura de "catch" pentru erori care nu sunt de tip ValidationError
-        // deoarece am introdus date care trec de schema Yup.
+        const { container } = renderComponent()
+        const emailInput = screen.getByPlaceholderText(/username@exemplu.com/i)
+        const passInput  = screen.getByPlaceholderText(/••••••••/i)
+        const form = emailInput.closest('form')!
+
+        fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+        fireEvent.change(passInput,  { target: { value: 'password123' } })
+
+        await act(async () => {
+            fireEvent.submit(form)
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText(/A apărut o eroare neașteptată/i)).toBeInTheDocument()
+        }, { timeout: 3000 })
     })
 })
