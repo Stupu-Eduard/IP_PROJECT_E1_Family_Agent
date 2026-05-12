@@ -1,0 +1,581 @@
+﻿  // --- THE PIPE: Conexiunea pentru actualizare LIVE (OPTIMIZATĂ JWT) ---
+  useEffect(() => {
+    if (!token) return;
+    console.log('⏳ HARTA: Se inițializează fluxul live prin THE PIPE...');
+    
+    // IMPORTANT: Backend-ul rulează de obicei pe 8080
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
+
+    console.log('📡 HARTA: Încercare conexiune la:', `${wsUrl}/locatie?token=...`);
+    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
+
+    socket.onopen = () => console.log('🟢 HARTA: Conectat la fluxul live!');
+
+    socket.onmessage = (event) => {
+      console.log('📡 THE PIPE (Harta): Mesaj brut primit:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📍 THE PIPE (Harta): Date parsate:', data);
+
+        // Actualizăm markerul și centrul hărții cu datele de la adaptorul tău
+        if (data.lat && data.lng) {
+          const newPos = { lat: data.lat, lng: data.lng };
+          setMarker(newPos);
+          setCenter(newPos);
+          
+          if (data.isRestricted) {
+            setIsOutsideZone(true);
+          } else if (savedZones.length > 0) {
+            const isSafe = savedZones.some(zone => isInsideGeofence(newPos, zone.points));
+            setIsOutsideZone(!isSafe);
+          }
+        }
+      } catch (e) {
+        console.error('❌ HARTA: Eroare la procesarea datelor live', e);
+      }
+    };
+
+    return () => socket.close();
+  }, [token, savedZones]);
+  // ----------------------------------------------------
+
+  const label = (state.locationLabel ?? '').trim()
+
+  async function geocodeAddress(address: string, signal: AbortSignal) {
+    if (!geocodingApiKey) return null
+
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${encodeURIComponent(geocodingApiKey)}`
+    const res = await fetch(url, { signal })
+    const data: any = await res.json()
+
+    const first = data?.results?.[0]
+    const loc = first?.geometry?.location
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lng !== 'number') {
+      return { error: data?.status ?? 'UNKNOWN', errorMessage: data?.error_message ?? null }
+    }
+
+    return {
+      coords: { lat: loc.lat as number, lng: loc.lng as number },
+      formattedAddress: first?.formatted_address ?? null,
+      geocodePlaceId: first?.place_id ?? null,
+    }
+  }
+
+  async function searchPlaceNear(textQuery: string, coords: LatLng, signal: AbortSignal) {
+    if (!mapsApiKey) return null
+
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': mapsApiKey,
+        'X-Goog-FieldMask': 'places.id,places.googleMapsUri',
+      },
+      body: JSON.stringify({
+        textQuery,
+        locationBias: {
+          circle: {
+            center: { latitude: coords.lat, longitude: coords.lng },
+            radius: 800,
+          },
+        },
+      }),
+    })
+
+    if (!res.ok) return null
+    const data: any = await res.json()
+    const first = data?.places?.[0]
+    if (!first?.id) return null
+
+    return {
+      id: first.id as string,
+      googleMapsUri: (first.googleMapsUri as string | undefined) ?? null,
+    }
+  }
+
+  async function fetchPlaceDetails(id: string, signal: AbortSignal) {
+    if (!mapsApiKey) return null
+
+    const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
+      method: 'GET',
+      signal,
+      headers: {
+        'X-Goog-Api-Key': mapsApiKey,
+        'X-Goog-FieldMask':
+            'displayName,formattedAddress,rating,userRatingCount,websiteUri,regularOpeningHours.openNow,regularOpeningHours.weekdayDescriptions,nationalPhoneNumber,internationalPhoneNumber,photos,googleMapsUri',
+      },
+    })
+
+    if (!res.ok) return null
+    const data: any = await res.json()
+
+    return {
+      name: data?.displayName?.text as string | undefined,
+      formattedAddress: data?.formattedAddress as string | undefined,
+      rating: data?.rating as number | undefined,
+      userRatingCount: data?.userRatingCount as number | undefined,
+      openNow: data?.regularOpeningHours?.openNow as boolean | undefined,
+      weekdayDescriptions: (data?.regularOpeningHours?.weekdayDescriptions as string[] | undefined) ?? undefined,
+      phone: (data?.internationalPhoneNumber as string | undefined) ?? (data?.nationalPhoneNumber as string | undefined),
+      websiteUri: data?.websiteUri as string | undefined,
+      photoName: data?.photos?.[0]?.name as string | undefined,
+      googleMapsUri: (data?.googleMapsUri as string | undefined) ?? null,
+    }
+  }
+
+  useEffect(() => {
+    setMessage(null)
+    setResolvedAddress(null)
+    setPlaceId(null)
+    setGoogleMapsUri(null)
+    setPlace(null)
+    setInfoOpen(false)
+    setIsOutsideZone(false) // Resetam alerta la schimbarea locatiei
+
+    if (!mapsApiKey || !isLoaded || loadError) return
+
+    const normalized = label.toLowerCase()
+    if (!label) {
+      setMarker(null)
+      setMessage('Nu există text de locație pentru geocoding.')
+      return
+    }
+    if (normalized === 'online' || normalized === 'fără locație' || normalized === 'fara locatie') {
+      setMarker(null)
+      setMessage('Locația este non-geografică (ex: Online) și nu poate fi geocodată.')
+      return
+    }
+
+    const controller = new AbortController()
+
+    async function run() {
+      // 1) Get coordinates (from DB or Geocoding)
+      let coords: LatLng | null = null
+      let addressFromGeocode: string | null = null
+      let geocodePlaceId: string | null = null
+      const hadDbCoords = typeof state.lat === 'number' && typeof state.lng === 'number'
+
+      if (hadDbCoords) {
+        coords = { lat: state.lat as number, lng: state.lng as number }
+        setMessage('Folosesc coordonatele salvate.')
+      } else {
+        if (!geocodingApiKey) {
+          setMessage('Lipsește cheia pentru Geocoding API. Setează VITE_GOOGLE_GEOCODING_API_KEY.')
+          setMarker(null)
+          return
+        }
+
+        setMessage(`Se caută locația pe hartă… ("${label}")`)
+        const geo = await geocodeAddress(label, controller.signal)
+        if (!geo || (geo as any).error) {
+          const err = (geo as any)?.error ?? 'UNKNOWN'
+          const extra = (geo as any)?.errorMessage ? ` - ${(geo as any).errorMessage}` : ''
+          setMarker(null)
+          setMessage(`${err}${extra}`)
+          return
+        }
+
+        coords = (geo as any).coords as LatLng
+        addressFromGeocode = (geo as any).formattedAddress as string | null
+        geocodePlaceId = (geo as any).geocodePlaceId as string | null
+      }
+
+      setCenter(coords)
+      setMarker(coords)
+      setResolvedAddress(addressFromGeocode)
+
+      // Verificam matematic INSTANT daca punctul e in afara zonelor salvate
+      if (coords && savedZones.length > 0) {
+        const isSafe = savedZones.some(zone => isInsideGeofence(coords, zone.points));
+        setIsOutsideZone(!isSafe);
+      }
+      // ------------------------------------------------
+
+      // 2) Save coords to DB if they were missing
+      if (!hadDbCoords && state.locationId) {
+        try {
+          await updateLocationCoordinates(state.locationId, coords.lat, coords.lng)
+          setMessage('Coordonatele au fost salvate în baza de date.')
+        } catch {
+          setMessage('Am găsit coordonatele, dar nu le-am putut salva în baza de date.')
+        }
+      }
+
+      // 3) Places: find the place near these coords and load details
+      try {
+        const found = await searchPlaceNear(label, coords, controller.signal)
+
+        if (found?.id) {
+          setPlaceId(found.id)
+          setGoogleMapsUri(found.googleMapsUri)
+
+          const details = await fetchPlaceDetails(found.id, controller.signal)
+          if (details) {
+            setPlace(details)
+            if (details.googleMapsUri) setGoogleMapsUri(details.googleMapsUri)
+          }
+        } else {
+          // fallback: at least keep the geocoding place id
+          if (geocodePlaceId) setPlaceId(geocodePlaceId)
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    void run().catch((err) => {
+      if (err?.name === 'AbortError') return
+      console.error('❌ HARTA: Eroare la inițializarea hărții', err)
+      setMessage('A apărut o eroare la încărcarea hărții. Reîncearcă sau dă refresh.')
+      setMarker(null)
+    });
+    return () => controller.abort();
+  }, [geocodingApiKey, isLoaded, label, loadError, mapsApiKey, state.lat, state.lng, state.locationId, savedZones])
+
+  const googleMapsLink = (() => {
+    if (googleMapsUri) return googleMapsUri
+    if (placeId) return `https://www.google.com/maps/place/?q=place_id:${placeId}`
+    if (marker) return `https://www.google.com/maps/search/?api=1&query=${marker.lat},${marker.lng}`
+    return null
+  })()
+
+  const placePhotoSrc = (() => {
+    if (!mapsApiKey) return null
+    if (!place?.photoName) return null
+    return `https://places.googleapis.com/v1/${place.photoName}/media?maxHeightPx=400&maxWidthPx=800&key=${mapsApiKey}`
+  })()
+
+  return (
+      <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
+        <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="w-10 h-10 bg-white border border-[#EDE9E3] rounded-[10px] flex items-center justify-center text-[#2D2926] hover:border-[#C4B9AC] transition-colors shadow-sm"
+                aria-label="Înapoi"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div className="flex flex-col">
+              <h2 className="text-[18px] sm:text-[20px] font-medium text-[#2D2926] tracking-tight leading-tight">Hartă</h2>
+              <div className="text-[12px] text-[#B8A99A] flex items-center gap-1.5 mt-0.5">
+                <MapPin size={12} />
+                <span>{label || 'Locație'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+                        <button
+              onClick={() => { setIsManagingZones(!isManagingZones); setIsDrawingMode(false); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-medium transition-all ${
+                isManagingZones
+                ? "bg-[#2D2926] text-white shadow-md"
+                : "bg-white border border-[#EDE9E3] text-[#2D2926] hover:border-[#C4B9AC]"
+              }`}
+            >
+              <Settings size={16} />
+              <span>{isManagingZones ? "Inchide gestiune" : "Gestioneaza zone"}</span>
+            </button>
+
+            <button
+              onClick={() => { setIsDrawingMode(!isDrawingMode); setIsManagingZones(false); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] font-medium transition-all ${
+                isDrawingMode 
+                ? 'bg-[#E8A87C] text-white shadow-md' 
+                : 'bg-white border border-[#EDE9E3] text-[#2D2926] hover:border-[#C4B9AC]'
+              }`}
+            >
+              <Shield size={16} />
+              <span>{isDrawingMode ? 'Anulează desenarea' : 'Setează zonă sigură'}</span>
+            </button>
+          </div>
+        </nav>
+
+        <main className="flex-1 p-6 lg:p-10">
+          {/* --- BANNER DE ALERTA GEOFENCING (Task Miron Andrei) --- */}
+          {isOutsideZone && marker && (
+              <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-[12px] shadow-sm animate-pulse flex items-center gap-3">
+                <Shield className="text-red-500 flex-shrink-0" size={24} />
+                <div>
+                  <div className="font-bold text-[15px]">ALERTĂ DE SECURITATE</div>
+                  <div className="text-[13px] opacity-90">Locația detectată este în afara zonelor de siguranță configurate!</div>
+                </div>
+              </div>
+          )}
+          {/* ------------------------------------------------------- */}
+
+          {state.description && <div className="mb-4 text-[14px] text-[#2D2926] font-medium bg-white/50 p-3 rounded-[10px] border border-[#EDE9E3]/50 inline-block">{state.description}</div>}
+
+          {!mapsApiKey && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
+                Lipsește cheia Google Maps. Setează <span className="font-medium text-[#2D2926]">VITE_GOOGLE_MAPS_API_KEY</span> în <span className="font-medium text-[#2D2926]">Frontend/.env.local</span>.
+              </div>
+          )}
+
+          {mapsApiKey && loadError && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">
+                Nu s-a putut încărca Google Maps. Verifică cheia și restricțiile ei în Google Cloud Console.
+              </div>
+          )}
+
+          {mapsApiKey && !loadError && !isLoaded && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 shadow-sm text-[13px] text-[#9A8A7C]">Se încarcă harta…</div>
+          )}
+
+          {mapsApiKey && !loadError && isLoaded && (
+              <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                <div className="flex flex-col lg:flex-row">
+                  <aside className="lg:w-[340px] lg:border-r border-[#EDE9E3] p-5">
+                    {placePhotoSrc && (
+                        <div className="mb-4 overflow-hidden rounded-[12px] border border-[#EDE9E3] bg-[#FAF8F5]">
+                          <img
+                              src={placePhotoSrc}
+                              alt={place?.name || label}
+                              className="w-full h-[180px] object-cover"
+                              loading="lazy"
+                          />
+                        </div>
+                    )}
+
+                    {isManagingZones && (
+
+
+                        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+
+
+                          <div className="flex items-center justify-between mb-4">
+
+
+                            <div className="text-[12px] text-[#9A8A7C] uppercase tracking-wider font-semibold">Zone active</div>
+
+
+                            {savedZones.length > 0 && (
+
+
+                                <button onClick={handleDeleteAllZones} className="text-[11px] text-red-500 hover:text-red-700 font-medium">Sterge tot</button>
+
+
+                            )}
+
+
+                          </div>
+
+
+                          
+
+
+                          {savedZones.length === 0 ? (
+
+
+                              <div className="text-[13px] text-[#9A8A7C] bg-[#FAF8F5] p-4 rounded-[12px] border border-dashed border-[#EDE9E3] text-center">
+
+
+                                Nu ai zone configurate.
+
+
+                              </div>
+
+
+                          ) : (
+
+
+                              <div className="space-y-2">
+
+
+                                {savedZones.map(zone => (
+
+
+                                    <div key={zone.id} className="flex items-center justify-between p-3 bg-white border border-[#EDE9E3] rounded-[12px] shadow-sm hover:border-[#C4B9AC] transition-all group">
+
+
+                                      <div className="flex items-center gap-3">
+
+
+                                        <div className="w-2 h-2 rounded-full bg-[#E8A87C]"></div>
+
+
+                                        <span className="text-[13px] font-medium text-[#2D2926]">{zone.name}</span>
+
+
+                                      </div>
+
+
+                                      <button 
+
+
+                                        onClick={() => handleDeleteZone(zone.id)}
+
+
+                                        className="text-[#B8A99A] hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+
+
+                                      >
+
+
+                                        <Trash2 size={14} />
+
+
+                                      </button>
+
+
+                                    </div>
+
+
+                                ))}
+
+
+                              </div>
+
+
+                          )}
+
+
+                        </div>
+
+
+                    )}
+
+
+
+                    <div className="text-[12px] text-[#9A8A7C] uppercase tracking-wider font-semibold">Locație</div>
+                    <div className="mt-1 text-[18px] font-medium text-[#2D2926] leading-snug">{place?.name || label || 'Locație'}</div>
+
+                    {(place?.formattedAddress || resolvedAddress) && (
+                        <div className="mt-2 text-[13px] text-[#9A8A7C] leading-relaxed">{place?.formattedAddress || resolvedAddress}</div>
+                    )}
+
+                    <div className="mt-6 space-y-4">
+                      {typeof place?.rating === 'number' && (
+                          <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-[#9A8A7C]">Rating</span>
+                            <span className="font-medium text-[#2D2926]">{place.rating} ⭐ ({place.userRatingCount})</span>
+                          </div>
+                      )}
+
+                      {typeof place?.openNow === 'boolean' && (
+                          <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-[#9A8A7C]">Status</span>
+                            <span className={`font-medium ${place.openNow ? 'text-green-600' : 'text-red-600'}`}>
+                              {place.openNow ? 'Deschis acum' : 'Închis'}
+                            </span>
+                          </div>
+                      )}
+                    </div>
+
+                    <div className="mt-8 flex flex-col gap-2">
+                      {googleMapsLink && (
+                          <a
+                              href={googleMapsLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center justify-center h-11 px-4 rounded-[12px] bg-[#2D2926] text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+                          >
+                            Vezi în Google Maps
+                          </a>
+                      )}
+                      
+                      {place?.websiteUri && (
+                          <a
+                              href={place.websiteUri}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center justify-center h-11 px-4 rounded-[12px] bg-white border border-[#EDE9E3] text-[13px] text-[#2D2926] font-medium hover:border-[#C4B9AC] transition-colors"
+                          >
+                            Vizitează Website
+                          </a>
+                      )}
+                    </div>
+
+                    {savedZones.length > 0 && (
+                      <div className="mt-10">
+                        <div className="text-[11px] text-[#9A8A7C] uppercase tracking-widest font-bold mb-3">Zone de Siguranță ({savedZones.length})</div>
+                        <div className="space-y-2">
+                          {savedZones.map(zone => (
+                            <div key={zone.id} className="flex items-center justify-between p-3 rounded-[10px] bg-[#FAF8F5] border border-[#EDE9E3]">
+                              <span className="text-[13px] font-medium text-[#2D2926]">{zone.name}</span>
+                              <div className="flex gap-2">
+                                <button className="text-[#9A8A7C] hover:text-[#2D2926]"><MapPin size={14} /></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {message && <div className="mt-6 p-3 rounded-[10px] bg-[#FDFCFB] border border-[#E8A87C]/30 text-[12px] text-[#9A8A7C] italic text-center">{message}</div>}
+                  </aside>
+
+                  <div className="flex-1 relative">
+                    <GoogleMap
+                        mapContainerStyle={{ width: '100%', height: '600px' }}
+                        center={center}
+                        zoom={marker ? 16 : 13}
+                        options={{ 
+                          mapTypeControl: false, 
+                          streetViewControl: false, 
+                          fullscreenControl: false,
+                          styles: [
+                            { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+                          ]
+                        }}
+                    >
+                      {marker && <Marker position={marker} onClick={() => setInfoOpen(true)} />}
+                      
+                      {savedZones.map(zone => (
+                        <Polygon
+                          key={zone.id}
+                          paths={zone.points}
+                          options={{
+                            fillColor: '#10b981',
+                            fillOpacity: 0.15,
+                            strokeColor: '#10b981',
+                            strokeWeight: 2,
+                            clickable: false,
+                          }}
+                        />
+                      ))}
+
+                      {isDrawingMode && (
+                        <DrawingManager
+                          onPolygonComplete={onPolygonComplete}
+                          options={{
+                            drawingMode: 'polygon' as any,
+                            drawingControl: false,
+                            polygonOptions: {
+                              fillColor: '#E8A87C',
+                              fillOpacity: 0.3,
+                              strokeColor: '#E8A87C',
+                              strokeWeight: 3,
+                              editable: true,
+                              draggable: true,
+                            }
+                          }}
+                        />
+                      )}
+
+                      {marker && infoOpen && (
+                          <InfoWindow position={marker} onCloseClick={() => setInfoOpen(false)}>
+                            <div className="p-1 max-w-[200px]">
+                              <div className="font-bold text-[14px] mb-1">{place?.name || label}</div>
+                              <div className="text-[12px] text-gray-500 leading-tight">{place?.formattedAddress || resolvedAddress || ''}</div>
+                            </div>
+                          </InfoWindow>
+                      )}
+                    </GoogleMap>
+                    
+                    {isDrawingMode && (
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border border-[#E8A87C] text-[12px] font-medium text-[#2D2926] z-20">
+                        Conturați poligonul pe hartă și uniți punctele pentru a salva zona.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+          )}
+        </main>
+      </div>
+  )
+}

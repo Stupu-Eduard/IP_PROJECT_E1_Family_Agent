@@ -1,0 +1,10 @@
+﻿import { useEffect, useState, useCallback, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeft, MapPin, Shield, Trash2, Settings, X } from 'lucide-react'
+import { GoogleMap, InfoWindow, Marker, useJsApiLoader, DrawingManager, Polygon } from '@react-google-maps/api'
+import { updateLocationCoordinates } from '../services/locations'
+import { saveGeofenceZone, fetchGeofenceZones, deleteGeofenceZone, deleteAllGeofenceZones } from '../services/geofencing'
+import type { GeofenceZone } from '../services/geofencing'
+import { isInsideGeofence } from '../utils/geofencing'
+
+type MapState = {

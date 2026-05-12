@@ -1,0 +1,120 @@
+﻿  lat?: number
+  lng?: number
+  locationId?: number
+  locationLabel?: string
+  description?: string
+}
+
+type LatLng = { lat: number; lng: number }
+// -----------------------------------------------------
+
+import { useAuthStore } from '../store/authStore'
+
+export default function ExpenseMap() {
+  const token = useAuthStore((state) => state.token)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const state = (location.state ?? {}) as MapState
+
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
+  const geocodingApiKey = (import.meta.env.VITE_GOOGLE_GEOCODING_API_KEY as string | undefined) ?? mapsApiKey
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'family-agent-google-maps',
+    googleMapsApiKey: mapsApiKey ?? '',
+    libraries: ['drawing', 'geometry'],
+  })
+
+  const [center, setCenter] = useState<LatLng>({ lat: 44.4268, lng: 26.1025 })
+  const [marker, setMarker] = useState<LatLng | null>(null)
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null)
+  const [placeId, setPlaceId] = useState<string | null>(null)
+  const [googleMapsUri, setGoogleMapsUri] = useState<string | null>(null)
+
+  //  Adaugat pentru Geofencing
+  const [isOutsideZone, setIsOutsideZone] = useState(false);
+  const [savedZones, setSavedZones] = useState<GeofenceZone[]>([]);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isManagingZones, setIsManagingZones] = useState(false);
+  
+  const loadZones = useCallback(async () => {
+    try {
+      const zones = await fetchGeofenceZones();
+      setSavedZones(zones);
+      
+      // Re-verificăm markerul curent față de noile zone
+      if (marker) {
+        const isSafe = zones.some(zone => isInsideGeofence(marker, zone.points));
+        setIsOutsideZone(zones.length > 0 && !isSafe);
+      }
+    } catch (err) {
+      console.error('Eroare la încărcarea zonelor:', err);
+    }
+  }, [marker]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      loadZones();
+    }
+  }, [isLoaded, loadZones]);
+
+  const onPolygonComplete = useCallback(async (polygon: google.maps.Polygon) => {
+    const path = polygon.getPath();
+    const points: LatLng[] = [];
+    for (let i = 0; i < path.getLength(); i++) {
+      const point = path.getAt(i);
+      points.push({ lat: point.lat(), lng: point.lng() });
+    }
+
+    const zoneName = prompt('Introduceți un nume pentru această zonă de siguranță:', `Zonă ${savedZones.length + 1}`);
+    if (zoneName) {
+      try {
+        await saveGeofenceZone(zoneName, points);
+        setMessage(`Zona "${zoneName}" a fost salvată.`);
+        await loadZones();
+      } catch (err) {
+        setMessage('Eroare la salvarea zonei.');
+      }
+    }
+    
+    polygon.setMap(null); // Ștergem poligonul temporar de desenare
+    setIsDrawingMode(false);
+  }, [savedZones.length, loadZones]);
+
+  const handleDeleteZone = async (id: number) => {
+    if (!window.confirm("Esti sigur ca vrei sa stergi aceasta zona?")) return;
+    try {
+      await deleteGeofenceZone(id);
+      await loadZones();
+    } catch (err) {
+      setMessage("Eroare la stergerea zonei.");
+    }
+  };
+
+  const handleDeleteAllZones = async () => {
+    if (!window.confirm("Esti sigur ca vrei sa stergi TOATE zonele?")) return;
+    try {
+      await deleteAllGeofenceZones();
+      await loadZones();
+    } catch (err) {
+      setMessage("Eroare la stergerea zonelor.");
+    }
+  };
+
+  // -----------------------------------------------------
+
+  const [place, setPlace] = useState<{
+    name?: string
+    formattedAddress?: string
+    rating?: number
+    userRatingCount?: number
+    openNow?: boolean
+    weekdayDescriptions?: string[]
+    phone?: string
+    websiteUri?: string
+    photoName?: string
+  } | null>(null)
+
