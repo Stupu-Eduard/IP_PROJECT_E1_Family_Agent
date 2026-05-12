@@ -58,8 +58,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 l.adress AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id
@@ -81,8 +81,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 l.adress AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id
@@ -111,8 +111,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 l.adress AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id
