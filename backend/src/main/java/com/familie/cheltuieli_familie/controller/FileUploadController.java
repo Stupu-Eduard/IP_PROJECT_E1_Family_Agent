@@ -22,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -47,7 +49,7 @@ public class FileUploadController {
             }
         } catch (AiServiceException e) {
             log.warn("PDF text extraction failed or returned empty, falling back to OCR: {}", e.getMessage());
-            File tempFile = Files.createTempFile("upload-", ".pdf").toFile();
+            File tempFile = createSecureTempFile("upload-", ".pdf");
             file.transferTo(tempFile);
             try {
                 extractedText = ocrService.extractTextFromPdf(tempFile);
@@ -89,5 +91,12 @@ public class FileUploadController {
         log.warn("OCR upload attempted by M5 team is not yet integrated. Filename: {}", file.getOriginalFilename());
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body("OCR module is under development by the M5 team. Please use PDF upload instead.");
+    }
+
+    private File createSecureTempFile(String prefix, String suffix) throws IOException {
+        Path tempDir = Paths.get(System.getProperty("user.dir"), "secure-temp");
+        Files.createDirectories(tempDir);
+        Path secureFile = Files.createTempFile(tempDir, prefix, suffix);
+        return secureFile.toFile();
     }
 }
