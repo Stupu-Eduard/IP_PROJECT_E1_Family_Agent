@@ -47,7 +47,7 @@ class ReportControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=financial_report_2024-01-01_to_2024-01-31.pdf"))
-                .andExpect(contentType(MediaType.APPLICATION_PDF))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(content().bytes(pdfContent));
     }
 

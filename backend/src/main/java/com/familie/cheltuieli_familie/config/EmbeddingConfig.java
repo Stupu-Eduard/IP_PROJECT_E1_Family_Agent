@@ -19,13 +19,12 @@ public class EmbeddingConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
-    private static Map<String, String> loadDotEnv() {
+    Map<String, String> loadDotEnv() {
         Map<String, String> envMap = new HashMap<>();
+        String userDir = System.getProperty("user.dir");
         Path[] candidates = new Path[]{
-                Paths.get(".env"),
-                Paths.get("..", ".env"),
-                Paths.get(System.getProperty("user.dir"), ".env"),
-                Paths.get(System.getProperty("user.dir"), "..", ".env")
+                Paths.get(userDir, ".env"),
+                Paths.get(userDir, "..", ".env")
         };
         for (Path candidate : candidates) {
             if (Files.exists(candidate)) {
@@ -49,15 +48,19 @@ public class EmbeddingConfig {
         return envMap;
     }
 
-    private String resolveKey(String springValue, String envName) {
+    String resolveKey(String springValue, String envName) {
         if (springValue != null && !springValue.isEmpty()) {
             return springValue;
         }
-        String env = System.getenv(envName);
+        String env = getEnv(envName);
         if (env != null && !env.isEmpty()) {
             return env;
         }
         return loadDotEnv().getOrDefault(envName, "");
+    }
+
+    protected String getEnv(String name) {
+        return System.getenv(name);
     }
 
     @Bean

@@ -10,16 +10,25 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class EmbeddingConfigTest {
 
     private EmbeddingConfig embeddingConfig;
+    private Map<String, String> mockEnv = new HashMap<>();
 
     @BeforeEach
     void setUp() {
-        embeddingConfig = new EmbeddingConfig();
+        mockEnv.clear();
+        embeddingConfig = new EmbeddingConfig() {
+            @Override
+            protected String getEnv(String name) {
+                return mockEnv.get(name);
+            }
+        };
     }
 
     @Test
@@ -40,6 +49,14 @@ class EmbeddingConfigTest {
     void testEmbeddingModelBeanCreationThrowsExceptionWhenKeyIsEmpty() {
         // Arrange
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", "");
+        // Ensure no fallback keys exist in mock env or real files
+        embeddingConfig = new EmbeddingConfig() {
+            @Override
+            protected String getEnv(String name) { return null; }
+            @Override
+            Map<String, String> loadDotEnv() { return Map.of(); }
+        };
+        ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", "");
 
         // Act & Assert
         IllegalStateException exception = assertThrows(
@@ -52,6 +69,12 @@ class EmbeddingConfigTest {
     @Test
     void testEmbeddingModelBeanCreationThrowsExceptionWhenKeyIsNull() {
         // Arrange
+        embeddingConfig = new EmbeddingConfig() {
+            @Override
+            protected String getEnv(String name) { return null; }
+            @Override
+            Map<String, String> loadDotEnv() { return Map.of(); }
+        };
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", null);
 
         // Act & Assert
@@ -85,26 +108,18 @@ class EmbeddingConfigTest {
         // Arrange
         String envName = "TEST_ENV_VAR_EMBEDDING";
         String expectedValue = "sk-or-v1-env-var";
+        mockEnv.put(envName, expectedValue);
 
-        // Set environment variable using reflection or system property
-        try {
-            // Note: Setting env vars in Java tests is tricky; using system property as fallback
-            System.setProperty(envName, expectedValue);
+        // Act
+        String result = ReflectionTestUtils.invokeMethod(
+                embeddingConfig,
+                "resolveKey",
+                "",  // empty spring value
+                envName
+        );
 
-            // Act
-            String result = ReflectionTestUtils.invokeMethod(
-                    embeddingConfig,
-                    "resolveKey",
-                    "",  // empty spring value
-                    envName
-            );
-
-            // Assert
-            // This test may not work as expected due to Java environment variable constraints
-            // but demonstrates the intention
-        } finally {
-            System.clearProperty(envName);
-        }
+        // Assert
+        assertEquals(expectedValue, result);
     }
 
     @Test
@@ -118,8 +133,15 @@ class EmbeddingConfigTest {
         System.setProperty("user.dir", tempDir.toString());
 
         try {
+            // Use real EmbeddingConfig but override getEnv to avoid picking up system environment
+            EmbeddingConfig config = new EmbeddingConfig() {
+                @Override
+                protected String getEnv(String name) {
+                    return null;
+                }
+            };
+            
             // Act
-            EmbeddingConfig config = new EmbeddingConfig();
             String result = ReflectionTestUtils.invokeMethod(
                     config,
                     "resolveKey",
@@ -140,6 +162,13 @@ class EmbeddingConfigTest {
         // Arrange
         String emptySpringValue = "";
         String nonExistentEnvName = "NON_EXISTENT_VAR_XYZ_EMBEDDING";
+        
+        embeddingConfig = new EmbeddingConfig() {
+            @Override
+            protected String getEnv(String name) { return null; }
+            @Override
+            Map<String, String> loadDotEnv() { return Map.of(); }
+        };
 
         // Act
         String result = ReflectionTestUtils.invokeMethod(
@@ -174,8 +203,13 @@ class EmbeddingConfigTest {
             EmbeddingConfig config = new EmbeddingConfig();
             var envMap = ReflectionTestUtils.invokeMethod(config, "loadDotEnv");
 
-            // Assert - Note: This is tricky because loadDotEnv is static and may not see temp dir
-            // This test demonstrates the intended behavior
+            // Assert
+            assertNotNull(envMap);
+            assertTrue(envMap instanceof Map);
+            Map<String, String> map = (Map<String, String>) envMap;
+            assertEquals("sk-or-v1-test-key", map.get("OPENROUTER_API_KEY"));
+            assertEquals("secretPassword123", map.get("DATABASE_PASSWORD"));
+            assertEquals("", map.get("EMPTY_VAR"));
         } finally {
             System.setProperty("user.dir", originalUserDir);
         }
@@ -192,9 +226,6 @@ class EmbeddingConfigTest {
 
         // Assert
         assertNotNull(model);
-        // Verify that the model is using the correct configuration
-        // Note: OpenAiEmbeddingModel fields are not directly accessible,
-        // so we verify by checking the instance type and that it doesn't throw
         assertTrue(model instanceof OpenAiEmbeddingModel);
     }
 }

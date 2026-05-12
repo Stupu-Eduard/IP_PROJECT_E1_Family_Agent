@@ -25,4 +25,4 @@ langchain4j:
     chat-model:
       api-key: ${OPENROUTER_API_KEY}
       base-url: https://openrouter.ai/api/v1
-      model-name: nvidia/nemotron-4-340b-instruct
+      model-name: deepseek/deepseek-chat
