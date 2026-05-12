@@ -36,7 +36,7 @@ public class ExtractionOCRController {
     public ResponseEntity<List<Transaction>> extractAndSave(
             @RequestParam("file") MultipartFile multipartFile,
             @RequestParam(value = "bank", required = false, defaultValue = "unknown") String bank
-    ) throws Exception {
+    ) throws IOException {
         Path tempFilePath = createTemporaryUploadFile(multipartFile);
 
         try {

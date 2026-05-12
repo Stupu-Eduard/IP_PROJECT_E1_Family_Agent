@@ -39,21 +39,25 @@ public class BankOcrService {
 
             java.nio.file.Path secureTempDir = Files.createTempDirectory("bank_ocr_");
 
-            for (int page = 0; page < document.getNumberOfPages(); page++) {
-                BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-                java.nio.file.Path tempPath = Files.createTempFile(secureTempDir, "page_" + page, ".png");
-                File tempFile = tempPath.toFile();
+            try {
+                for (int page = 0; page < document.getNumberOfPages(); page++) {
+                    BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
+                    java.nio.file.Path tempPath = Files.createTempFile(secureTempDir, "page_" + page, ".png");
+                    File tempFile = tempPath.toFile();
 
-                try {
-                    javax.imageio.ImageIO.write(image, "png", tempFile);
-                    BufferedImage processed = preProcessor.processImage(tempFile, bank);
-                    String pageText = tesseract.doOCR(processed);
-                    String correctedText = corrector.correctText(pageText);
-                    result.append(correctedText).append("\n");
-                    logger.info("Processed page: {}", page);
-                } finally {
-                    org.springframework.util.FileSystemUtils.deleteRecursively(secureTempDir);
+                    try {
+                        javax.imageio.ImageIO.write(image, "png", tempFile);
+                        BufferedImage processed = preProcessor.processImage(tempFile, bank);
+                        String pageText = tesseract.doOCR(processed);
+                        String correctedText = corrector.correctText(pageText);
+                        result.append(correctedText).append("\n");
+                        logger.info("Processed page: {}", page);
+                    } finally {
+                        Files.deleteIfExists(tempPath);
+                    }
                 }
+            } finally {
+                org.springframework.util.FileSystemUtils.deleteRecursively(secureTempDir);
             }
 
             return result.toString();

@@ -5,6 +5,8 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -39,27 +41,10 @@ class OCRPreProcessorTest {
         }
     }
 
-    @Test
-    void processImage_ShouldHandleRevolut() throws IOException {
-        BufferedImage result = preProcessor.processImage(validImageFile, "revolut");
-        assertNotNull(result);
-    }
-
-    @Test
-    void processImage_ShouldHandleBT() throws IOException {
-        BufferedImage result = preProcessor.processImage(validImageFile, "bt");
-        assertNotNull(result);
-    }
-
-    @Test
-    void processImage_ShouldHandleING() throws IOException {
-        BufferedImage result = preProcessor.processImage(validImageFile, "ing");
-        assertNotNull(result);
-    }
-
-    @Test
-    void processImage_ShouldHandleDefaultBank() throws IOException {
-        BufferedImage result = preProcessor.processImage(validImageFile, "unknown_bank");
+    @ParameterizedTest
+    @ValueSource(strings = {"revolut", "bt", "ing", "unknown_bank"})
+    void processImage_ShouldHandleVariousBanks(String bankName) throws IOException {
+        BufferedImage result = preProcessor.processImage(validImageFile, bankName);
         assertNotNull(result);
     }
 
