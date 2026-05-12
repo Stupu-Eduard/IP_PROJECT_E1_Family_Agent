@@ -13,6 +13,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>family-agent</name>
 	<description>Family Agent Project</description>
+
 	<properties>
 		<java.version>21</java.version>
 		<langchain4j.version>0.33.0</langchain4j.version>
@@ -21,6 +22,7 @@
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.projectKey>Stupu-Eduard_IP_PROJECT_E1_Family_Agent</sonar.projectKey>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -42,6 +44,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -51,15 +54,92 @@
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>${lombok.version}</version>
 			<optional>true</optional>
 		</dependency>
+
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j</artifactId>
+			<version>${langchain4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-open-ai</artifactId>
+			<version>${langchain4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-qdrant</artifactId>
+			<version>${langchain4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-netty-shaded</artifactId>
+			<version>1.69.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.12.6</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>9.4.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.locationtech.jts</groupId>
+			<artifactId>jts-core</artifactId>
+			<version>1.19.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sourceforge.tess4j</groupId>
+			<artifactId>tess4j</artifactId>
+			<version>5.10.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openpnp</groupId>
+			<artifactId>opencv</artifactId>
+			<version>4.9.0-0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -79,155 +159,6 @@
 			<artifactId>byte-buddy-agent</artifactId>
 			<version>1.18.8</version>
 			<scope>test</scope>
-		</dependency>
-
-		<!-- LangChain4j dependencies -->
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j-open-ai</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j-qdrant</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-
-		<!-- gRPC: force consistent version to resolve conflict between Qdrant (1.59) and Firebase (1.69) -->
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-netty-shaded</artifactId>
-			<version>1.69.0</version>
-		</dependency>
-
-		<!-- JWT -->
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-api</artifactId>
-			<version>0.12.6</version>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-impl</artifactId>
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-jackson</artifactId>
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
-
-		<!-- Swagger / OpenAPI -->
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.6.0</version>
-		</dependency>
-
-		<!-- Firebase -->
-		<dependency>
-			<groupId>com.google.firebase</groupId>
-			<artifactId>firebase-admin</artifactId>
-			<version>9.4.3</version>
-		</dependency>
-
-		<!-- JTS Geometry -->
-		<dependency>
-			<groupId>org.locationtech.jts</groupId>
-			<artifactId>jts-core</artifactId>
-			<version>1.19.0</version>
-		</dependency>
-
-
-		<!-- PDF processing -->
-		<dependency>
-			<groupId>org.apache.pdfbox</groupId>
-			<artifactId>pdfbox</artifactId>
-			<version>3.0.1</version>
-		</dependency>
-
-		<!-- OCR dependencies -->
-		<dependency>
-			<groupId>net.sourceforge.tess4j</groupId>
-			<artifactId>tess4j</artifactId>
-			<version>5.10.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.openpnp</groupId>
-			<artifactId>opencv</artifactId>
-			<version>4.9.0-0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j-open-ai</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j-qdrant</artifactId>
-			<version>${langchain4j.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-netty-shaded</artifactId>
-			<version>1.69.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-api</artifactId>
-			<version>0.12.6</version>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-impl</artifactId>
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.jsonwebtoken</groupId>
-			<artifactId>jjwt-jackson</artifactId>
-			<version>0.12.6</version>
-			<scope>runtime</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.6.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.google.firebase</groupId>
-			<artifactId>firebase-admin</artifactId>
-			<version>9.4.3</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.locationtech.jts</groupId>
-			<artifactId>jts-core</artifactId>
-			<version>1.19.0</version>
 		</dependency>
 	</dependencies>
 
@@ -307,5 +238,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
