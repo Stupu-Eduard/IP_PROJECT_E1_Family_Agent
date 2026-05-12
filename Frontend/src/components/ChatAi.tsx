@@ -1,13 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, X, MessageSquare } from 'lucide-react';
 import api from '../api/api';
+import AgentResponseRenderer from './AgentResponseRenderer';
+import type { AgentResponse } from '../types/AgentResponseDTO';
+
+interface ChatMessage {
+    id: number;
+    response: AgentResponse;
+    sender: 'user' | 'bot';
+}
 
 const ChatAI: React.FC = () => {
 
     // ── State ────────────────────────────────────────────────────────────
     const [isOpen,   setIsOpen]   = useState(false);
-    const [messages, setMessages] = useState([
-        { id: 1, text: 'Salut! Sunt asistentul tău FamilyAgent. Cum te pot ajuta cu bugetul astăzi?', sender: 'bot' }
+    const [messages, setMessages] = useState<ChatMessage[]>([
+        {
+            id: 1,
+            response: { type: 'text', text: 'Salut! Sunt asistentul tău FamilyAgent. Cum te pot ajuta cu bugetul astăzi?' },
+            sender: 'bot',
+        },
     ]);
     const [input,    setInput]    = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -22,22 +34,28 @@ const ChatAI: React.FC = () => {
         e.preventDefault();
         if (!input.trim() || isTyping) return;
 
-        const userMsg = { id: Date.now(), text: input, sender: 'user' };
+        const userMsg: ChatMessage = {
+            id: Date.now(),
+            response: { type: 'text', text: input },
+            sender: 'user',
+        };
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
 
         try {
             const { data } = await api.post('/v1/chat', { message: input });
+            // Backend-ul returnează direct AgentResponse (text/chart/map).
+            // Dacă payload-ul e malformat, AgentResponseRenderer afișează fallback elegant.
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: data.reply,
+                response: data as AgentResponse,
                 sender: 'bot',
             }]);
-        } catch (err) {
+        } catch {
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
-                text: 'Eroare la conectarea cu asistentul. Încearcă din nou.',
+                response: { type: 'text', text: 'Eroare la conectarea cu asistentul. Încearcă din nou.' },
                 sender: 'bot',
             }]);
         } finally {
@@ -162,28 +180,41 @@ const ChatAI: React.FC = () => {
                         scrollbarWidth: 'thin',
                         scrollbarColor: '#EDE9E3 transparent',
                     }}>
-                        {messages.map((msg) => (
-                            <div key={msg.id} style={{
-                                display: 'flex',
-                                justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                            }}>
-                                <div style={{
-                                    maxWidth: '85%',
-                                    padding: '8px 11px',
-                                    fontSize: 12.5,
-                                    lineHeight: 1.5,
-                                    borderRadius: msg.sender === 'user'
-                                        ? '12px 12px 3px 12px'
-                                        : '12px 12px 12px 3px',
-                                    background: msg.sender === 'user' ? 'var(--color-ink)' : '#fff',
-                                    color: msg.sender === 'user' ? '#fff' : 'var(--color-ink)',
-                                    border: msg.sender === 'user' ? 'none' : '1px solid var(--color-border)',
-                                    boxShadow: '0 1px 3px rgba(45,41,38,0.05)',
+                        {messages.map((msg) => {
+                            const isUser = msg.sender === 'user';
+                            const isVisual = msg.response.type === 'chart' || msg.response.type === 'map';
+                            return (
+                                <div key={msg.id} style={{
+                                    display: 'flex',
+                                    justifyContent: isUser ? 'flex-end' : 'flex-start',
                                 }}>
-                                    {msg.text}
+                                    <div style={{
+                                        maxWidth: isVisual ? '95%' : '85%',
+                                        width: isVisual ? '95%' : 'auto',
+                                        padding: isVisual ? 0 : '8px 11px',
+                                        fontSize: 12.5,
+                                        lineHeight: 1.5,
+                                        borderRadius: isVisual
+                                            ? 9
+                                            : isUser
+                                                ? '12px 12px 3px 12px'
+                                                : '12px 12px 12px 3px',
+                                        background: isVisual
+                                            ? 'transparent'
+                                            : isUser
+                                                ? 'var(--color-ink)'
+                                                : '#fff',
+                                        color: isUser ? '#fff' : 'var(--color-ink)',
+                                        border: isVisual || isUser ? 'none' : '1px solid var(--color-border)',
+                                        boxShadow: isVisual ? 'none' : '0 1px 3px rgba(45,41,38,0.05)',
+                                    }}>
+                                        {isUser && msg.response.type === 'text'
+                                            ? msg.response.text
+                                            : <AgentResponseRenderer response={msg.response} />}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
 
                         {/* Typing indicator */}
                         {isTyping && (
