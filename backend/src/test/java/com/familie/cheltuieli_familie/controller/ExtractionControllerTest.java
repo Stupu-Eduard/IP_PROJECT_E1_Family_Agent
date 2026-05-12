@@ -5,7 +5,6 @@ import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.service.ExtractionService;
-import com.familie.cheltuieli_familie.service.SyncService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

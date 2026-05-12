@@ -15,7 +15,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;

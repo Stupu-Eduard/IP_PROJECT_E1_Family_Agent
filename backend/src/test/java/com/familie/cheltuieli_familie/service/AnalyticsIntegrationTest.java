@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.model.Expense;
-import java.time.LocalDateTime;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

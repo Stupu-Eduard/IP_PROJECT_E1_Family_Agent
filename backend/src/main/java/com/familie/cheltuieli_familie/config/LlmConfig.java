@@ -156,61 +156,65 @@ public class LlmConfig {
 
     private long[] parseRetryDelays(String str, int maxRetries) {
         long[] defaultDelays = new long[]{2000, 4000};
-        long[] parsedDelays = defaultDelays;
+        long[] parsedDelays = parseLongArrayOrDefault(str, defaultDelays);
+        return normalizeToLength(parsedDelays, maxRetries);
+    }
 
+    private long[] parseLongArrayOrDefault(String str, long[] defaultDelays) {
         if (str == null || str.isBlank()) {
             log.warn("Property ai.intent-extraction.retry-delays-ms is blank; using default retry delays.");
-        } else {
-            String[] parts = str.split(",");
-            long[] temp = new long[parts.length];
-            int count = 0;
+            return defaultDelays;
+        }
 
-            try {
-                for (String part : parts) {
-                    String trimmed = part.trim();
-                    if (trimmed.isBlank()) {
-                        continue;
-                    }
+        String[] parts = str.split(",");
+        long[] temp = new long[parts.length];
+        int count = 0;
+
+        try {
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isBlank()) {
                     temp[count++] = Long.parseLong(trimmed);
                 }
-
-                if (count == 0) {
-                    log.warn("Property ai.intent-extraction.retry-delays-ms contains no valid values; using default retry delays.");
-                } else {
-                    parsedDelays = new long[count];
-                    System.arraycopy(temp, 0, parsedDelays, 0, count);
-                }
-            } catch (NumberFormatException ex) {
-                log.warn("Invalid value '{}' for ai.intent-extraction.retry-delays-ms; using default retry delays.", str, ex);
             }
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid value '{}' for ai.intent-extraction.retry-delays-ms; using default retry delays.", str, ex);
+            return defaultDelays;
         }
 
-        if (maxRetries <= 0) {
-            return parsedDelays;
+        if (count == 0) {
+            log.warn("Property ai.intent-extraction.retry-delays-ms contains no valid values; using default retry delays.");
+            return defaultDelays;
         }
 
-        if (parsedDelays.length == maxRetries) {
-            return parsedDelays;
+        long[] result = new long[count];
+        System.arraycopy(temp, 0, result, 0, count);
+        return result;
+    }
+
+    private long[] normalizeToLength(long[] delays, int maxRetries) {
+        if (maxRetries <= 0 || delays.length == maxRetries) {
+            return delays;
         }
 
-        long[] normalizedDelays = new long[maxRetries];
-        int copyLength = Math.min(parsedDelays.length, maxRetries);
-        System.arraycopy(parsedDelays, 0, normalizedDelays, 0, copyLength);
+        long[] normalized = new long[maxRetries];
+        int copyLength = Math.min(delays.length, maxRetries);
+        System.arraycopy(delays, 0, normalized, 0, copyLength);
 
-        long fillValue = parsedDelays[parsedDelays.length - 1];
+        long fillValue = delays[delays.length - 1];
         for (int i = copyLength; i < maxRetries; i++) {
-            normalizedDelays[i] = fillValue;
+            normalized[i] = fillValue;
         }
 
-        if (parsedDelays.length != maxRetries) {
+        if (delays.length != maxRetries) {
             log.warn(
                     "Configured retry delays count ({}) does not match ai.intent-extraction.max-retries ({}); normalized retry delays to match.",
-                    parsedDelays.length,
+                    delays.length,
                     maxRetries
             );
         }
 
-        return normalizedDelays;
+        return normalized;
     }
 
 }

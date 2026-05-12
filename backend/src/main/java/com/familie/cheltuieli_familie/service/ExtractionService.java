@@ -191,11 +191,6 @@ public class ExtractionService {
         // Consistency Validation
         String validationNote = buildValidationNote(node.path("items"), amount);
 
-        String finalRawInput = rawText;
-        if (validationNote != null) {
-            finalRawInput = validationNote + "\n" + finalRawInput;
-        }
-
         return ExtractionResponse.builder()
                 .amount(amount)
                 .category(category)

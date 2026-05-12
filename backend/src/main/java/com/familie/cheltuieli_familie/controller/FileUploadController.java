@@ -54,8 +54,10 @@ public class FileUploadController {
             try {
                 extractedText = ocrService.extractTextFromPdf(tempFile);
             } finally {
-                if (!tempFile.delete()) {
-                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+                try {
+                    Files.delete(tempFile.toPath());
+                } catch (IOException ex) {
+                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath(), ex);
                 }
             }
         }

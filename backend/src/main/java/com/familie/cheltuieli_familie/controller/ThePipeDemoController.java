@@ -23,6 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ThePipeDemoController {
 
+    private static final String TIMESTAMP_KEY = "timestamp";
+
     private final ThePipeHandler thePipeHandler;
     private final ObjectMapper objectMapper;
 
@@ -31,7 +33,7 @@ public class ThePipeDemoController {
     public String sayHello() throws JsonProcessingException {
         String json = objectMapper.writeValueAsString(Map.of(
                 "message", "Salut de la The Pipe!",
-                "timestamp", LocalDateTime.now().toString()
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
         ));
         thePipeHandler.broadcast(json);
         return "OK - Mesaj de salut trimis";
@@ -46,7 +48,7 @@ public class ThePipeDemoController {
                 "lat", 44.4325,
                 "lng", 26.1039,
                 "isRestricted", false,
-                "timestamp", LocalDateTime.now().toString()
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
         ));
         thePipeHandler.broadcast(json);
         return "OK - Locatie sigura trimisa (Piata Universitatii)";
@@ -61,7 +63,7 @@ public class ThePipeDemoController {
                 "lat", 44.4370,
                 "lng", 26.0959,
                 "isRestricted", true,
-                "timestamp", LocalDateTime.now().toString()
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
         ));
         thePipeHandler.broadcast(json);
         return "OK - ALERTA trimisa: Copil in zona restrictionata!";
