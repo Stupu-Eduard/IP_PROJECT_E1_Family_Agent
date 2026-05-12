@@ -83,45 +83,6 @@ export default function ExpenseMap() {
     photoName?: string
   } | null>(null)
 
-  // --- THE PIPE: Conexiunea pentru actualizare LIVE (OPTIMIZATĂ JWT) ---
-  useEffect(() => {
-    if (!token) return;
-    console.log('⏳ HARTA: Se inițializează fluxul live prin THE PIPE...');
-    
-    // IMPORTANT: Backend-ul rulează de obicei pe 8080
-    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
-    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
-
-    console.log('📡 HARTA: Încercare conexiune la:', `${wsUrl}/locatie?token=...`);
-    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
-
-    socket.onopen = () => console.log('🟢 HARTA: Conectat la fluxul live!');
-
-    socket.onmessage = (event) => {
-      console.log('📡 THE PIPE (Harta): Mesaj brut primit:', event.data);
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📍 THE PIPE (Harta): Date parsate:', data);
-
-        // Actualizăm markerul și centrul hărții cu datele de la adaptorul tău
-        if (data.lat && data.lng) {
-          const newPos = { lat: data.lat, lng: data.lng };
-          setMarker(newPos);
-          setCenter(newPos);
-          
-          if (data.isRestricted) {
-            setIsOutsideZone(true);
-          }
-        }
-      } catch (e) {
-        console.error('❌ HARTA: Eroare la procesarea datelor live', e);
-      }
-    };
-
-    return () => socket.close();
-  }, [token]);
-  // ----------------------------------------------------
-
   const label = (state.locationLabel ?? '').trim()
 
   async function geocodeAddress(address: string, signal: AbortSignal) {

@@ -12,12 +12,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -58,10 +60,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (userOpt.isPresent() && jwtUtil.validateToken(jwt, userEmail)) {
                     User user = userOpt.get();
+                    
+                    // Extragem rolul din token și îl convertim în autoritate Spring Security
+                    String role = jwtUtil.extractClaim(jwt, claims -> claims.get("role", String.class));
+                    List<SimpleGrantedAuthority> authorities = Collections.emptyList();
+                    
+                    if (role != null) {
+                        authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                        log.debug("🔑 User {} autentificat cu rolul: {}", userEmail, authorities);
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             user,
                             null,
-                            Collections.emptyList() // Aici poți adăuga autoritățile dacă există
+                            authorities
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);

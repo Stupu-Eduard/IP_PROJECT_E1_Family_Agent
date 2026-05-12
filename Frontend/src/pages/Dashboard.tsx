@@ -219,12 +219,13 @@ export default function Dashboard() {
       console.log('🚫 WebSocket ignorat: Utilizatorul este Copil.')
       return
     }
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
     const wsUrl =
         import.meta.env.VITE_WS_BASE_URL ||
         (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
-        window.location.host
-    const socket = new WebSocket(`${wsUrl}/locatie`)
-    socket.onopen    = () => console.log('🟢 WebSocket conectat cu succes la /locatie')
+        host
+    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`)
+    socket.onopen    = () => console.log('🟢 Dashboard: WebSocket conectat cu succes la /locatie')
     socket.onerror   = (err) => console.error('🔴 Eroare WebSocket:', err)
     socket.onmessage = (event) => {
       try {
