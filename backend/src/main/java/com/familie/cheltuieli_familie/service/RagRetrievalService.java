@@ -2,7 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.config.LlmConfig;
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +48,7 @@ public class RagRetrievalService {
                 .distinct()
                 .toList();
 
-        List<ExpenseEntity> dbRecords = expenseJpaRepository.findAllById(ids);
+        List<Expense> dbRecords = expenseJpaRepository.findAllById(ids);
 
         StringBuilder context = new StringBuilder();
         context.append("Rezultate semantice din Qdrant:\n");
@@ -57,9 +57,9 @@ public class RagRetrievalService {
                     e.getId(), e.getCategory(), e.getAmount(), e.getDate(), e.getScore()));
         }
         context.append("\nDate exacte din baza de date:\n");
-        for (ExpenseEntity e : dbRecords) {
+        for (Expense e : dbRecords) {
             context.append(String.format("- ID %d: %s, %s RON, %s, %s\n",
-                    e.getId(), e.getCategory(), e.getAmount(), e.getDate(), e.getPerson()));
+                    e.getId(), e.getAiCategory(), e.getAmount(), e.getExpenseDate(), e.getAiPerson()));
         }
 
         String enrichedQuery = query + "\n\nContext:\n" + context;

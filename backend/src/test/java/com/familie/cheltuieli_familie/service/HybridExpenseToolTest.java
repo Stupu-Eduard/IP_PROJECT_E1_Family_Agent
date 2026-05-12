@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,9 +36,9 @@ class HybridExpenseToolTest {
                 EmbeddedExpense.builder().id(2L).category("food").amount(new BigDecimal("30.00")).score(0.90).build()
         );
 
-        List<ExpenseEntity> dbRecords = List.of(
-                ExpenseEntity.builder().id(1L).amount(new BigDecimal("50.00")).date(LocalDate.of(2024, 1, 10)).build(),
-                ExpenseEntity.builder().id(2L).amount(new BigDecimal("30.00")).date(LocalDate.of(2024, 1, 15)).build()
+        List<Expense> dbRecords = List.of(
+                Expense.builder().id(1L).amount(new BigDecimal("50.00")).expenseDate(LocalDate.of(2024, 1, 10).atStartOfDay()).build(),
+                Expense.builder().id(2L).amount(new BigDecimal("30.00")).expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay()).build()
         );
 
         when(qdrantVectorService.searchSimilar("mancare", 20)).thenReturn(semanticResults);
@@ -57,9 +58,9 @@ class HybridExpenseToolTest {
                 EmbeddedExpense.builder().id(2L).category("food").amount(new BigDecimal("30.00")).score(0.90).build()
         );
 
-        List<ExpenseEntity> dbRecords = List.of(
-                ExpenseEntity.builder().id(1L).amount(new BigDecimal("50.00")).date(LocalDate.of(2024, 2, 10)).build(),
-                ExpenseEntity.builder().id(2L).amount(new BigDecimal("30.00")).date(LocalDate.of(2024, 1, 15)).build()
+        List<Expense> dbRecords = List.of(
+                Expense.builder().id(1L).amount(new BigDecimal("50.00")).expenseDate(LocalDate.of(2024, 2, 10).atStartOfDay()).build(),
+                Expense.builder().id(2L).amount(new BigDecimal("30.00")).expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay()).build()
         );
 
         when(qdrantVectorService.searchSimilar("mancare", 20)).thenReturn(semanticResults);
@@ -87,8 +88,8 @@ class HybridExpenseToolTest {
                 EmbeddedExpense.builder().id(2L).category("food").amount(new BigDecimal("30.00")).score(0.90).build()
         );
 
-        List<ExpenseEntity> dbRecords = List.of(
-                ExpenseEntity.builder().id(2L).amount(new BigDecimal("30.00")).date(LocalDate.of(2024, 1, 15)).build()
+        List<Expense> dbRecords = List.of(
+                Expense.builder().id(2L).amount(new BigDecimal("30.00")).expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay()).build()
         );
 
         when(qdrantVectorService.searchSimilar("mancare", 20)).thenReturn(semanticResults);
@@ -106,13 +107,13 @@ class HybridExpenseToolTest {
                 EmbeddedExpense.builder().id(1L).category("food").amount(new BigDecimal("50.00")).score(0.95).build()
         );
 
-        List<ExpenseEntity> dbRecords = List.of(
-                ExpenseEntity.builder().id(1L).amount(new BigDecimal("50.00")).date(LocalDate.of(2024, 1, 10)).build()
+        List<Expense> dbRecords = List.of(
+                Expense.builder().id(1L).amount(new BigDecimal("50.00")).expenseDate(LocalDate.of(2024, 1, 10).atStartOfDay()).build()
         );
 
-        List<ExpenseEntity> allInRange = List.of(
-                ExpenseEntity.builder().id(1L).amount(new BigDecimal("50.00")).date(LocalDate.of(2024, 1, 10)).build(),
-                ExpenseEntity.builder().id(3L).amount(new BigDecimal("100.00")).date(LocalDate.of(2024, 1, 20)).build()
+        List<Expense> allInRange = List.of(
+                Expense.builder().id(1L).amount(new BigDecimal("50.00")).expenseDate(LocalDate.of(2024, 1, 10).atStartOfDay()).build(),
+                Expense.builder().id(3L).amount(new BigDecimal("100.00")).expenseDate(LocalDate.of(2024, 1, 20).atStartOfDay()).build()
         );
 
         when(qdrantVectorService.searchSimilar("mancare", 20)).thenReturn(semanticResults);
@@ -130,8 +131,8 @@ class HybridExpenseToolTest {
     void compareSemanticVsDbTotal_shouldHandleEmptySemanticResults() {
         when(qdrantVectorService.searchSimilar("vacanta", 20)).thenReturn(List.of());
 
-        List<ExpenseEntity> allInRange = List.of(
-                ExpenseEntity.builder().id(3L).amount(new BigDecimal("200.00")).date(LocalDate.of(2024, 1, 20)).build()
+        List<Expense> allInRange = List.of(
+                Expense.builder().id(3L).amount(new BigDecimal("200.00")).expenseDate(LocalDate.of(2024, 1, 20).atStartOfDay()).build()
         );
 
         when(expenseJpaRepository.findByDateBetween(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))

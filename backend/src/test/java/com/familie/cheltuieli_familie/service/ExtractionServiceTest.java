@@ -2,7 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;

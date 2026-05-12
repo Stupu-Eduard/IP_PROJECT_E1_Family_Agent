@@ -3,7 +3,7 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.exception.PipelineException;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,31 +35,31 @@ public class ExpensePipelineService {
 
         return extractedList.stream().map(extracted -> {
             // save and sync (PostgreSQL + Qdrant)
-            ExpenseEntity entity = ExpenseEntity.builder()
+            Expense expense = Expense.builder()
                     .amount(extracted.getAmount())
-                    .category(extracted.getCategory())
-                    .location(extracted.getLocation())
-                    .person(extracted.getPerson())
-                    .date(extracted.getTransactionDate())
+                    .aiCategory(extracted.getCategory())
+                    .aiLocation(extracted.getLocation())
+                    .aiPerson(extracted.getPerson())
+                    .expenseDate(extracted.getTransactionDate().atStartOfDay())
                     .rawInput(extracted.getRawInput())
                     .build();
             
-            entity = syncService.syncExpense(entity);
-            log.info("Saved and synced entity: {}", entity.getId());
+            expense = syncService.syncExpense(expense);
+            log.info("Saved and synced expense: {}", expense.getId());
 
             // validate Persistence
-            validationService.validatePersistence(entity.getId());
+            validationService.validatePersistence(expense.getId());
 
             // --- THE PIPE: Trimitem notificarea în timp real ---
             try {
-                String payload = objectMapper.writeValueAsString(entity);
+                String payload = objectMapper.writeValueAsString(expense);
                 thePipeHandler.broadcast(payload);
             } catch (Exception e) {
                 log.error("Failed to broadcast expense to The Pipe", e);
             }
             // --------------------------------------------------
             
-            return entity.getId();
+            return expense.getId();
         }).toList();
     }
 }

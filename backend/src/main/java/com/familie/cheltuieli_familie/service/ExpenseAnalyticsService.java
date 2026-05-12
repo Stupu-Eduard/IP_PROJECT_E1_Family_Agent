@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class ExpenseAnalyticsService {
         log.info("Calculating total expenses from {} to {}", from, to);
         return repository.findByDateBetween(from, to)
                 .stream()
-                .map(ExpenseEntity::getAmount)
+                .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -36,8 +36,8 @@ public class ExpenseAnalyticsService {
         return repository.findByDateBetween(from, to)
                 .stream()
                 .collect(Collectors.groupingBy(
-                        ExpenseEntity::getCategory,
-                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntity::getAmount, BigDecimal::add)
+                        Expense::getAiCategory,
+                        Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)
                 ));
     }
 
@@ -45,14 +45,14 @@ public class ExpenseAnalyticsService {
         log.info("Comparing expenses between members from {} to {}", from, to);
         return repository.findByDateBetween(from, to)
                 .stream()
-                .filter(e -> e.getPerson() != null)
+                .filter(e -> e.getAiPerson() != null)
                 .collect(Collectors.groupingBy(
-                        ExpenseEntity::getPerson,
-                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntity::getAmount, BigDecimal::add)
+                        Expense::getAiPerson,
+                        Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)
                 ));
     }
 
-    public List<ExpenseEntity> detectAnomalies(BigDecimal threshold) {
+    public List<Expense> detectAnomalies(BigDecimal threshold) {
         log.info("Detecting expense anomalies above threshold: {}", threshold);
         return repository.findAll()
                 .stream()
@@ -60,15 +60,15 @@ public class ExpenseAnalyticsService {
                 .toList();
     }
 
-    public List<ExpenseEntity> findByPerson(String person, LocalDate from, LocalDate to) {
+    public List<Expense> findByPerson(String person, LocalDate from, LocalDate to) {
         log.info("Fetching expenses for person: {} from {} to {}", person, from, to);
         return repository.findByDateBetween(from, to)
                 .stream()
-                .filter(e -> person.equalsIgnoreCase(e.getPerson()))
+                .filter(e -> person.equalsIgnoreCase(e.getAiPerson()))
                 .collect(Collectors.toList());
     }
 
-    public List<ExpenseEntity> getTopExpenses(int limit) {
+    public List<Expense> getTopExpenses(int limit) {
         log.info("Fetching top {} expenses", limit);
         return repository.findAll(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "amount"))).getContent();
     }
@@ -87,8 +87,8 @@ public class ExpenseAnalyticsService {
     public String calculateTrend(String category, LocalDate from, LocalDate to) {
         log.info("Calculating trend for category: {} from {} to {}", category, from, to);
         BigDecimal currentTotal = repository.findByDateBetween(from, to).stream()
-                .filter(e -> category.equalsIgnoreCase(e.getCategory()))
-                .map(ExpenseEntity::getAmount)
+                .filter(e -> category.equalsIgnoreCase(e.getAiCategory()))
+                .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long days = ChronoUnit.DAYS.between(from, to) + 1;
@@ -96,8 +96,8 @@ public class ExpenseAnalyticsService {
         LocalDate prevFrom = prevTo.minusDays(days - 1);
 
         BigDecimal prevTotal = repository.findByDateBetween(prevFrom, prevTo).stream()
-                .filter(e -> category.equalsIgnoreCase(e.getCategory()))
-                .map(ExpenseEntity::getAmount)
+                .filter(e -> category.equalsIgnoreCase(e.getAiCategory()))
+                .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (prevTotal.compareTo(BigDecimal.ZERO) == 0) {

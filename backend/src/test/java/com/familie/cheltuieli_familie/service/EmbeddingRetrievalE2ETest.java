@@ -1,7 +1,8 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,13 +91,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testStoreAndRetrieveExpense() {
         long uniqueId = System.currentTimeMillis();
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("150.00"))
-                .category("Mâncare")
-                .person("Alice")
-                .location("Kaufland")
-                .date(LocalDate.of(2024, 3, 15))
+                .aiCategory("Mâncare")
+                .aiPerson("Alice")
+                .aiLocation("Kaufland")
+                .expenseDate(LocalDateTime.of(2024, 3, 15, 0, 0))
                 .rawInput("Am cumpărat 150 lei de mâncare de la Kaufland")
                 .build();
 
@@ -115,13 +116,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testStoreAndSearchWithFilter() {
         long uniqueId = System.currentTimeMillis();
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("200.00"))
-                .category("Transport")
-                .person("Bob")
-                .location("Metro")
-                .date(LocalDate.of(2024, 4, 10))
+                .aiCategory("Transport")
+                .aiPerson("Bob")
+                .aiLocation("Metro")
+                .expenseDate(LocalDateTime.of(2024, 4, 10, 0, 0))
                 .rawInput("Bilet metro 200 lei")
                 .build();
 
@@ -139,13 +140,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testExistsInVectorStore() {
         long uniqueId = System.currentTimeMillis();
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("50.00"))
-                .category("Divertisment")
-                .person("Charlie")
-                .location("Cinema")
-                .date(LocalDate.of(2024, 5, 1))
+                .aiCategory("Divertisment")
+                .aiPerson("Charlie")
+                .aiLocation("Cinema")
+                .expenseDate(LocalDateTime.of(2024, 5, 1, 0, 0))
                 .rawInput("Bilet cinema 50 lei")
                 .build();
 

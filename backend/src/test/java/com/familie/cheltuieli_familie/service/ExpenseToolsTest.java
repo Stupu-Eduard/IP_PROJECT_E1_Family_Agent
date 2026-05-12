@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -47,10 +48,10 @@ class ExpenseToolsTest {
 
     @Test
     void testDetectAnomalies() {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .amount(new BigDecimal("500.00"))
-                .category("Electronics")
-                .date(LocalDate.of(2024, 1, 15))
+                .aiCategory("Electronics")
+                .expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay())
                 .build();
 
         when(analyticsService.detectAnomalies(new BigDecimal("200"))).thenReturn(List.of(expense));
@@ -74,10 +75,10 @@ class ExpenseToolsTest {
 
     @Test
     void testByPerson() {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .amount(new BigDecimal("150.00"))
-                .category("Food")
-                .date(LocalDate.of(2024, 1, 10))
+                .aiCategory("Food")
+                .expenseDate(LocalDate.of(2024, 1, 10).atStartOfDay())
                 .build();
 
         when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
@@ -104,11 +105,11 @@ class ExpenseToolsTest {
 
     @Test
     void testTopExpenses() {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .amount(new BigDecimal("400.00"))
-                .category("Electronics")
-                .person("Teodor")
-                .date(LocalDate.of(2024, 1, 5))
+                .aiCategory("Electronics")
+                .aiPerson("Teodor")
+                .expenseDate(LocalDate.of(2024, 1, 5).atStartOfDay())
                 .build();
 
         when(analyticsService.getTopExpenses(3)).thenReturn(List.of(expense));

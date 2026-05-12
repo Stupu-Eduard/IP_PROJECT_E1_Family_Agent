@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
@@ -39,16 +39,16 @@ public class HybridExpenseTool {
         LocalDate fromDate = LocalDate.parse(from);
         LocalDate toDate = LocalDate.parse(to);
 
-        List<ExpenseEntity> dbRecords = expenseJpaRepository.findAllById(ids);
+        List<Expense> dbRecords = expenseJpaRepository.findAllById(ids);
         BigDecimal total = dbRecords.stream()
-                .filter(e -> e.getDate() != null)
-                .filter(e -> !e.getDate().isBefore(fromDate) && !e.getDate().isAfter(toDate))
-                .map(ExpenseEntity::getAmount)
+                .filter(e -> e.getExpenseDate() != null)
+                .filter(e -> !e.getExpenseDate().toLocalDate().isBefore(fromDate) && !e.getExpenseDate().toLocalDate().isAfter(toDate))
+                .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long count = dbRecords.stream()
-                .filter(e -> e.getDate() != null)
-                .filter(e -> !e.getDate().isBefore(fromDate) && !e.getDate().isAfter(toDate))
+                .filter(e -> e.getExpenseDate() != null)
+                .filter(e -> !e.getExpenseDate().toLocalDate().isBefore(fromDate) && !e.getExpenseDate().toLocalDate().isAfter(toDate))
                 .count();
 
         return String.format("S-au găsit %d cheltuieli similare. Total în perioada %s–%s: %s RON (%d cheltuieli).",
@@ -71,17 +71,17 @@ public class HybridExpenseTool {
 
         BigDecimal semanticTotal = BigDecimal.ZERO;
         if (!ids.isEmpty()) {
-            List<ExpenseEntity> dbRecords = expenseJpaRepository.findAllById(ids);
+            List<Expense> dbRecords = expenseJpaRepository.findAllById(ids);
             semanticTotal = dbRecords.stream()
-                    .filter(e -> e.getDate() != null)
-                    .filter(e -> !e.getDate().isBefore(fromDate) && !e.getDate().isAfter(toDate))
-                    .map(ExpenseEntity::getAmount)
+                    .filter(e -> e.getExpenseDate() != null)
+                    .filter(e -> !e.getExpenseDate().toLocalDate().isBefore(fromDate) && !e.getExpenseDate().toLocalDate().isAfter(toDate))
+                    .map(Expense::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
-        List<ExpenseEntity> allInRange = expenseJpaRepository.findByDateBetween(fromDate, toDate);
+        List<Expense> allInRange = expenseJpaRepository.findByDateBetween(fromDate, toDate);
         BigDecimal dbTotal = allInRange.stream()
-                .map(ExpenseEntity::getAmount)
+                .map(Expense::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return String.format(

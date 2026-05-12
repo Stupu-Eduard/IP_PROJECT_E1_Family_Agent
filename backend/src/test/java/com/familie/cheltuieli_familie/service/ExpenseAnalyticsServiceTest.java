@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -33,14 +34,14 @@ class ExpenseAnalyticsServiceTest {
     @InjectMocks
     private ExpenseAnalyticsService analyticsService;
 
-    private List<ExpenseEntity> sampleExpenses;
+    private List<Expense> sampleExpenses;
 
     @BeforeEach
     void setUp() {
         sampleExpenses = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").person("Alice").date(LocalDate.now()).build(),
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Transport").person("Bob").date(LocalDate.now()).build(),
-                ExpenseEntity.builder().amount(new BigDecimal("150.00")).category("Food").person("Alice").date(LocalDate.now()).build()
+                Expense.builder().amount(new BigDecimal("100.00")).aiCategory("Food").aiPerson("Alice").expenseDate(LocalDateTime.now()).build(),
+                Expense.builder().amount(new BigDecimal("200.00")).aiCategory("Transport").aiPerson("Bob").expenseDate(LocalDateTime.now()).build(),
+                Expense.builder().amount(new BigDecimal("150.00")).aiCategory("Food").aiPerson("Alice").expenseDate(LocalDateTime.now()).build()
         );
     }
 
@@ -85,7 +86,7 @@ class ExpenseAnalyticsServiceTest {
     void testDetectAnomalies() {
         when(repository.findAll()).thenReturn(sampleExpenses);
 
-        List<ExpenseEntity> anomalies = analyticsService.detectAnomalies(new BigDecimal("180.00"));
+        List<Expense> anomalies = analyticsService.detectAnomalies(new BigDecimal("180.00"));
 
         assertEquals(1, anomalies.size());
         assertEquals(new BigDecimal("200.00"), anomalies.get(0).getAmount());
@@ -97,10 +98,10 @@ class ExpenseAnalyticsServiceTest {
         LocalDate to = LocalDate.now();
         when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
 
-        List<ExpenseEntity> result = analyticsService.findByPerson("Alice", from, to);
+        List<Expense> result = analyticsService.findByPerson("Alice", from, to);
 
         assertEquals(2, result.size());
-        assertTrue(result.stream().allMatch(e -> "Alice".equalsIgnoreCase(e.getPerson())));
+        assertTrue(result.stream().allMatch(e -> "Alice".equalsIgnoreCase(e.getAiPerson())));
     }
 
     @Test
@@ -109,17 +110,17 @@ class ExpenseAnalyticsServiceTest {
         LocalDate to = LocalDate.now();
         when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
 
-        List<ExpenseEntity> result = analyticsService.findByPerson("Charlie", from, to);
+        List<Expense> result = analyticsService.findByPerson("Charlie", from, to);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     void testGetTopExpenses() {
-        Page<ExpenseEntity> page = new PageImpl<>(sampleExpenses);
+        Page<Expense> page = new PageImpl<>(sampleExpenses);
         when(repository.findAll(any(Pageable.class))).thenReturn(page);
 
-        List<ExpenseEntity> result = analyticsService.getTopExpenses(3);
+        List<Expense> result = analyticsService.getTopExpenses(3);
 
         assertEquals(3, result.size());
     }
@@ -148,11 +149,11 @@ class ExpenseAnalyticsServiceTest {
         LocalDate prevFrom = LocalDate.of(2024, 1, 30);
         LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Food").date(from.plusDays(5)).build()
+        List<Expense> current = List.of(
+                Expense.builder().amount(new BigDecimal("200.00")).aiCategory("Food").expenseDate(from.plusDays(5).atStartOfDay()).build()
         );
-        List<ExpenseEntity> previous = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").date(prevFrom.plusDays(5)).build()
+        List<Expense> previous = List.of(
+                Expense.builder().amount(new BigDecimal("100.00")).aiCategory("Food").expenseDate(prevFrom.plusDays(5).atStartOfDay()).build()
         );
 
         when(repository.findByDateBetween(from, to)).thenReturn(current);
@@ -171,11 +172,11 @@ class ExpenseAnalyticsServiceTest {
         LocalDate prevFrom = LocalDate.of(2024, 1, 30);
         LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("50.00")).category("Food").date(from.plusDays(5)).build()
+        List<Expense> current = List.of(
+                Expense.builder().amount(new BigDecimal("50.00")).aiCategory("Food").expenseDate(from.plusDays(5).atStartOfDay()).build()
         );
-        List<ExpenseEntity> previous = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").date(prevFrom.plusDays(5)).build()
+        List<Expense> previous = List.of(
+                Expense.builder().amount(new BigDecimal("100.00")).aiCategory("Food").expenseDate(prevFrom.plusDays(5).atStartOfDay()).build()
         );
 
         when(repository.findByDateBetween(from, to)).thenReturn(current);
@@ -194,8 +195,8 @@ class ExpenseAnalyticsServiceTest {
         LocalDate prevFrom = LocalDate.of(2024, 1, 30);
         LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Food").date(from.plusDays(5)).build()
+        List<Expense> current = List.of(
+                Expense.builder().amount(new BigDecimal("200.00")).aiCategory("Food").expenseDate(from.plusDays(5).atStartOfDay()).build()
         );
 
         when(repository.findByDateBetween(from, to)).thenReturn(current);

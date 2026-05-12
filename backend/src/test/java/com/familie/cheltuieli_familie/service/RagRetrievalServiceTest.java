@@ -2,7 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.config.LlmConfig;
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -146,13 +147,13 @@ class RagRetrievalServiceTest {
                         .build()
         );
 
-        List<ExpenseEntity> dbRecords = List.of(
-                ExpenseEntity.builder()
+        List<Expense> dbRecords = List.of(
+                Expense.builder()
                         .id(1L)
-                        .category("food")
+                        .aiCategory("food")
                         .amount(new BigDecimal("100.00"))
-                        .date(LocalDate.of(2024, 1, 15))
-                        .person("Teodor")
+                        .expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay())
+                        .aiPerson("Teodor")
                         .build()
         );
 

@@ -2,7 +2,7 @@ package com.familie.cheltuieli_familie.controller;
 
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,11 +41,11 @@ class AiExpenseControllerTest {
 
     @Test
     void testGetAll() throws Exception {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .category("Food")
-                .date(LocalDate.now())
+                .aiCategory("Food")
+                .expenseDate(java.time.LocalDateTime.now())
                 .build();
         
         when(repository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));
@@ -54,16 +54,16 @@ class AiExpenseControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].amount").value(100.00))
-                .andExpect(jsonPath("$.content[0].category").value("Food"));
+                .andExpect(jsonPath("$.content[0].aiCategory").value("Food"));
     }
 
     @Test
     void testGetById() throws Exception {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .category("Food")
-                .date(LocalDate.now())
+                .aiCategory("Food")
+                .expenseDate(java.time.LocalDateTime.now())
                 .build();
 
         when(repository.findById(1L)).thenReturn(Optional.of(expense));
@@ -72,7 +72,7 @@ class AiExpenseControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount").value(100.00))
-                .andExpect(jsonPath("$.category").value("Food"));
+                .andExpect(jsonPath("$.aiCategory").value("Food"));
     }
 
     @Test
@@ -86,44 +86,44 @@ class AiExpenseControllerTest {
 
     @Test
     void testGetByCategory() throws Exception {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .category("Food")
-                .date(LocalDate.now())
+                .aiCategory("Food")
+                .expenseDate(java.time.LocalDateTime.now())
                 .build();
 
-        when(repository.findByCategory(any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));
+        when(repository.findByAiCategory(any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));
 
         mockMvc.perform(get("/v1/expenses/by-category/Food")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].category").value("Food"));
+                .andExpect(jsonPath("$.content[0].aiCategory").value("Food"));
     }
 
     @Test
     void testGetByPerson() throws Exception {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .person("Teodor")
-                .date(LocalDate.now())
+                .aiPerson("Teodor")
+                .expenseDate(java.time.LocalDateTime.now())
                 .build();
 
-        when(repository.findByPerson(any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));
+        when(repository.findByAiPerson(any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));
 
         mockMvc.perform(get("/v1/expenses/by-person/Teodor")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].person").value("Teodor"));
+                .andExpect(jsonPath("$.content[0].aiPerson").value("Teodor"));
     }
 
     @Test
     void testGetByDateRange() throws Exception {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .date(LocalDate.now())
+                .expenseDate(java.time.LocalDateTime.now())
                 .build();
 
         when(repository.findByDateRange(any(), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(expense)));

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.familie.cheltuieli_familie.exception.AiServiceException;
 import com.familie.cheltuieli_familie.exception.AmountNotFoundException;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.util.NormalizerUtil;
@@ -196,15 +195,6 @@ public class ExtractionService {
         if (validationNote != null) {
             finalRawInput = validationNote + "\n" + finalRawInput;
         }
-
-        ExpenseEntity entity = ExpenseEntity.builder()
-                .amount(amount)
-                .category(category)
-                .location(location)
-                .person(person)
-                .date(transactionDate)
-                .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
-                .build();
 
         return ExtractionResponse.builder()
                 .amount(amount)

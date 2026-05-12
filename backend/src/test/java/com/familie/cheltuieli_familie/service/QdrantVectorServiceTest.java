@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -43,13 +44,13 @@ class QdrantVectorServiceTest {
 
     @Test
     void testStoreExpense() {
-        ExpenseEntity expense = ExpenseEntity.builder()
+        Expense expense = Expense.builder()
                 .id(1L)
                 .amount(new BigDecimal("100.00"))
-                .category("Food")
-                .location("Kaufland")
-                .person("Familie")
-                .date(LocalDate.now())
+                .aiCategory("Food")
+                .aiLocation("Kaufland")
+                .aiPerson("Familie")
+                .expenseDate(LocalDateTime.now())
                 .rawInput("Am platit 100 lei la Kaufland")
                 .build();
 

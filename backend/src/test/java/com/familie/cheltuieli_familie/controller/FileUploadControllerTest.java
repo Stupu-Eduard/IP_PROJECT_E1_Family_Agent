@@ -3,7 +3,7 @@ package com.familie.cheltuieli_familie.controller;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.exception.AiServiceException;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import com.familie.cheltuieli_familie.service.OcrService;
 import com.familie.cheltuieli_familie.service.PdfExtractionService;
@@ -69,7 +69,7 @@ class FileUploadControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].amount").value(100.00));
 
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 
     @Test
@@ -94,7 +94,7 @@ class FileUploadControllerTest {
                 .andExpect(jsonPath("$[0].amount").value(50.00));
 
         verify(ocrService, times(1)).extractTextFromPdf(any());
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 
     @Test

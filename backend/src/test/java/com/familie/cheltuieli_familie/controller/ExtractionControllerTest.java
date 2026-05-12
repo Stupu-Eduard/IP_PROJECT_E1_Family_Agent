@@ -3,7 +3,7 @@ package com.familie.cheltuieli_familie.controller;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import com.familie.cheltuieli_familie.service.SyncService;
 import org.junit.jupiter.api.Test;
@@ -61,7 +61,7 @@ class ExtractionControllerTest {
                 .andExpect(jsonPath("$[0].amount").value(150.00))
                 .andExpect(jsonPath("$[0].category").value("Mâncare"));
 
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 
     @Test

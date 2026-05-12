@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.exception.VectorStoreException;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
@@ -60,21 +60,21 @@ public class QdrantVectorService {
         this.restTemplate = restTemplate;
     }
 
-    public void storeExpense(ExpenseEntity expense) {
+    public void storeExpense(Expense expense) {
         log.info("Storing expense ID {} in vector store", expense.getId());
         String textToEmbed = expense.getRawInput();
         if (textToEmbed == null || textToEmbed.isEmpty()) {
             textToEmbed = String.format("Cheltuială: %s, Sumă: %s, Persoană: %s, Locație: %s, Dată: %s",
-                    expense.getCategory(), expense.getAmount(), expense.getPerson(), expense.getLocation(), expense.getDate());
+                    expense.getAiCategory(), expense.getAmount(), expense.getAiPerson(), expense.getAiLocation(), expense.getExpenseDate().toLocalDate());
         }
 
         Metadata metadata = new Metadata();
         metadata.put(KEY_ID, expense.getId());
         metadata.put(KEY_AMOUNT, expense.getAmount().doubleValue());
-        if (expense.getCategory() != null) metadata.put(KEY_CATEGORY, expense.getCategory());
-        if (expense.getPerson() != null) metadata.put(KEY_PERSON, expense.getPerson());
-        if (expense.getLocation() != null) metadata.put(KEY_LOCATION, expense.getLocation());
-        if (expense.getDate() != null) metadata.put(KEY_DATE, expense.getDate().toString());
+        if (expense.getAiCategory() != null) metadata.put(KEY_CATEGORY, expense.getAiCategory());
+        if (expense.getAiPerson() != null) metadata.put(KEY_PERSON, expense.getAiPerson());
+        if (expense.getAiLocation() != null) metadata.put(KEY_LOCATION, expense.getAiLocation());
+        if (expense.getExpenseDate() != null) metadata.put(KEY_DATE, expense.getExpenseDate().toLocalDate().toString());
 
         Document document = Document.from(textToEmbed, metadata);
         // Use recursive splitter to handle potentially long receipts/OCR text

@@ -2,7 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,8 +51,8 @@ class ExpensePipelineServiceTest {
                 .build();
         when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
-        ExpenseEntity savedEntity = ExpenseEntity.builder().id(1L).build();
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
+        Expense savedExpense = Expense.builder().id(1L).build();
+        when(syncService.syncExpense(any(Expense.class))).thenReturn(savedExpense);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
         List<Long> result = pipelineService.processRawInput("text");
@@ -61,7 +61,7 @@ class ExpensePipelineServiceTest {
         assertEquals(1L, result.get(0));
         verify(thePipeHandler, times(1)).broadcast(anyString());
         verify(validationService, times(1)).validatePersistence(1L);
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 
     @Test
@@ -76,8 +76,8 @@ class ExpensePipelineServiceTest {
                 .build();
         when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
-        ExpenseEntity savedEntity = ExpenseEntity.builder().id(2L).build();
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
+        Expense savedExpense = Expense.builder().id(2L).build();
+        when(syncService.syncExpense(any(Expense.class))).thenReturn(savedExpense);
 
         // Simulam o exceptie la scrierea JSON-ului pentru broadcast
         when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
@@ -88,6 +88,6 @@ class ExpensePipelineServiceTest {
         assertEquals(2L, result.get(0));
         // Verificam ca eroarea a fost capturata si procesarea a continuat
         verify(thePipeHandler, never()).broadcast(anyString());
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
+        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 }

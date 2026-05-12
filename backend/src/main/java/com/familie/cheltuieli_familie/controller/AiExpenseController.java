@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,13 +21,13 @@ public class AiExpenseController {
     private final ExpenseJpaRepository repository;
 
     @GetMapping
-    public ResponseEntity<Page<ExpenseEntity>> getAll(Pageable pageable) {
+    public ResponseEntity<Page<Expense>> getAll(Pageable pageable) {
         log.info("Fetching all expenses, pageable: {}", pageable);
         return ResponseEntity.ok(repository.findAll(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExpenseEntity> getById(@PathVariable Long id) {
+    public ResponseEntity<Expense> getById(@PathVariable Long id) {
         log.info("Fetching expense with id: {}", id);
         return repository.findById(id)
                 .map(ResponseEntity::ok)
@@ -35,19 +35,19 @@ public class AiExpenseController {
     }
 
     @GetMapping("/by-category/{cat}")
-    public ResponseEntity<Page<ExpenseEntity>> getByCategory(@PathVariable String cat, Pageable pageable) {
+    public ResponseEntity<Page<Expense>> getByCategory(@PathVariable String cat, Pageable pageable) {
         log.info("Fetching expenses for category: {}, pageable: {}", cat, pageable);
-        return ResponseEntity.ok(repository.findByCategory(cat, pageable));
+        return ResponseEntity.ok(repository.findByAiCategory(cat, pageable));
     }
 
     @GetMapping("/by-person/{person}")
-    public ResponseEntity<Page<ExpenseEntity>> getByPerson(@PathVariable String person, Pageable pageable) {
+    public ResponseEntity<Page<Expense>> getByPerson(@PathVariable String person, Pageable pageable) {
         log.info("Fetching expenses for person: {}, pageable: {}", person, pageable);
-        return ResponseEntity.ok(repository.findByPerson(person, pageable));
+        return ResponseEntity.ok(repository.findByAiPerson(person, pageable));
     }
 
     @GetMapping("/by-date-range")
-    public ResponseEntity<Page<ExpenseEntity>> getByDateRange(
+    public ResponseEntity<Page<Expense>> getByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             Pageable pageable) {
