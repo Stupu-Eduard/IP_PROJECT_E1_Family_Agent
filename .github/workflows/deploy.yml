@@ -41,7 +41,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
       - name: Compileaza aplicatia (Creeaza .jar)
         if: github.ref == 'refs/heads/main'

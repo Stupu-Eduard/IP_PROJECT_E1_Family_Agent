@@ -20,7 +20,7 @@ class ExpenseVectorRepositoryImplTest {
     private MockRestServiceServer mockServer;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         RestTemplate restTemplate = new RestTemplate();
         repository = new ExpenseVectorRepositoryImpl(restTemplate, "localhost", 6333);
         mockServer = MockRestServiceServer.createServer(restTemplate);

@@ -31,6 +31,8 @@ public class QdrantConfig {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private static final String KEYWORD_TYPE = "keyword";
+
     @Bean
     public QdrantEmbeddingStore embeddingStore() {
         return QdrantEmbeddingStore.builder()
@@ -70,10 +72,10 @@ public class QdrantConfig {
             log.info("Successfully created Qdrant collection '{}' with 2048 dimensions and Cosine distance.", collectionName);
             
             // Create indexes for metadata
-            createPayloadIndex("date", "keyword");
-            createPayloadIndex("person", "keyword");
-            createPayloadIndex("category", "keyword");
-            createPayloadIndex("location", "keyword");
+            createPayloadIndex("date", KEYWORD_TYPE);
+            createPayloadIndex("person", KEYWORD_TYPE);
+            createPayloadIndex("category", KEYWORD_TYPE);
+            createPayloadIndex("location", KEYWORD_TYPE);
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());
