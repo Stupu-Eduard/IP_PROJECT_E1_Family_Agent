@@ -201,10 +201,17 @@
             <artifactId>tess4j</artifactId>
             <version>5.10.0</version>
         </dependency>
+      
         <dependency>
             <groupId>org.openpnp</groupId>
             <artifactId>opencv</artifactId>
-            <version>4.7.0-0</version>
+            <version>4.9.0-0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
