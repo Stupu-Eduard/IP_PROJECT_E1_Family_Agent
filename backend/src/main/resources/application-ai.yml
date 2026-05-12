@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/family_agent
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://db:5432/main_db
+    username: FamilyDB
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -10,8 +10,8 @@ spring:
     show-sql: true
 
 qdrant:
-  host: localhost
-  port: 6333
+  host: qdrant
+  port: 6334
   collection-name: expenses
 
 # LangChain4j Config referencing .env values
@@ -26,3 +26,7 @@ langchain4j:
       api-key: ${OPENROUTER_API_KEY}
       base-url: https://openrouter.ai/api/v1
       model-name: nvidia/nemotron-4-340b-instruct
+    embedding-model:
+      api-key: ${OPENROUTER_API_KEY}
+      base-url: https://openrouter.ai/api/v1
+      model-name: nvidia/llama-nemotron-embed-vl-1b-v2:free

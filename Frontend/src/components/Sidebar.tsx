@@ -24,7 +24,7 @@ const parentNavItems = [
                 <circle cx="17" cy="9" r="2.6"/><path d="M22 20c0-2.6-2.2-4.7-5-4.7"/>
             </svg>
         )},
-    { id: 'expenses/map', label: 'Hartă Live',  icon: (
+    { id: 'expenses/all-map', label: 'Hartă Live',  icon: (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/>
             </svg>
@@ -33,36 +33,39 @@ const parentNavItems = [
 
 // ── Nav items Copil — acces limitat ───────────────────────────────────────
 const childNavItems = [
-    { id: 'dashboard',    label: 'Dashboard',   icon: parentNavItems[0].icon },
+    { id: 'dashboard',    label: 'Dashboard',        icon: parentNavItems[0].icon },
     { id: 'expenses',     label: 'Cheltuielile mele', icon: parentNavItems[1].icon },
-    { id: 'family',       label: 'Familie',     icon: parentNavItems[3].icon },
+    { id: 'family',       label: 'Familie',           icon: parentNavItems[3].icon },
 ]
 
 export default function Sidebar() {
-    const navigate  = useNavigate()
-    const location  = useLocation()
-    const token     = useAuthStore((s) => s.token)
-    const logout    = useAuthStore((s) => s.logout)
+    const navigate = useNavigate()
+    const location = useLocation()
+    const token    = useAuthStore((s) => s.token)
+    const logout   = useAuthStore((s) => s.logout)
 
-    // ── Detectare rol din JWT (același mecanism ca în Dashboard) ──────────
-    let userRole = 'Parent'
-    let userName = 'Eduard P.'
+    // ── Detectare rol și nume din JWT ─────────────────────────────────────
+    let userRole      = 'Parent'
+    let userName      = 'Utilizator'
     let userRoleLabel = 'Părinte · Activ'
-    let userInitials = 'ED'
+    let userInitials  = 'U'
 
     if (token) {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]))
             userRole = payload.role || 'Parent'
-            if (payload.sub) {
-                const email = payload.sub as string
-                userInitials = email.slice(0, 2).toUpperCase()
-                if (userRole === 'Child') {
-                    userName = 'Andrei P.'
-                    userRoleLabel = 'Copil · Activ'
-                    userInitials = 'AN'
-                }
+
+            // Extragem numele din câmpul name sau sub (email)
+            const fullName = payload.name || payload.sub || ''
+            if (fullName) {
+                const parts       = fullName.split(' ')
+                const firstName   = parts[0] || ''
+                const lastInitial = parts[1] ? `${parts[1][0]}.` : ''
+                userName     = lastInitial ? `${firstName} ${lastInitial}` : firstName
+                userInitials = ((firstName[0] || '') + (parts[1]?.[0] || firstName[1] || '')).toUpperCase()
             }
+
+            userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
         } catch {}
     }
 
@@ -105,9 +108,9 @@ export default function Sidebar() {
                             onClick={() => navigate('/' + id)}
                             className={`fa-sidebar-link ${isActive ? 'active' : ''}`}
                         >
-              <span className="fa-sidebar-icon-bg">
-                <span className="fa-sidebar-icon">{icon}</span>
-              </span>
+                            <span className="fa-sidebar-icon-bg">
+                                <span className="fa-sidebar-icon">{icon}</span>
+                            </span>
                             {label}
                             {isActive && <span className="fa-sidebar-active-dot" />}
                         </button>

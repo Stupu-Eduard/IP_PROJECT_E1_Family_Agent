@@ -20,16 +20,10 @@ class ExpenseVectorRepositoryImplTest {
     private MockRestServiceServer mockServer;
 
     @BeforeEach
-    void setUp() throws Exception {
-        repository = new ExpenseVectorRepositoryImpl();
-
-        // Replace the internal RestTemplate with a mockable one via reflection
+    void setUp() {
         RestTemplate restTemplate = new RestTemplate();
+        repository = new ExpenseVectorRepositoryImpl(restTemplate, "localhost", 6333);
         mockServer = MockRestServiceServer.createServer(restTemplate);
-
-        java.lang.reflect.Field field = ExpenseVectorRepositoryImpl.class.getDeclaredField("restTemplate");
-        field.setAccessible(true);
-        field.set(repository, restTemplate);
     }
 
     @Test

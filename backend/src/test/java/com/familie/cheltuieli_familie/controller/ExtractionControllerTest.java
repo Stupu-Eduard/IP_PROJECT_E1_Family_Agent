@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,6 +43,13 @@ class ExtractionControllerTest {
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
     @MockitoBean
     private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+
+    @MockBean
+    private ExtractionService extractionService;
+
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
+
     @Test
     void testExtractDetails() throws Exception {
         ExtractionResponse response = ExtractionResponse.builder()

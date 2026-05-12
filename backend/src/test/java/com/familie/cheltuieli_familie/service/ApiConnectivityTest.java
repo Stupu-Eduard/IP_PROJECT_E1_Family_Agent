@@ -4,6 +4,7 @@ import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 import java.io.InputStream;
 import java.util.Properties;
 import java.io.FileInputStream;
@@ -48,8 +49,11 @@ public class ApiConnectivityTest {
                 
                 String dsResponse = deepseekModel.generate("Hello, are you receiving this message? Reply only with 'DeepSeek confirms reception.'");
                 System.out.println("DeepSeek Response -> " + dsResponse);
+                assertNotNull(dsResponse);
+                assertTrue(dsResponse.contains("DeepSeek confirms reception"));
             } catch (Exception e) {
                 System.out.println("DeepSeek Test Failed: " + e.getMessage());
+                fail("DeepSeek Test Failed: " + e.getMessage());
             }
         } else {
             System.out.println("\nDeepSeek API Key not found.");
@@ -67,8 +71,11 @@ public class ApiConnectivityTest {
                 
                 String orResponse = openRouterModel.generate("Hello, are you receiving this message? Reply only with 'OpenRouter confirms reception.'");
                 System.out.println("OpenRouter Response -> " + orResponse);
+                assertNotNull(orResponse);
+                assertTrue(orResponse.contains("OpenRouter confirms reception"));
             } catch (Exception e) {
                 System.out.println("OpenRouter Test Failed: " + e.getMessage());
+                fail("OpenRouter Test Failed: " + e.getMessage());
             }
         } else {
             System.out.println("\nOpenRouter API Key not found.");
