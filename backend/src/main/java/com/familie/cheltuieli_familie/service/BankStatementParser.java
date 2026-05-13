@@ -28,6 +28,7 @@ public class BankStatementParser {
     private static final String DEFAULT_TYPE = "EXPENSE";
     private static final String TYPE_INCOME = "INCOME";
     private static final String TYPE_TRANSFER = "TRANSFER";
+    private static final String KEYWORD_TRANSFER = TYPE_TRANSFER;
 
     private static final int MIN_DESCRIPTION_LENGTH = 2;
     private static final int MAX_DESCRIPTION_LENGTH = 120;
@@ -372,7 +373,7 @@ public class BankStatementParser {
     }
 
     private boolean containsTransferKeyword(String upperLine) {
-        return upperLine.contains("TRANSFER")
+        return upperLine.contains(KEYWORD_TRANSFER)
                 || upperLine.contains("VIRAMENT");
     }
 
