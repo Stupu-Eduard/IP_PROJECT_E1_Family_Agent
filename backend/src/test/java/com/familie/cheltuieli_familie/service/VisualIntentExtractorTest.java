@@ -1,0 +1,201 @@
+package com.familie.cheltuieli_familie.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.familie.cheltuieli_familie.model.ChartFilters;
+import com.familie.cheltuieli_familie.model.ChartQueryIntent;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.output.Response;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class VisualIntentExtractorTest {
+
+    private VisualIntentExtractor extractor;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Mock
+    private ChatLanguageModel chatLanguageModel;
+
+    @BeforeEach
+    void setUp() {
+        extractor = new VisualIntentExtractor(chatLanguageModel, 3, new long[]{2000, 4000}, "category", "person");
+    }
+
+    @Test
+    void parseIntent_shouldReturnDefaultsForEmptyJson() {
+        ChartQueryIntent intent = extractor.parseIntent("{}");
+
+        assertEquals("data_query", intent.getResponseType());
+        assertEquals("bar", intent.getChartType());
+        assertEquals("sum", intent.getAggregation());
+        assertEquals("category", intent.getGroupBy());
+        assertNull(intent.getSeriesBy());
+        assertEquals("Analiză cheltuieli", intent.getTitle());
+    }
+
+    @Test
+    void parseIntent_shouldParseValidJson() throws Exception {
+        String json = objectMapper.writeValueAsString(ChartQueryIntent.builder()
+                .responseType("chart")
+                .chartType("pie")
+                .aggregation("avg")
+                .groupBy("person")
+                .seriesBy("category")
+                .title("Test Title")
+                .filters(ChartFilters.builder()
+                        .category("food")
+                        .person("Teodor")
+                        .build())
+                .build());
+
+        ChartQueryIntent intent = extractor.parseIntent(json);
+
+        assertEquals("chart", intent.getResponseType());
+        assertEquals("pie", intent.getChartType());
+        assertEquals("avg", intent.getAggregation());
+        assertEquals("person", intent.getGroupBy());
+        assertEquals("category", intent.getSeriesBy());
+        assertEquals("Test Title", intent.getTitle());
+        assertNotNull(intent.getFilters());
+        assertEquals("food", intent.getFilters().getCategory());
+        assertEquals("Teodor", intent.getFilters().getPerson());
+    }
+
+    @Test
+    void parseIntent_shouldSanitizeInvalidResponseType() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\": \"invalid\"}");
+        assertEquals("data_query", intent.getResponseType());
+    }
+
+    @Test
+    void parseIntent_shouldSanitizeInvalidChartType() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"chartType\": \"invalid\"}");
+        assertEquals("bar", intent.getChartType());
+    }
+
+    @Test
+    void parseIntent_shouldSanitizeInvalidAggregation() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"aggregation\": \"invalid\"}");
+        assertEquals("sum", intent.getAggregation());
+    }
+
+    @Test
+    void parseIntent_shouldSanitizeInvalidGroupBy() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"groupBy\": \"invalid\"}");
+        assertEquals("category", intent.getGroupBy());
+    }
+
+    @Test
+    void parseIntent_shouldSanitizeInvalidSeriesBy() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"seriesBy\": \"invalid\"}");
+        assertNull(intent.getSeriesBy());
+    }
+
+    @Test
+    void parseIntent_shouldHandleNullSeriesBy() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"seriesBy\": null}");
+        assertNull(intent.getSeriesBy());
+    }
+
+    @Test
+    void parseIntent_shouldParseFilters() {
+        String json = "{\"filters\": {\"category\": \"food\", \"person\": \"Teodor\", \"dateRange\": \"this_month\", \"location\": \"Bucuresti\"}}";
+        ChartQueryIntent intent = extractor.parseIntent(json);
+
+        assertNotNull(intent.getFilters());
+        assertEquals("food", intent.getFilters().getCategory());
+        assertEquals("Teodor", intent.getFilters().getPerson());
+        assertEquals("this_month", intent.getFilters().getDateRange());
+        assertEquals("Bucuresti", intent.getFilters().getLocation());
+    }
+
+    @Test
+    void parseIntent_shouldHandleBlankFilters() {
+        String json = "{\"filters\": {\"category\": \"\", \"person\": \"   \"}}";
+        ChartQueryIntent intent = extractor.parseIntent(json);
+
+        assertNotNull(intent.getFilters());
+        assertNull(intent.getFilters().getCategory());
+        assertNull(intent.getFilters().getPerson());
+    }
+
+    @Test
+    void parseIntent_shouldHandleMissingFilters() {
+        ChartQueryIntent intent = extractor.parseIntent("{}");
+        assertNotNull(intent.getFilters());
+        assertNull(intent.getFilters().getCategory());
+    }
+
+    @Test
+    void parseIntent_shouldReturnDataQueryFallbackOnInvalidJson() {
+        ChartQueryIntent intent = extractor.parseIntent("not valid json");
+        assertEquals("data_query", intent.getResponseType());
+        assertNull(intent.getChartType());
+    }
+
+    @Test
+    void stripMarkdownFences_shouldRemoveJsonFence() {
+        String raw = "```json\n{\"responseType\": \"chart\"}\n```";
+        String cleaned = extractor.stripMarkdownFences(raw);
+        assertEquals("{\"responseType\": \"chart\"}", cleaned.trim());
+    }
+
+    @Test
+    void stripMarkdownFences_shouldRemoveGenericFence() {
+        String raw = "```\n{\"responseType\": \"chart\"}\n```";
+        String cleaned = extractor.stripMarkdownFences(raw);
+        assertEquals("{\"responseType\": \"chart\"}", cleaned);
+    }
+
+    @Test
+    void stripMarkdownFences_shouldReturnPlainText() {
+        String raw = "{\"responseType\": \"chart\"}";
+        String cleaned = extractor.stripMarkdownFences(raw);
+        assertEquals(raw, cleaned);
+    }
+
+    @Test
+    void stripMarkdownFences_shouldHandleNull() {
+        assertNull(extractor.stripMarkdownFences(null));
+    }
+
+    @Test
+    void extract_shouldReturnIntentOnValidModelResponse() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(
+            Response.from(AiMessage.from("{\"responseType\":\"chart\",\"chartType\":\"pie\",\"aggregation\":\"sum\",\"groupBy\":\"category\"}"))
+        );
+        ChartQueryIntent intent = extractor.extract("Show me expenses by category");
+        assertEquals("chart", intent.getResponseType());
+        assertEquals("pie", intent.getChartType());
+    }
+
+    @Test
+    void parseIntent_shouldHandleMissingFiltersNode() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"data_query\"}");
+        assertNotNull(intent.getFilters());
+        assertNull(intent.getFilters().getCategory());
+    }
+
+    @Test
+    void parseIntent_shouldParseConversationResponseType() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"conversation\"}");
+        assertEquals("conversation", intent.getResponseType());
+    }
+
+    @Test
+    void callWithRetry_shouldThrowOnPersistentFailure() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(
+            Response.from(AiMessage.from("invalid json"))
+        );
+        assertThrows(IllegalStateException.class, () -> extractor.extract("query"));
+    }
+}

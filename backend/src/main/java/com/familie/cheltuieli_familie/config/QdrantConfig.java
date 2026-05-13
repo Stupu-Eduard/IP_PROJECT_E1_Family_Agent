@@ -29,6 +29,15 @@ public class QdrantConfig {
     @Value("${qdrant.collection-name:expenses}")
     private String collectionName;
 
+    @Value("${qdrant.collection.vector-size:2048}")
+    private int vectorSize;
+
+    @Value("${qdrant.collection.distance:Cosine}")
+    private String distance;
+
+    @Value("${qdrant.collection.index-type:keyword}")
+    private String indexType;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Bean
@@ -54,11 +63,11 @@ public class QdrantConfig {
             log.info("Qdrant collection '{}' not found, creating it...", collectionName);
         }
 
-        // Create collection with 2048 dimensions and Cosine distance
+        // Create collection with configured dimensions and distance
         Map<String, Object> body = new HashMap<>();
         body.put("vectors", Map.of(
-                "size", 2048,
-                "distance", "Cosine"
+                "size", vectorSize,
+                "distance", distance
         ));
 
         HttpHeaders headers = new HttpHeaders();
@@ -67,13 +76,13 @@ public class QdrantConfig {
 
         try {
             restTemplate.put(url, entity);
-            log.info("Successfully created Qdrant collection '{}' with 2048 dimensions and Cosine distance.", collectionName);
+            log.info("Successfully created Qdrant collection '{}' with {} dimensions and {} distance.", collectionName, vectorSize, distance);
             
             // Create indexes for metadata
-            createPayloadIndex("date", "keyword");
-            createPayloadIndex("person", "keyword");
-            createPayloadIndex("category", "keyword");
-            createPayloadIndex("location", "keyword");
+            createPayloadIndex("date", indexType);
+            createPayloadIndex("person", indexType);
+            createPayloadIndex("category", indexType);
+            createPayloadIndex("location", indexType);
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());

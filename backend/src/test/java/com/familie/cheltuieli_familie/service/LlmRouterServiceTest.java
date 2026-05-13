@@ -3,14 +3,16 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.config.LlmConfig;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.rag.RetrievalAugmentor;
-import org.junit.jupiter.api.BeforeEach;
+import dev.langchain4j.service.AiServices;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,40 +27,75 @@ class LlmRouterServiceTest {
     @Mock
     private RetrievalAugmentor retrievalAugmentor;
 
+    @Mock
+    private LlmConfig.RagAssistant ragAssistant;
+
+    @InjectMocks
     private LlmRouterService llmRouterService;
 
-    @BeforeEach
-    void setUp() {
-        llmRouterService = new LlmRouterService(routerAssistant, deepseekModel, retrievalAugmentor);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private MockedStatic<AiServices> mockAiServicesStatic() {
+        MockedStatic<AiServices> mocked = mockStatic(AiServices.class);
+        AiServices builder = mock(AiServices.class);
+        when(builder.chatLanguageModel(any(ChatLanguageModel.class))).thenReturn(builder);
+        when(builder.retrievalAugmentor(any(RetrievalAugmentor.class))).thenReturn(builder);
+        when(builder.build()).thenReturn(ragAssistant);
+        mocked.when(() -> AiServices.builder(LlmConfig.RagAssistant.class)).thenReturn(builder);
+        return mocked;
     }
 
     @Test
-    void testRouteSimpleQuery() {
-        when(routerAssistant.classify(anyString())).thenReturn("SIMPLE");
-        
-        // We can't easily mock the internal AiServices creation without more effort, 
-        // but we can verify the classification was called.
-        // In a real test, we might mock the AiServices builder if possible or use integration test.
-        
-        try {
-            llmRouterService.routeAndChat("Cat am cheltuit ieri?");
-        } catch (Exception e) {
-            // AiServices.builder might fail in unit test if not fully mocked, 
-            // but we verify the logic flow
-        }
+    void routeAndChat_shouldReturnResponse_whenAllValid() {
+        when(routerAssistant.classify("hello")).thenReturn("SIMPLE");
+        when(ragAssistant.chat("hello")).thenReturn("Hi there");
 
-        verify(routerAssistant).classify("Cat am cheltuit ieri?");
+        try (MockedStatic<AiServices> mocked = mockAiServicesStatic()) {
+            String result = llmRouterService.routeAndChat("hello");
+            assertEquals("Hi there", result);
+        }
     }
 
     @Test
-    void testRouteComplexQuery() {
-        when(routerAssistant.classify(anyString())).thenReturn("COMPLEX");
+    void routeAndChat_shouldDefaultToSimple_whenClassificationIsNull() {
+        when(routerAssistant.classify("hello")).thenReturn(null);
+        when(ragAssistant.chat("hello")).thenReturn("Hi there");
 
-        try {
-            llmRouterService.routeAndChat("Analizează trendul cheltuielilor mele");
-        } catch (Exception e) {
+        try (MockedStatic<AiServices> mocked = mockAiServicesStatic()) {
+            String result = llmRouterService.routeAndChat("hello");
+            assertEquals("Hi there", result);
         }
+    }
 
-        verify(routerAssistant).classify("Analizează trendul cheltuielilor mele");
+    @Test
+    void routeAndChat_shouldDefaultToSimple_whenClassificationIsBlank() {
+        when(routerAssistant.classify("hello")).thenReturn("   ");
+        when(ragAssistant.chat("hello")).thenReturn("Hi there");
+
+        try (MockedStatic<AiServices> mocked = mockAiServicesStatic()) {
+            String result = llmRouterService.routeAndChat("hello");
+            assertEquals("Hi there", result);
+        }
+    }
+
+    @Test
+    void routeAndChat_shouldReturnNull_whenChatReturnsNull() {
+        when(routerAssistant.classify("hello")).thenReturn("SIMPLE");
+        when(ragAssistant.chat("hello")).thenReturn(null);
+
+        try (MockedStatic<AiServices> mocked = mockAiServicesStatic()) {
+            String result = llmRouterService.routeAndChat("hello");
+            assertNull(result);
+        }
+    }
+
+    @Test
+    void routeAndChat_shouldReturnBlank_whenChatReturnsBlank() {
+        when(routerAssistant.classify("hello")).thenReturn("SIMPLE");
+        when(ragAssistant.chat("hello")).thenReturn("   ");
+
+        try (MockedStatic<AiServices> mocked = mockAiServicesStatic()) {
+            String result = llmRouterService.routeAndChat("hello");
+            assertEquals("   ", result);
+        }
     }
 }

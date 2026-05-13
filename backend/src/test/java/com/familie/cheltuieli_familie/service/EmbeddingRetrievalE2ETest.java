@@ -15,8 +15,11 @@ import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+
+import org.awaitility.Awaitility;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -99,14 +102,10 @@ class EmbeddingRetrievalE2ETest {
 
         qdrantVectorService.storeExpense(expense);
 
-        // Small delay for Qdrant to index
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar("mâncare Kaufland", 5);
+        List<EmbeddedExpense> results = Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .until(() -> qdrantVectorService.searchSimilar("mâncare Kaufland", 5), r -> !r.isEmpty());
 
         assertFalse(results.isEmpty(), "Should find the stored expense");
         assertTrue(results.stream().anyMatch(r -> r.getId() != null && r.getId() == uniqueId),
@@ -128,14 +127,11 @@ class EmbeddingRetrievalE2ETest {
 
         qdrantVectorService.storeExpense(expense);
 
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
-                "transport", 5, "Transport", "Bob", null, null);
+        List<EmbeddedExpense> results = Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .until(() -> qdrantVectorService.searchWithFilter(
+                        "transport", 5, "Transport", "Bob", null, null), r -> !r.isEmpty());
 
         assertFalse(results.isEmpty(), "Should find the expense with filters");
     }
@@ -155,13 +151,10 @@ class EmbeddingRetrievalE2ETest {
 
         qdrantVectorService.storeExpense(expense);
 
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        boolean exists = qdrantVectorService.existsInVectorStore(uniqueId);
+        boolean exists = Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(100))
+                .until(() -> qdrantVectorService.existsInVectorStore(uniqueId), result -> result);
         assertTrue(exists, "Expense should exist in vector store");
 
         boolean notExists = qdrantVectorService.existsInVectorStore(uniqueId + 99999);

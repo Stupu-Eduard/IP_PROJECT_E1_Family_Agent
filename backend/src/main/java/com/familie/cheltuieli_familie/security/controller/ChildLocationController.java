@@ -17,32 +17,38 @@ public class ChildLocationController {
 
     private final LocationStreamService locationStreamService;
     private final MinorSafetyFilterService minorSafetyFilterService;
-    private final LocationValidationService locationValidationService; // <-- Paznicul nostru adaugat
+    private final LocationValidationService locationValidationService;
+    private final com.familie.cheltuieli_familie.repository.LocationRepository locationRepository;
 
     public ChildLocationController(LocationStreamService locationStreamService,
                                    MinorSafetyFilterService minorSafetyFilterService,
-                                   LocationValidationService locationValidationService) {
+                                   LocationValidationService locationValidationService,
+                                   com.familie.cheltuieli_familie.repository.LocationRepository locationRepository) {
         this.locationStreamService = locationStreamService;
         this.minorSafetyFilterService = minorSafetyFilterService;
-        this.locationValidationService = locationValidationService; // <-- Injectat aici
+        this.locationValidationService = locationValidationService;
+        this.locationRepository = locationRepository;
     }
 
     @Operation(
             summary = "Sincronizeaza locatia copilului",
-            description = "Primeste locatia curenta a copilului si o valideaza inainte de sincronizare."
+            description = "Primeste locatia curenta a copilului, o salvează în DB și o trimite prin fluxurile live."
     )
     @PostMapping("/location/sync")
     public ResponseEntity<String> syncLocation(
             @org.springframework.web.bind.annotation.RequestBody LocationSyncRequest request) {
 
-        // --- PAZNICUL INTERVINE AICI ---
-        // Verificam daca datele GPS sunt valide inainte sa facem orice altceva
+        // 1. Validăm datele GPS
         if (!locationValidationService.isLocationValid(request.latitude(), request.longitude())) {
             return ResponseEntity.badRequest().body("Eroare: Locatie GPS invalida (ex: 0,0). Sincronizare oprita.");
         }
-        // -------------------------------
 
-        // PASUL 1: Trimitem locatia catre parinte prin SSE ca LocationMapDto
+        // 2. SALVĂM ÎN BAZA DE DATE (Pentru a declanșa "The Pipe" prin Postgres NOTIFY)
+        // Folosim ID-ul copilului ca referință pentru rândul din tabela 'locations'
+        // NOTĂ: Într-un sistem real, am avea un tabel de 'live_locations'. Aici refolosim tabela de locations.
+        locationRepository.updateCoordinates(request.childId(), request.latitude(), request.longitude());
+
+        // 3. Trimitem prin SSE (Legacy stream)
         locationStreamService.sendLocationToParent(
                 request.childId(),
                 request.parentId(),
@@ -51,7 +57,7 @@ public class ChildLocationController {
                 request.placeTypes()
         );
 
-        // PASUL 2: Verificam zona restrictionata si trimitem alerta daca e cazul
+        // 4. Verificăm zonele restricționate
         minorSafetyFilterService.evaluateChildLocation(
                 request.childId(),
                 request.parentId(),

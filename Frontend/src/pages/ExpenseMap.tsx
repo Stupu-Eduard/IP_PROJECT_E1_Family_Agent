@@ -33,7 +33,10 @@ function isInsideGeofence(point: LatLng, polygon: LatLng[]) {
 }
 // -----------------------------------------------------
 
+import { useAuthStore } from '../store/authStore'
+
 export default function ExpenseMap() {
+  const token = useAuthStore((state) => state.token)
   const navigate = useNavigate()
   const location = useLocation()
   const state = (location.state ?? {}) as MapState

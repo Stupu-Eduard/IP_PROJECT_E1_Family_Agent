@@ -16,31 +16,18 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     interface ExpenseWithLocationProjection {
         Long getId();
-
         BigDecimal getAmount();
-
         String getCurrency();
-
         String getDescription();
-
         LocalDateTime getExpenseDate();
-
         String getCategory();
-
         String getPerson();
-
         Long getLocationId();
-
         String getStore();
-
         String getAddress();
-
         String getCity();
-
         String getCountry();
-
         Double getLat();
-
         Double getLng();
     }
 
@@ -55,11 +42,11 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 u.name AS person,
                 l.id AS locationId,
                 l.store AS store,
-                l.adress AS address,
+                l.address AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id
@@ -78,11 +65,11 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 u.name AS person,
                 l.id AS locationId,
                 l.store AS store,
-                l.adress AS address,
+                l.address AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id
@@ -108,11 +95,11 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 u.name AS person,
                 l.id AS locationId,
                 l.store AS store,
-                l.adress AS address,
+                l.address AS address,
                 l.city AS city,
                 l.country AS country,
-                ST_Y(l.location::geometry) AS lat,
-                ST_X(l.location::geometry) AS lng
+                ST_Y(CAST(l.location AS geometry)) AS lat,
+                ST_X(CAST(l.location AS geometry)) AS lng
             FROM expenses e
             LEFT JOIN categories c ON c.id = e.category_id
             LEFT JOIN users u ON u.id = e.user_id

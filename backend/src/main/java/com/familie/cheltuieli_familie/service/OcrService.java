@@ -27,12 +27,15 @@ public class OcrService {
     @Value("${tesseract.datapath}")
     private String tessDataPath;
 
+    @Value("${ocr.language:eng}")
+    private String ocrLanguage;
+
     private final ITesseract tesseract = new Tesseract();
 
     @PostConstruct
     public void init() {
         tesseract.setDatapath(tessDataPath);
-        tesseract.setLanguage("eng");
+        tesseract.setLanguage(ocrLanguage);
     }
 
     public String extractTextFromPdf(File pdfFile) {
