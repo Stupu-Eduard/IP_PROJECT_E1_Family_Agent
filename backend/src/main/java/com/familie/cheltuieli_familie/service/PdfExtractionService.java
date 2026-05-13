@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.exception.AiServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -19,6 +20,10 @@ public class PdfExtractionService {
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(document);
             log.debug("Extracted text length: {}", text.length());
+            String stripped = text != null ? text.strip() : "";
+            if (stripped.isBlank() || stripped.length() < 50) {
+                throw new AiServiceException("PDF contains no extractable text");
+            }
             return text;
         } catch (IOException e) {
             log.error("Failed to extract text from PDF", e);

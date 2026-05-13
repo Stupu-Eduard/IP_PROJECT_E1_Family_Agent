@@ -18,27 +18,41 @@ public class VisualIntentExtractor {
     private final ChatLanguageModel chatLanguageModel;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public VisualIntentExtractor(ChatLanguageModel chatLanguageModel) {
-        this.chatLanguageModel = chatLanguageModel;
-    }
+    private final int maxRetries;
+    private final long[] retryDelaysMs;
+    private final String defaultGroupBy;
+    private final String defaultSeriesBy;
 
-    private static final int MAX_RETRIES = 3;
-    private static final long[] RETRY_DELAYS_MS = {2000, 4000};
-
-    private static final String DEFAULT_GROUP_BY = "category";
-    private static final String DEFAULT_SERIES_BY = "person";
-
-    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("text", "chart");
+    private static final String DEFAULT_RESPONSE_TYPE = "data_query";
+    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("conversation", DEFAULT_RESPONSE_TYPE, "chart");
     private static final Set<String> ALLOWED_CHART_TYPES = Set.of("bar", "pie", "line");
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("sum", "count", "avg");
-    private static final Set<String> ALLOWED_GROUP_BY = Set.of(DEFAULT_GROUP_BY, DEFAULT_SERIES_BY, "month", "year", "location");
-    private static final Set<String> ALLOWED_SERIES_BY = Set.of(DEFAULT_SERIES_BY, DEFAULT_GROUP_BY);
+
+    public VisualIntentExtractor(ChatLanguageModel chatLanguageModel,
+                                  int maxRetries,
+                                  long[] retryDelaysMs,
+                                  String defaultGroupBy,
+                                  String defaultSeriesBy) {
+        this.chatLanguageModel = chatLanguageModel;
+        this.maxRetries = maxRetries;
+        this.retryDelaysMs = retryDelaysMs;
+        this.defaultGroupBy = defaultGroupBy;
+        this.defaultSeriesBy = defaultSeriesBy;
+    }
+
+    private Set<String> allowedGroupBy() {
+        return Set.of(defaultGroupBy, defaultSeriesBy, "month", "year", "location");
+    }
+
+    private Set<String> allowedSeriesBy() {
+        return Set.of(defaultSeriesBy, defaultGroupBy);
+    }
 
     interface IntentAssistant {
         @SystemMessage("""
             Ești un clasificator de intenții pentru un asistent financiar de familie.
             BAZA DE DATE are următoarea structură:
-            
+
             TABEL: expenses
             - id (BIGINT, PK)
             - amount (DECIMAL) — suma cheltuită
@@ -47,21 +61,24 @@ public class VisualIntentExtractor {
             - person (VARCHAR) — persoana care a cheltuit (ex: "Teodor", "Maria")
             - date (DATE) — data tranzacției
             - raw_input (VARCHAR) — textul brut extras
-            
+
             REGULI:
             1. Analizează întrebarea și returnează DOAR un obiect JSON.
             2. Nu adăuga câmpuri care nu există în tabel.
             3. Nu presupune existența unor coloane precum "budget", "income", "savings".
-            
+
             Câmpuri JSON obligatorii:
-            - responseType: "text" sau "chart"
+            - responseType: "conversation" | "data_query" | "chart"
+              - "conversation" = salutări, small talk, întrebări generale fără legătură cu datele
+              - "data_query" = întrebări despre cheltuieli, analize, sume, comparări (necesită RAG)
+              - "chart" = cereri de grafic sau vizualizare
             - chartType: "bar" | "pie" | "line" (doar dacă responseType="chart")
             - aggregation: "sum" | "count" | "avg"
             - groupBy: "person" | "category" | "month" | "year" | "location"
             - seriesBy: "person" | "category" | null
             - title: titlu în română
-            - filters: { DEFAULT_GROUP_BY, DEFAULT_SERIES_BY, dateRange, location }
-            
+            - filters: { category, person, dateRange, location }
+
             Pentru dateRange, folosește: "last_3_months", "this_month", "this_year",
             sau un obiect { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }.
             """)
@@ -77,7 +94,7 @@ public class VisualIntentExtractor {
         IntentAssistant assistant = AiServices.create(IntentAssistant.class, chatLanguageModel);
         String lastError = null;
 
-        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 String rawResult = assistant.extractIntent(userMessage);
                 log.info("Intent extraction raw (attempt {}): {}", attempt, rawResult);
@@ -89,8 +106,8 @@ public class VisualIntentExtractor {
             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
                 lastError = e.getMessage();
                 log.warn("Intent extraction attempt {} failed: {}", attempt, lastError);
-                if (attempt < MAX_RETRIES) {
-                    long delay = RETRY_DELAYS_MS[attempt - 1];
+                if (attempt < maxRetries) {
+                    long delay = retryDelaysMs[attempt - 1];
                     log.info("Retrying intent extraction in {} ms...", delay);
                     try {
                         java.util.concurrent.TimeUnit.MILLISECONDS.sleep(delay);
@@ -109,9 +126,9 @@ public class VisualIntentExtractor {
         try {
             JsonNode root = objectMapper.readTree(json);
 
-            String responseType = root.path("responseType").asText("text");
+            String responseType = root.path("responseType").asText(DEFAULT_RESPONSE_TYPE);
             if (!ALLOWED_RESPONSE_TYPES.contains(responseType)) {
-                responseType = "text";
+                responseType = DEFAULT_RESPONSE_TYPE;
             }
 
             String chartType = root.path("chartType").asText("bar");
@@ -124,14 +141,14 @@ public class VisualIntentExtractor {
                 aggregation = "sum";
             }
 
-            String groupBy = root.path("groupBy").asText(DEFAULT_GROUP_BY);
-            if (!ALLOWED_GROUP_BY.contains(groupBy)) {
-                groupBy = DEFAULT_GROUP_BY;
+            String groupBy = root.path("groupBy").asText(defaultGroupBy);
+            if (!allowedGroupBy().contains(groupBy)) {
+                groupBy = defaultGroupBy;
             }
 
             JsonNode seriesByNode = root.path("seriesBy");
             String seriesBy = seriesByNode.isNull() ? null : seriesByNode.asText();
-            if (seriesBy != null && !ALLOWED_SERIES_BY.contains(seriesBy)) {
+            if (seriesBy != null && !allowedSeriesBy().contains(seriesBy)) {
                 seriesBy = null;
             }
 
@@ -152,7 +169,7 @@ public class VisualIntentExtractor {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Failed to parse intent JSON: {}", e.getMessage());
             return ChartQueryIntent.builder()
-                    .responseType("text")
+                    .responseType(DEFAULT_RESPONSE_TYPE)
                     .build();
         }
     }
@@ -163,8 +180,8 @@ public class VisualIntentExtractor {
         }
 
         return ChartFilters.builder()
-                .category(nullIfBlank(filtersNode.path(DEFAULT_GROUP_BY).asText(null)))
-                .person(nullIfBlank(filtersNode.path(DEFAULT_SERIES_BY).asText(null)))
+                .category(nullIfBlank(filtersNode.path(defaultGroupBy).asText(null)))
+                .person(nullIfBlank(filtersNode.path(defaultSeriesBy).asText(null)))
                 .dateRange(nullIfBlank(filtersNode.path("dateRange").asText(null)))
                 .location(nullIfBlank(filtersNode.path("location").asText(null)))
                 .build();

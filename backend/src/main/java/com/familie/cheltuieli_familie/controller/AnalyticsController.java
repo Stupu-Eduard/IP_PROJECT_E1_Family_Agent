@@ -5,6 +5,7 @@ import com.familie.cheltuieli_familie.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 @RequestMapping("/v1/analytics")
 @Slf4j
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class AnalyticsController {
 
     private final AnalyticsAssistant analyticsAssistant;
@@ -21,7 +23,7 @@ public class AnalyticsController {
     @PostMapping("/query")
     public ResponseEntity<String> query(@RequestBody String userMessage) {
         log.info("Received analytics query: {}", userMessage);
-        String response = analyticsAssistant.chat(userMessage + " (Today's date is " + LocalDate.now() + ")");
+        String response = analyticsAssistant.chat(userMessage, LocalDate.now().toString());
         return ResponseEntity.ok(response);
     }
 

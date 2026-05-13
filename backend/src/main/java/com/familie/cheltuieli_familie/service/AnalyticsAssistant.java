@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 public interface AnalyticsAssistant {
 
@@ -12,5 +13,6 @@ public interface AnalyticsAssistant {
         If the user's question is ambiguous, ask for clarification.
         Today's date is {{current_date}}.
         """)
-    String chat(@UserMessage String userMessage);
+    @UserMessage("{{userMessage}} (Today's date is {{currentDate}})")
+    String chat(@V("userMessage") String userMessage, @V("currentDate") String currentDate);
 }

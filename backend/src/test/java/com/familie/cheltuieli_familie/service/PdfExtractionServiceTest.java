@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.exception.AiServiceException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -15,8 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
@@ -34,7 +34,7 @@ class PdfExtractionServiceTest {
                 contentStream.beginText();
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
                 contentStream.newLineAtOffset(100, 700);
-                contentStream.showText("Test Expense: 100 RON");
+                contentStream.showText("Test Expense: 100 RON for groceries and household items purchased today at the local supermarket");
                 contentStream.endText();
             }
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -44,6 +44,21 @@ class PdfExtractionServiceTest {
             String text = pdfExtractionService.extractText(file);
             assertNotNull(text);
             assertTrue(text.contains("100 RON"));
+        }
+    }
+
+    @Test
+    void testExtractText_EmptyPdfThrowsException() throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+            // No text content added
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
+            MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", baos.toByteArray());
+
+            AiServiceException exception = assertThrows(AiServiceException.class, () -> pdfExtractionService.extractText(file));
+            assertEquals("PDF contains no extractable text", exception.getMessage());
         }
     }
 }
