@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera } from 'lucide-react';
+import { Camera, MapPin, MapPinOff } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 // ── Mock data (va fi înlocuit de API când e disponibil) ───────────────────
 const myExpenses = [
@@ -27,13 +29,80 @@ const quickActions = [
 
 export default function KidDashboard() {
     const navigate = useNavigate()
+    const token = useAuthStore((state) => state.token);
+    const [locationStatus, setLocationStatus] = useState<'pending' | 'active' | 'denied'>('pending');
+
+    // ── Logica Real-time Location Sync ──────────────────────────────────────
+    useEffect(() => {
+        if (!token || !navigator.geolocation) return;
+
+        let watchId: number;
+
+        const sendLocation = (lat: number, lng: number, restricted = false) => {
+            // Decodăm ID-ul copilului din JWT (sau folosim o valoare default dacă nu e disponibil)
+            let childId = 2; // Default conform seed data
+            let parentId = 1;
+            
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                childId = payload.userId || payload.jti || 2;
+                parentId = payload.familyId || 1;
+            } catch (e) {
+                console.warn("Eroare la extragerea ID-ului din token, folosim ID-ul de test.");
+            }
+
+            fetch("http://localhost:8080/api/v1/child/location/sync", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    childId,
+                    parentId,
+                    latitude: lat,
+                    longitude: lng,
+                    placeTypes: restricted ? ["bar"] : ["school"]
+                })
+            }).catch(err => console.error("❌ Eroare sync locație:", err));
+        };
+
+        // Cerem locația
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                setLocationStatus('active');
+                sendLocation(pos.coords.latitude, pos.coords.longitude);
+            },
+            (err) => {
+                console.error("🚫 Locație refuzată sau eroare:", err.message);
+                setLocationStatus('denied');
+                // Trimitem un semnal de "Locație indisponibilă" (0,0)
+                sendLocation(0, 0); 
+            },
+            { enableHighAccuracy: true }
+        );
+
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [token]);
 
     return (
         <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
 
             {/* ── Header ──────────────────────────────────────────────────────── */}
             <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div className="chip chip-live">SESIUNE COPIL · ANDREI</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="chip chip-live">SESIUNE COPIL</div>
+                    {locationStatus === 'active' && (
+                        <div className="chip" style={{ background: '#E8F5EE', color: '#2E7B4F', border: '1px solid #CDE8D8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MapPin size={12} /> GPS Activ
+                        </div>
+                    )}
+                    {locationStatus === 'denied' && (
+                        <div className="chip" style={{ background: '#FEECEC', color: '#E24B4A', border: '1px solid #FAD1D1', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MapPinOff size={12} /> GPS Dezactivat
+                        </div>
+                    )}
+                </div>
                 <button
                     className="btn btn-accent"
                     style={{ fontSize: 13 }}
