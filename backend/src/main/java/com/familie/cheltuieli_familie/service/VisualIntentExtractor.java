@@ -23,7 +23,8 @@ public class VisualIntentExtractor {
     private final String defaultGroupBy;
     private final String defaultSeriesBy;
 
-    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("conversation", "data_query", "chart");
+    private static final String DEFAULT_RESPONSE_TYPE = "data_query";
+    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("conversation", DEFAULT_RESPONSE_TYPE, "chart");
     private static final Set<String> ALLOWED_CHART_TYPES = Set.of("bar", "pie", "line");
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("sum", "count", "avg");
 
@@ -125,9 +126,9 @@ public class VisualIntentExtractor {
         try {
             JsonNode root = objectMapper.readTree(json);
 
-            String responseType = root.path("responseType").asText("data_query");
+            String responseType = root.path("responseType").asText(DEFAULT_RESPONSE_TYPE);
             if (!ALLOWED_RESPONSE_TYPES.contains(responseType)) {
-                responseType = "data_query";
+                responseType = DEFAULT_RESPONSE_TYPE;
             }
 
             String chartType = root.path("chartType").asText("bar");
@@ -168,7 +169,7 @@ public class VisualIntentExtractor {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Failed to parse intent JSON: {}", e.getMessage());
             return ChartQueryIntent.builder()
-                    .responseType("data_query")
+                    .responseType(DEFAULT_RESPONSE_TYPE)
                     .build();
         }
     }
