@@ -52,7 +52,7 @@ public class VisualIntentExtractor {
         @SystemMessage("""
             Ești un clasificator de intenții pentru un asistent financiar de familie.
             BAZA DE DATE are următoarea structură:
-            
+
             TABEL: expenses
             - id (BIGINT, PK)
             - amount (DECIMAL) — suma cheltuită
@@ -61,12 +61,12 @@ public class VisualIntentExtractor {
             - person (VARCHAR) — persoana care a cheltuit (ex: "Teodor", "Maria")
             - date (DATE) — data tranzacției
             - raw_input (VARCHAR) — textul brut extras
-            
+
             REGULI:
             1. Analizează întrebarea și returnează DOAR un obiect JSON.
             2. Nu adăuga câmpuri care nu există în tabel.
             3. Nu presupune existența unor coloane precum "budget", "income", "savings".
-            
+
             Câmpuri JSON obligatorii:
             - responseType: "conversation" | "data_query" | "chart"
               - "conversation" = salutări, small talk, întrebări generale fără legătură cu datele
@@ -78,7 +78,7 @@ public class VisualIntentExtractor {
             - seriesBy: "person" | "category" | null
             - title: titlu în română
             - filters: { category, person, dateRange, location }
-            
+
             Pentru dateRange, folosește: "last_3_months", "this_month", "this_year",
             sau un obiect { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }.
             """)
