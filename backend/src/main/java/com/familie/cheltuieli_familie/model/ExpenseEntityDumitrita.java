@@ -31,6 +31,7 @@ public class ExpenseEntityDumitrita {
     @Column(name = "raw_input", length = 1000)
     private String rawInput;
 
+    @Builder.Default
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }
