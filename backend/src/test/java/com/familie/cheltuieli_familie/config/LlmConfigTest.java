@@ -36,6 +36,10 @@ class LlmConfigTest {
 
     @Test
     void visualIntentExtractor_shouldCreateBeanWithProvidedModel() {
+        ReflectionTestUtils.setField(llmConfig, "intentMaxRetries", 3);
+        ReflectionTestUtils.setField(llmConfig, "retryDelaysMsStr", "2000,4000");
+        ReflectionTestUtils.setField(llmConfig, "defaultGroupBy", "category");
+        ReflectionTestUtils.setField(llmConfig, "defaultSeriesBy", "person");
         VisualIntentExtractor extractor = llmConfig.visualIntentExtractor(chatLanguageModel);
         assertNotNull(extractor);
     }
@@ -43,6 +47,10 @@ class LlmConfigTest {
     @Test
     void deepseekModel_shouldCreateBeanWithDeepseekKey() {
         ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "sk-test-deepseek");
+        ReflectionTestUtils.setField(llmConfig, "deepseekBaseUrl", "https://api.deepseek.com");
+        ReflectionTestUtils.setField(llmConfig, "deepseekModelName", "deepseek-chat");
+        ReflectionTestUtils.setField(llmConfig, "temperature", 0.1);
+        ReflectionTestUtils.setField(llmConfig, "timeoutSeconds", 60L);
         ChatLanguageModel model = llmConfig.deepseekModel();
         assertNotNull(model);
     }
@@ -51,6 +59,10 @@ class LlmConfigTest {
     void deepseekModel_shouldCreateBeanWithOpenRouterKey() {
         ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "");
         ReflectionTestUtils.setField(llmConfig, "openRouterApiKey", "sk-test-openrouter");
+        ReflectionTestUtils.setField(llmConfig, "openRouterBaseUrl", "https://openrouter.ai/api/v1");
+        ReflectionTestUtils.setField(llmConfig, "openRouterModelName", "deepseek/deepseek-chat");
+        ReflectionTestUtils.setField(llmConfig, "temperature", 0.1);
+        ReflectionTestUtils.setField(llmConfig, "timeoutSeconds", 60L);
         ChatLanguageModel model = llmConfig.deepseekModel();
         assertNotNull(model);
     }
@@ -70,8 +82,8 @@ class LlmConfigTest {
     }
 
     @Test
-    void routerAssistant_shouldCreateBean() {
-        LlmConfig.RouterAssistant assistant = llmConfig.routerAssistant(chatLanguageModel);
+    void ragAssistant_shouldCreateBean() {
+        LlmConfig.RagAssistant assistant = llmConfig.ragAssistant(chatLanguageModel, llmConfig.retrievalAugmentor(qdrantContentRetriever));
         assertNotNull(assistant);
     }
 

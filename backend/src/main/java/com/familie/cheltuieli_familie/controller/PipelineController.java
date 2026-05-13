@@ -5,6 +5,7 @@ import com.familie.cheltuieli_familie.service.ExpensePipelineService;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/pipeline")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class PipelineController {
 
     private final ExpensePipelineService pipelineService;

@@ -33,7 +33,7 @@ class VectorControllerTest {
 
         mockMvc.perform(get("/v1/vectors/check/1"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$").value(true));
     }
 
     @Test
@@ -42,6 +42,6 @@ class VectorControllerTest {
 
         mockMvc.perform(get("/v1/vectors/check/99"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(jsonPath("$").value(false));
     }
 }

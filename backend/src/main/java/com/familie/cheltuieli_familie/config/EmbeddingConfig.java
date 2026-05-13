@@ -12,6 +12,15 @@ public class EmbeddingConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
+    @Value("${langchain4j.open-router.embedding-model.base-url:https://openrouter.ai/api/v1}")
+    private String baseUrl;
+
+    @Value("${langchain4j.open-router.embedding-model.model-name:nvidia/llama-nemotron-embed-vl-1b-v2:free}")
+    private String modelName;
+
+    @Value("${langchain4j.open-router.embedding-model.dimensions:2048}")
+    private int dimensions;
+
     @Bean
     public EmbeddingModel embeddingModel() {
         String openRouterKey = KeyResolver.resolve(openRouterApiKey, "OPENROUTER_API_KEY");
@@ -21,9 +30,9 @@ public class EmbeddingConfig {
 
         return OpenAiEmbeddingModel.builder()
                 .apiKey(openRouterKey)
-                .baseUrl("https://openrouter.ai/api/v1")
-                .modelName("nvidia/llama-nemotron-embed-vl-1b-v2:free")
-                .dimensions(2048)
+                .baseUrl(baseUrl)
+                .modelName(modelName)
+                .dimensions(dimensions)
                 .build();
     }
 }

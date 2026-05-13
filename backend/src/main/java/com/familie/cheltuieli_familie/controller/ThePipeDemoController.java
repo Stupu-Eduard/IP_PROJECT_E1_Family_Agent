@@ -1,14 +1,17 @@
 package com.familie.cheltuieli_familie.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.familie.cheltuieli_familie.service.ThePipeHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Controller special pentru DEMO.
@@ -20,41 +23,48 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ThePipeDemoController {
 
+    private static final String TIMESTAMP_KEY = "timestamp";
+
     private final ThePipeHandler thePipeHandler;
+    private final ObjectMapper objectMapper;
 
     @Operation(summary = "Trimite un mesaj de salut prin WebSocket")
-    @GetMapping("/hello")
-    public String sayHello() {
-        thePipeHandler.broadcast("{\"message\": \"Salut de la The Pipe!\", \"timestamp\": \"" + LocalDateTime.now() + "\"}");
+    @PostMapping("/hello")
+    public String sayHello() throws JsonProcessingException {
+        String json = objectMapper.writeValueAsString(Map.of(
+                "message", "Salut de la The Pipe!",
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
+        ));
+        thePipeHandler.broadcast(json);
         return "OK - Mesaj de salut trimis";
     }
 
     @Operation(summary = "Simulează locația live a copilului (Zonă Sigură)")
-    @GetMapping("/child-safe")
-    public String simulateChildSafe() {
-        String json = "{" +
-                "\"childId\": 2," +
-                "\"parentId\": 1," +
-                "\"lat\": 44.4325," +
-                "\"lng\": 26.1039," +
-                "\"isRestricted\": false," +
-                "\"timestamp\": \"" + LocalDateTime.now() + "\"" +
-                "}";
+    @PostMapping("/child-safe")
+    public String simulateChildSafe() throws JsonProcessingException {
+        String json = objectMapper.writeValueAsString(Map.of(
+                "childId", 2,
+                "parentId", 1,
+                "lat", 44.4325,
+                "lng", 26.1039,
+                "isRestricted", false,
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
+        ));
         thePipeHandler.broadcast(json);
         return "OK - Locatie sigura trimisa (Piata Universitatii)";
     }
 
     @Operation(summary = "Simulează intrarea copilului într-o zonă restricționată (ALERTĂ)")
-    @GetMapping("/child-danger")
-    public String simulateChildDanger() {
-        String json = "{" +
-                "\"childId\": 2," +
-                "\"parentId\": 1," +
-                "\"lat\": 44.4370," +
-                "\"lng\": 26.0959," +
-                "\"isRestricted\": true," +
-                "\"timestamp\": \"" + LocalDateTime.now() + "\"" +
-                "}";
+    @PostMapping("/child-danger")
+    public String simulateChildDanger() throws JsonProcessingException {
+        String json = objectMapper.writeValueAsString(Map.of(
+                "childId", 2,
+                "parentId", 1,
+                "lat", 44.4370,
+                "lng", 26.0959,
+                "isRestricted", true,
+                TIMESTAMP_KEY, LocalDateTime.now().toString()
+        ));
         thePipeHandler.broadcast(json);
         return "OK - ALERTA trimisa: Copil in zona restrictionata!";
     }
