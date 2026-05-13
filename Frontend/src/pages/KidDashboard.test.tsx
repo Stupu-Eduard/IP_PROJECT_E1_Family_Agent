@@ -1,109 +1,128 @@
 import '@testing-library/jest-dom'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import KidDashboard from './KidDashboard'
 
-// Mock pentru navigare
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
     const actual = await vi.importActual('react-router-dom')
-    return {
-        ...actual,
-        useNavigate: () => mockNavigate
-    }
+    return { ...actual, useNavigate: () => mockNavigate }
 })
 
-describe('KidDashboard Component - Full Coverage Hunt', () => {
+const MOCK_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.' +
+    btoa(JSON.stringify({ name: 'Sofia Popescu', userId: 5, role: 'Child' })) +
+    '.signature'
+
+vi.mock('../store/authStore', () => ({
+    useAuthStore: (selector: (s: { token: string }) => unknown) =>
+        selector({ token: MOCK_TOKEN }),
+}))
+
+const MOCK_EXPENSES = [
+    { id: 1, amount: '8.50',  currency: 'RON', description: 'Gustare la chioșc',    expenseDate: '2026-05-14T13:20:00', category: 'Food',      person: 'Sofia', location: null },
+    { id: 2, amount: '24.00', currency: 'RON', description: 'Caiete pentru școală', expenseDate: '2026-05-13T17:05:00', category: 'Education', person: 'Sofia', location: null },
+    { id: 3, amount: '12.50', currency: 'RON', description: 'Suc + apă plată',       expenseDate: '2026-05-12T09:40:00', category: 'Food',      person: 'Sofia', location: null },
+]
+const MOCK_BUDGET = { totalBudget: 100, totalSpent: 55, balance: 45 }
+
+vi.mock('../services/expenses', () => ({
+    fetchExpenses: vi.fn().mockResolvedValue(MOCK_EXPENSES),
+}))
+
+vi.mock('../services/api', () => ({
+    api: {
+        get: vi.fn().mockResolvedValue({ data: MOCK_BUDGET }),
+        interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+    },
+}))
+
+describe('KidDashboard', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        Object.defineProperty(navigator, 'geolocation', {
+            value: { watchPosition: vi.fn(), clearWatch: vi.fn() },
+            configurable: true,
+        })
     })
 
     const renderComponent = () => render(
-        <MemoryRouter>
-            <KidDashboard />
-        </MemoryRouter>
+        <MemoryRouter><KidDashboard /></MemoryRouter>
     )
 
-    it('1. Verifică identitatea vizuală și elementele de branding', () => {
+    it('afișează identitatea din token — prenume, avatar, badge', () => {
         renderComponent()
-        // Verificăm textul de sesiune și salutul
-        expect(screen.getByText(/SESIUNE COPIL · ANDREI/i)).toBeInTheDocument()
-        const greeting = screen.getByRole('heading', { level: 1 })
-        expect(greeting).toHaveTextContent(/Salut, Andrei/i)
-
-        // Verificăm prezența avatarului și a etichetei de cont
-        expect(screen.getByText('Andrei P.')).toBeInTheDocument()
+        expect(screen.getByText(/SESIUNE COPIL/i)).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/Salut, Sofia/i)
+        expect(screen.getByText('S')).toBeInTheDocument()
+        expect(screen.getByText('Sofia P.')).toBeInTheDocument()
         expect(screen.getByText(/Cont copil/i)).toBeInTheDocument()
     })
 
-    it('2. Validează calculele financiare și formatarea prețurilor', () => {
+    it('afișează luna curentă în header-ul cardului de sold', () => {
         renderComponent()
-        // Balance calculat: 100 - 55 = 45
-        expect(screen.getByText('45')).toBeInTheDocument()
-        expect(screen.getByText(/din 100 RON alocați/i)).toBeInTheDocument()
+        const monthLabel = new Date().toLocaleString('ro-RO', { month: 'long' }).toUpperCase()
+        expect(screen.getByText(new RegExp(`SOLD DISPONIBIL · ${monthLabel}`))).toBeInTheDocument()
+    })
 
-        // Verificăm cheltuiala specifică formatată[cite: 2]
-        expect(screen.getByText(/55 RON/i)).toBeInTheDocument()
+    it('afișează datele de buget după încărcare', async () => {
+        renderComponent()
+        await waitFor(() => {
+            expect(screen.getByText('45.00')).toBeInTheDocument()
+        })
+        expect(screen.getByText(/din 100.00 RON alocați de părinți/i)).toBeInTheDocument()
+        expect(screen.getByText(/Cheltuit/i)).toBeInTheDocument()
         expect(screen.getByText('55% din buget')).toBeInTheDocument()
+    })
 
-        // Verificăm formatarea zecimală a cheltuielilor din listă (8.50, 24.00, 12.50)[cite: 2]
+    it('afișează cheltuielile reale după încărcare', async () => {
+        renderComponent()
+        await waitFor(() => {
+            expect(screen.getByText('Gustare la chioșc')).toBeInTheDocument()
+        })
+        expect(screen.getByText('Caiete pentru școală')).toBeInTheDocument()
+        expect(screen.getByText('Suc + apă plată')).toBeInTheDocument()
         expect(screen.getByText('8.50')).toBeInTheDocument()
         expect(screen.getByText('24.00')).toBeInTheDocument()
         expect(screen.getByText('12.50')).toBeInTheDocument()
     })
 
-    it('3. Testează interacțiunea cu toate Acțiunile Rapide', () => {
+    it('navighează corect din acțiunile rapide', () => {
         renderComponent()
-
-        // 1. Scanează un bon[cite: 2]
         fireEvent.click(screen.getByText('Scanează un bon'))
         expect(mockNavigate).toHaveBeenCalledWith('/add-expense')
-
-        // 2. Cheltuielile mele[cite: 2]
         fireEvent.click(screen.getByText('Cheltuielile mele'))
         expect(mockNavigate).toHaveBeenCalledWith('/expenses')
-
-        // 3. Familia mea[cite: 2]
         fireEvent.click(screen.getByText('Familia mea'))
         expect(mockNavigate).toHaveBeenCalledWith('/family')
     })
 
-    it('4. Verifică lista de cumpărături și click-ul pe rânduri', () => {
+    it('navighează la /expenses la click pe rândul de cheltuială', async () => {
         renderComponent()
-
-        // Verificăm dacă rândul cu "Gustare la chioșc" este prezent și navighează[cite: 2]
-        const expenseRow = screen.getByText('Gustare la chioșc').closest('.row-clickable')
-        if (expenseRow) fireEvent.click(expenseRow)
-
+        await waitFor(() => screen.getByText('Gustare la chioșc'))
+        const row = screen.getByText('Gustare la chioșc').closest('.row-clickable')
+        if (row) fireEvent.click(row)
         expect(mockNavigate).toHaveBeenCalledWith('/expenses')
     })
 
-    it('5. Analizează secțiunea de Obiectiv și progresul acestuia', () => {
+    it('afișează butonul "Vezi tot" și navighează', () => {
         renderComponent()
-
-        // Verificăm datele obiectivului "Căști noi"[cite: 2]
-        const goalCard = screen.getByText(/OBIECTIVUL MEU/i).closest('.card')
-        expect(goalCard).toHaveTextContent('Căști noi')
-        expect(goalCard).toHaveTextContent('180') // saved[cite: 2]
-        expect(goalCard).toHaveTextContent('/ 240 RON') // target[cite: 2]
-        expect(goalCard).toHaveTextContent('2 luni rămase') // monthsLeft[cite: 2]
-
-        // Calculul procentajului obiectivului (180/240 = 75%)[cite: 2]
-        expect(screen.getByText('75% adunat')).toBeInTheDocument()
+        fireEvent.click(screen.getByText(/Vezi tot →/i))
+        expect(mockNavigate).toHaveBeenCalledWith('/expenses')
     })
 
-    it('6. Testează butoanele secundare de navigare (Header și "Vezi tot")', () => {
+    it('afișează secțiunea obiectiv cu mesaj coming soon', () => {
         renderComponent()
+        expect(screen.getByText(/OBIECTIVUL MEU/i)).toBeInTheDocument()
+        expect(screen.getByText(/Disponibil în curând/i)).toBeInTheDocument()
+    })
 
-        // Butonul de scanare din header[cite: 2]
-        const headerScanBtn = screen.getByRole('button', { name: /Scanează bonul/i })
-        fireEvent.click(headerScanBtn)
-        expect(mockNavigate).toHaveBeenCalledWith('/add-expense')
-
-        // Butonul "Vezi tot →" din cardul de cheltuieli[cite: 2]
-        const seeAllBtn = screen.getByText(/Vezi tot →/i)
-        fireEvent.click(seeAllBtn)
-        expect(mockNavigate).toHaveBeenCalledWith('/expenses')
+    it('afișează mesaj gol când nu există cheltuieli', async () => {
+        const { fetchExpenses } = await import('../services/expenses')
+        vi.mocked(fetchExpenses).mockResolvedValueOnce([])
+        renderComponent()
+        await waitFor(() => {
+            expect(screen.getByText(/Nicio cheltuială înregistrată/i)).toBeInTheDocument()
+        })
     })
 })

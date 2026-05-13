@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useExpenseStore } from '../store/expenseStore';
 import { useNavigate } from 'react-router-dom';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
@@ -30,13 +31,14 @@ export default function Expenses() {
     const navigate = useNavigate();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = 2;
+    const ITEMS_PER_PAGE = 20;
 
     const [expenses,            setExpenses]            = useState<ExpenseListDTO[]>([]);
     const [isLoading,           setIsLoading]           = useState(true);
     const [loadError,           setLoadError]           = useState<string | null>(null);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [availablePeople,     setAvailablePeople]     = useState<string[]>([]);
+    const expenseVersion = useExpenseStore((s) => s.version);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -116,7 +118,11 @@ export default function Expenses() {
             isCancelled = true;
             controller.abort();
         };
-    }, [selectedCategory, selectedPerson]);
+    }, [selectedCategory, selectedPerson, expenseVersion]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedCategory, selectedPerson, startDate, endDate, expenseVersion]);
 
     const openMap = (expense: ExpenseListDTO) => {
         navigate('/expenses/map', {
@@ -137,6 +143,12 @@ export default function Expenses() {
         if (endDate && e.rawDate && e.rawDate > endDate) return false;
         return true;
     });
+
+    const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / ITEMS_PER_PAGE));
+    const pagedExpenses = filteredExpenses.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
 
     const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] h-10 px-3 text-[13px] text-[#2D2926] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
@@ -261,7 +273,7 @@ export default function Expenses() {
 
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="stagger" style={{ display: 'none' }}>
-                    {filteredExpenses.map((expense) => (
+                    {pagedExpenses.map((expense) => (
                         <div key={expense.id} className="card card-hover fade-up" style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                                 <div>
@@ -302,7 +314,7 @@ export default function Expenses() {
                     </div>
 
                     <div className="stagger">
-                        {filteredExpenses.map((expense) => (
+                        {pagedExpenses.map((expense) => (
                             <div
                                 key={expense.id}
                                 className="row-clickable fade-up"
@@ -353,7 +365,7 @@ export default function Expenses() {
                             >
                                 <ChevronLeft size={15} />
                             </button>
-                            {[1, 2].map((n) => (
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                                 <button
                                     key={n}
                                     onClick={() => setCurrentPage(n)}
