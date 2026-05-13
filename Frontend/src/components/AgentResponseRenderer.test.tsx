@@ -363,6 +363,12 @@ describe('AgentResponseRenderer — Switch / Discriminator', () => {
         expect(screen.getByText(/text malformat/i)).toBeInTheDocument()
     })
 
+    it('39b. Randează text din message când text lipsește (fallback backend)', () => {
+        const r = { type: 'text', message: 'Răspuns prin message.' } as unknown as AgentResponse
+        render(<AgentResponseRenderer response={r} />)
+        expect(screen.getByTestId('agent-text')).toHaveTextContent('Răspuns prin message.')
+    })
+
     it('40. Randează ChartResponse (line) prin componenta InlineChart', () => {
         const r: ChartResponse = {
             type: 'chart',

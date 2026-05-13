@@ -31,6 +31,10 @@ public class LlmRouterService {
 
     public String routeAndChat(String userMessage) {
         String classification = routerAssistant.classify(userMessage);
+        if (classification == null || classification.isBlank()) {
+            log.warn("RouterAssistant returned null/blank classification, defaulting to SIMPLE");
+            classification = "SIMPLE";
+        }
         log.info("Query classification: {}", classification);
 
         // All queries routed through DeepSeek
@@ -43,6 +47,10 @@ public class LlmRouterService {
                     .build()
         );
 
-        return assistant.chat(userMessage);
+        String response = assistant.chat(userMessage);
+        if (response == null || response.isBlank()) {
+            log.error("RagAssistant returned null or blank response for message: {}", userMessage);
+        }
+        return response;
     }
 }

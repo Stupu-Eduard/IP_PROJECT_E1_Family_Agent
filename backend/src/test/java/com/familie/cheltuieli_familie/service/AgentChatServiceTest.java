@@ -119,4 +119,57 @@ class AgentChatServiceTest {
 
         assertInstanceOf(TextResponseDTO.class, result);
     }
+
+    @Test
+    void processQuery_shouldReturnFallbackText_whenRagReturnsNull() {
+        String userMessage = "How much did I spend?";
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .responseType("text")
+                .build();
+
+        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(null);
+
+        var result = agentChatService.processQuery(userMessage);
+
+        assertInstanceOf(TextResponseDTO.class, result);
+        assertNotNull(result.getMessage());
+        assertFalse(result.getMessage().isBlank());
+    }
+
+    @Test
+    void processQuery_shouldReturnFallbackText_whenRagReturnsBlank() {
+        String userMessage = "How much did I spend?";
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .responseType("text")
+                .build();
+
+        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn("   ");
+
+        var result = agentChatService.processQuery(userMessage);
+
+        assertInstanceOf(TextResponseDTO.class, result);
+        assertNotNull(result.getMessage());
+        assertFalse(result.getMessage().isBlank());
+    }
+
+    @Test
+    void processQuery_shouldReturnFallbackText_whenChartFailsAndRagReturnsNull() {
+        String userMessage = "Show me expenses";
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .responseType("chart")
+                .chartType("pie")
+                .build();
+
+        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
+        when(chartGenerationService.generate(intent)).thenThrow(new RuntimeException("Chart failed"));
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(null);
+
+        var result = agentChatService.processQuery(userMessage);
+
+        assertInstanceOf(TextResponseDTO.class, result);
+        assertNotNull(result.getMessage());
+        assertFalse(result.getMessage().isBlank());
+    }
 }

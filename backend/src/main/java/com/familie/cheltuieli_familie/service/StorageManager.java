@@ -13,6 +13,10 @@ import java.util.List;
 @Service
 public class StorageManager implements StorageService {
 
+    private static final String DEFAULT_CURRENCY = "RON";
+    private static final String DEFAULT_TYPE = "EXPENSE";
+    private static final String SOURCE_TYPE = "OCR";
+
     private final ExpenseOCRRepository expenseRepository;
 
     public StorageManager(ExpenseOCRRepository expenseRepository) {
@@ -29,30 +33,64 @@ public class StorageManager implements StorageService {
         int failed = 0;
 
         for (Transaction transaction : transactions) {
-            try {
-                if (!isValid(transaction)) {
-                    failed++;
-                    continue;
-                }
-
-                ExpenseOCREntity expense = new ExpenseOCREntity(
-                        BigDecimal.valueOf(transaction.getAmount()),
-                        transaction.getDescription(),
-                        transaction.getDate() != null ? transaction.getDate().atStartOfDay() : LocalDateTime.now(),
-                        transaction.getCurrency() != null ? transaction.getCurrency() : "RON",
-                        transaction.getType() != null ? transaction.getType() : "EXPENSE",
-                        "OCR"
-                );
-
-                expenseRepository.save(expense);
+            if (saveTransaction(transaction)) {
                 saved++;
-
-            } catch (Exception e) {
+            } else {
                 failed++;
             }
         }
 
         return new StorageResult(transactions.size(), saved, failed);
+    }
+
+    private boolean saveTransaction(Transaction transaction) {
+        try {
+            if (!isValid(transaction)) {
+                return false;
+            }
+
+            ExpenseOCREntity expense = createExpenseEntity(transaction);
+            expenseRepository.save(expense);
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private ExpenseOCREntity createExpenseEntity(Transaction transaction) {
+        return new ExpenseOCREntity(
+                BigDecimal.valueOf(transaction.getAmount()),
+                transaction.getDescription(),
+                resolveDate(transaction),
+                resolveCurrency(transaction),
+                resolveType(transaction),
+                SOURCE_TYPE
+        );
+    }
+
+    private LocalDateTime resolveDate(Transaction transaction) {
+        if (transaction.getDate() == null) {
+            return LocalDateTime.now();
+        }
+
+        return transaction.getDate().atStartOfDay();
+    }
+
+    private String resolveCurrency(Transaction transaction) {
+        if (transaction.getCurrency() == null) {
+            return DEFAULT_CURRENCY;
+        }
+
+        return transaction.getCurrency();
+    }
+
+    private String resolveType(Transaction transaction) {
+        if (transaction.getType() == null) {
+            return DEFAULT_TYPE;
+        }
+
+        return transaction.getType();
     }
 
     private boolean isValid(Transaction transaction) {

@@ -47,7 +47,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/parent/stream/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
                         .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
-                        .requestMatchers("/v1/chat/**").permitAll()      // <-- AI CHAT
 
                         // Swagger UI
                         .requestMatchers("/swagger-ui/**").permitAll()

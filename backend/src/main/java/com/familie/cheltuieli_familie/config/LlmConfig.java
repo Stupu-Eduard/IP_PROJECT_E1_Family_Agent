@@ -11,7 +11,9 @@ import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,16 +31,46 @@ public class LlmConfig {
     @Value("${OPENROUTER_API_KEY:}")
     private String openRouterApiKey;
 
+    @Value("${langchain4j.open-ai.chat-model.base-url:https://api.deepseek.com}")
+    private String deepseekBaseUrl;
+
+    @Value("${langchain4j.open-ai.chat-model.model-name:deepseek-chat}")
+    private String deepseekModelName;
+
+    @Value("${langchain4j.open-router.chat-model.base-url:https://openrouter.ai/api/v1}")
+    private String openRouterBaseUrl;
+
+    @Value("${langchain4j.open-router.chat-model.model-name:deepseek/deepseek-chat}")
+    private String openRouterModelName;
+
+    @Value("${langchain4j.open-ai.chat-model.temperature:0.1}")
+    private double temperature;
+
+    @Value("${langchain4j.open-ai.chat-model.timeout:60}")
+    private long timeoutSeconds;
+
+    @Value("${ai.intent-extraction.max-retries:3}")
+    private int intentMaxRetries;
+
+    @Value("${ai.intent-extraction.retry-delays-ms:2000,4000}")
+    private String retryDelaysMsStr;
+
+    @Value("${ai.intent-extraction.default-group-by:category}")
+    private String defaultGroupBy;
+
+    @Value("${ai.intent-extraction.default-series-by:person}")
+    private String defaultSeriesBy;
+
     @Bean
     @Primary
     public ChatLanguageModel deepseekModel() {
         String dsKey = KeyResolver.resolve(deepseekApiKey, "DEEPSEEK_API_KEY");
         if (!dsKey.isEmpty()) {
-            return buildOpenAiModel(dsKey, "https://api.deepseek.com", "deepseek-chat");
+            return buildOpenAiModel(dsKey, deepseekBaseUrl, deepseekModelName);
         }
         String orKey = KeyResolver.resolve(openRouterApiKey, "OPENROUTER_API_KEY");
         if (!orKey.isEmpty()) {
-            return buildOpenAiModel(orKey, "https://openrouter.ai/api/v1", "deepseek/deepseek-chat");
+            return buildOpenAiModel(orKey, openRouterBaseUrl, openRouterModelName);
         }
         throw new IllegalStateException("DEEPSEEK_API_KEY or OPENROUTER_API_KEY is required.");
     }
@@ -48,8 +80,8 @@ public class LlmConfig {
                 .apiKey(apiKey)
                 .baseUrl(baseUrl)
                 .modelName(modelName)
-                .temperature(0.1)
-                .timeout(Duration.ofSeconds(60))
+                .temperature(temperature)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .build();
     }
 
@@ -57,36 +89,6 @@ public class LlmConfig {
     public RetrievalAugmentor retrievalAugmentor(QdrantContentRetriever qdrantContentRetriever) {
         return DefaultRetrievalAugmentor.builder()
                 .contentRetriever(qdrantContentRetriever)
-                .build();
-    }
-
-    public interface RouterAssistant {
-        @SystemMessage("""
-            Ești un router de interogări pentru un sistem de management al cheltuielilor de familie.
-            Misiunea ta este să clasifici mesajul utilizatorului în funcție de complexitatea sa.
-            
-            Categorii:
-            1. SIMPLE:
-               - Căutări de bază ("Cât am cheltuit ieri?")
-               - Întrebări despre o singură cheltuială ("Unde am cumpărat pâine?")
-               - Listări simple ("Arată-mi cheltuielile de la Lidl")
-               - Întrebări factuale directe.
-            
-            2. COMPLEX:
-               - Analize de trenduri ("Cum au evoluat cheltuielile pe mâncare în ultimele 3 luni?")
-               - Comparații ("Am cheltuit mai mult luna asta decât luna trecută?")
-               - Planificare bugetară ("Dacă continui așa, cât voi cheltui până la finalul anului?")
-               - Întrebări care necesită corelarea mai multor date sau raționament matematic complex.
-            
-            Răspunde DOAR cu cuvântul 'SIMPLE' sau 'COMPLEX'.
-            """)
-        String classify(@UserMessage String userMessage);
-    }
-
-    @Bean
-    public RouterAssistant routerAssistant(ChatLanguageModel deepseekModel) {
-        return AiServices.builder(RouterAssistant.class)
-                .chatLanguageModel(deepseekModel)
                 .build();
     }
 
@@ -107,6 +109,44 @@ public class LlmConfig {
             - Claritatea: Explică orice calcul efectuat.
             """)
         String chat(String userMessage);
+    }
+
+    public interface RouterAssistant {
+        @SystemMessage("""
+            Ești un router de interogări pentru un sistem de management al cheltuielilor de familie.
+            Misiunea ta este să clasifici mesajul utilizatorului în funcție de complexitatea sa.
+
+            Categorii:
+            1. SIMPLE:
+               - Căutări de bază ("Cât am cheltuit ieri?")
+               - Întrebări despre o singură cheltuială ("Unde am cumpărat pâine?")
+               - Listări simple ("Arată-mi cheltuielile de la Lidl")
+               - Întrebări factuale directe.
+
+            2. COMPLEX:
+               - Analize de trenduri ("Cum au evoluat cheltuielile pe mâncare în ultimele 3 luni?")
+               - Comparații ("Am cheltuit mai mult luna asta decât luna trecută?")
+               - Planificare bugetară ("Dacă continui așa, cât voi cheltui până la finalul anului?")
+               - Întrebări care necesită corelarea mai multor date sau raționament matematic complex.
+
+            Răspunde DOAR cu cuvântul 'SIMPLE' sau 'COMPLEX'.
+            """)
+        String classify(@UserMessage String userMessage);
+    }
+
+    @Bean
+    public RouterAssistant routerAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel) {
+        return AiServices.builder(RouterAssistant.class)
+                .chatLanguageModel(deepseekModel)
+                .build();
+    }
+
+    @Bean
+    public RagAssistant ragAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel, RetrievalAugmentor retrievalAugmentor) {
+        return AiServices.builder(RagAssistant.class)
+                .chatLanguageModel(deepseekModel)
+                .retrievalAugmentor(retrievalAugmentor)
+                .build();
     }
 
     @Bean
@@ -137,9 +177,75 @@ public class LlmConfig {
                 .build();
     }
 
+
+
     @Bean
     public VisualIntentExtractor visualIntentExtractor(ChatLanguageModel deepseekModel) {
-        return new VisualIntentExtractor(deepseekModel);
+        long[] retryDelaysMs = parseRetryDelays(retryDelaysMsStr, intentMaxRetries);
+        return new VisualIntentExtractor(deepseekModel, intentMaxRetries, retryDelaysMs, defaultGroupBy, defaultSeriesBy);
+    }
+
+    private long[] parseRetryDelays(String str, int maxRetries) {
+        long[] defaultDelays = new long[]{2000, 4000};
+        long[] parsedDelays = parseLongArrayOrDefault(str, defaultDelays);
+        return normalizeToLength(parsedDelays, maxRetries);
+    }
+
+    private long[] parseLongArrayOrDefault(String str, long[] defaultDelays) {
+        if (str == null || str.isBlank()) {
+            log.warn("Property ai.intent-extraction.retry-delays-ms is blank; using default retry delays.");
+            return defaultDelays;
+        }
+
+        String[] parts = str.split(",");
+        long[] temp = new long[parts.length];
+        int count = 0;
+
+        try {
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isBlank()) {
+                    temp[count++] = Long.parseLong(trimmed);
+                }
+            }
+        } catch (NumberFormatException ex) {
+            log.warn("Invalid value '{}' for ai.intent-extraction.retry-delays-ms; using default retry delays.", str, ex);
+            return defaultDelays;
+        }
+
+        if (count == 0) {
+            log.warn("Property ai.intent-extraction.retry-delays-ms contains no valid values; using default retry delays.");
+            return defaultDelays;
+        }
+
+        long[] result = new long[count];
+        System.arraycopy(temp, 0, result, 0, count);
+        return result;
+    }
+
+    private long[] normalizeToLength(long[] delays, int maxRetries) {
+        if (maxRetries <= 0 || delays.length == maxRetries) {
+            return delays;
+        }
+
+        long[] normalized = new long[maxRetries];
+        int copyLength = Math.min(delays.length, maxRetries);
+        System.arraycopy(delays, 0, normalized, 0, copyLength);
+
+        long fillValue = delays[delays.length - 1];
+        for (int i = copyLength; i < maxRetries; i++) {
+            normalized[i] = fillValue;
+        }
+
+        if (delays.length != maxRetries) {
+            log.warn(
+                    "Configured retry delays count ({}) does not match ai.intent-extraction.max-retries ({}); normalized retry delays to match.",
+                    delays.length,
+                    maxRetries
+            );
+        }
+
+        return normalized;
     }
 
 }

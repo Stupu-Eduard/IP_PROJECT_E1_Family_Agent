@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import ChatAI from './ChatAi'
 
-vi.mock('../api/api', () => ({
-    default: {
+vi.mock('../services/api', () => ({
+    api: {
         post: vi.fn(),
     },
 }))
@@ -17,7 +17,7 @@ vi.mock('./AgentResponseRenderer', () => ({
     ),
 }))
 
-import api from '../api/api'
+import { api } from '../services/api'
 
 describe('ChatAI Component', () => {
     let scrollIntoViewMock: any
@@ -156,6 +156,28 @@ describe('ChatAI Component', () => {
         await waitFor(() => {
             expect(screen.getByText('Eroare la conectarea cu asistentul. Încearcă din nou.')).toBeInTheDocument()
         })
+    })
+
+    it('testRedirectsToLoginOn401', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.mocked(api.post).mockRejectedValueOnce({ response: { status: 401 } })
+
+        render(<ChatAI />)
+        fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
+
+        const input = screen.getByRole('textbox')
+        fireEvent.change(input, { target: { value: 'Test 401' } })
+
+        await act(async () => {
+            fireEvent.submit(input)
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('Eroare la conectarea cu asistentul. Încearcă din nou.')).toBeInTheDocument()
+        })
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Chat API error:', expect.objectContaining({ response: { status: 401 } }))
+        consoleErrorSpy.mockRestore()
     })
 
     // ─────────────────────────────────────────────────────────────────────
