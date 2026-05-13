@@ -148,6 +148,27 @@ public class LlmConfig {
                 .build();
     }
 
+    public interface ConversationAssistant {
+        @SystemMessage("""
+            Ești FamilyAgent, un asistent virtual prietenos pentru managementul financiar al familiei.
+
+            REGULI:
+            1. Răspunde natural, prietenos și util.
+            2. NU accesa baza de date — ești în mod conversație pură.
+            3. Dacă utilizatorul cere date concrete (sume, grafice, analize), spune-i politicos
+               că poate folosi comenzi precum "arată-mi cheltuielile pe categorie" sau "cât am cheltuit luna trecută".
+            4. Răspunde întotdeauna în limba română.
+            """)
+        String chat(String userMessage);
+    }
+
+    @Bean
+    public ConversationAssistant conversationAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel) {
+        return AiServices.builder(ConversationAssistant.class)
+                .chatLanguageModel(deepseekModel)
+                .build();
+    }
+
     @Bean
     public VisualIntentExtractor visualIntentExtractor(ChatLanguageModel deepseekModel) {
         long[] retryDelaysMs = parseRetryDelays(retryDelaysMsStr, intentMaxRetries);

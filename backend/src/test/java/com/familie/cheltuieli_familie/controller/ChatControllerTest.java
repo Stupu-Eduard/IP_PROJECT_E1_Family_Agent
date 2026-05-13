@@ -41,6 +41,7 @@ class ChatControllerTest {
                         .content("{\"message\": \"Cat am cheltuit luna aceasta?\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.type").value("text"))
+                .andExpect(jsonPath("$.text").value("Ai cheltuit 1248 de lei luna aceasta."))
                 .andExpect(jsonPath("$.message").value("Ai cheltuit 1248 de lei luna aceasta."));
     }
 

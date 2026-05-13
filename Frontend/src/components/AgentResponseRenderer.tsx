@@ -19,10 +19,12 @@ import type {
 
 // ── Type Guards ───────────────────────────────────────────────────────────────
 
-export function isTextResponse(r: unknown): r is { type: 'text'; text: string } {
-    return !!r && typeof r === 'object'
-        && (r as { type?: unknown }).type === 'text'
-        && typeof (r as { text?: unknown }).text === 'string';
+export function isTextResponse(r: unknown): r is { type: 'text'; text: string; message?: string } {
+    if (!r || typeof r !== 'object') return false;
+    if ((r as { type?: unknown }).type !== 'text') return false;
+    const text = (r as { text?: unknown }).text;
+    const message = (r as { message?: unknown }).message;
+    return typeof text === 'string' || typeof message === 'string';
 }
 
 export function isChartResponse(r: unknown): r is ChartResponse {
@@ -330,7 +332,7 @@ const AgentResponseRenderer: React.FC<AgentResponseRendererProps> = ({ response 
             if (!isTextResponse(response)) {
                 return <AgentFallback message="Răspuns text malformat." />;
             }
-            return <span data-testid="agent-text">{response.text}</span>;
+            return <span data-testid="agent-text">{response.text || response.message}</span>;
         }
 
         case 'chart': {

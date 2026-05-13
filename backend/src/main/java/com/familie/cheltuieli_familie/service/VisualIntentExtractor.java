@@ -23,7 +23,7 @@ public class VisualIntentExtractor {
     private final String defaultGroupBy;
     private final String defaultSeriesBy;
 
-    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("text", "chart");
+    private static final Set<String> ALLOWED_RESPONSE_TYPES = Set.of("conversation", "data_query", "chart");
     private static final Set<String> ALLOWED_CHART_TYPES = Set.of("bar", "pie", "line");
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("sum", "count", "avg");
 
@@ -67,7 +67,10 @@ public class VisualIntentExtractor {
             3. Nu presupune existența unor coloane precum "budget", "income", "savings".
             
             Câmpuri JSON obligatorii:
-            - responseType: "text" sau "chart"
+            - responseType: "conversation" | "data_query" | "chart"
+              - "conversation" = salutări, small talk, întrebări generale fără legătură cu datele
+              - "data_query" = întrebări despre cheltuieli, analize, sume, comparări (necesită RAG)
+              - "chart" = cereri de grafic sau vizualizare
             - chartType: "bar" | "pie" | "line" (doar dacă responseType="chart")
             - aggregation: "sum" | "count" | "avg"
             - groupBy: "person" | "category" | "month" | "year" | "location"
@@ -122,9 +125,9 @@ public class VisualIntentExtractor {
         try {
             JsonNode root = objectMapper.readTree(json);
 
-            String responseType = root.path("responseType").asText("text");
+            String responseType = root.path("responseType").asText("data_query");
             if (!ALLOWED_RESPONSE_TYPES.contains(responseType)) {
-                responseType = "text";
+                responseType = "data_query";
             }
 
             String chartType = root.path("chartType").asText("bar");
@@ -165,7 +168,7 @@ public class VisualIntentExtractor {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Failed to parse intent JSON: {}", e.getMessage());
             return ChartQueryIntent.builder()
-                    .responseType("text")
+                    .responseType("data_query")
                     .build();
         }
     }
