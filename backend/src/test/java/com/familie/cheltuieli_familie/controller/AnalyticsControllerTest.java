@@ -36,7 +36,7 @@ class AnalyticsControllerTest {
 
     @Test
     void testQuery() throws Exception {
-        when(analyticsAssistant.chat(anyString())).thenReturn("Ai cheltuit 100 lei.");
+        when(analyticsAssistant.chat(anyString(), anyString())).thenReturn("Ai cheltuit 100 lei.");
 
         mockMvc.perform(post("/v1/analytics/query")
                         .contentType(MediaType.APPLICATION_JSON)

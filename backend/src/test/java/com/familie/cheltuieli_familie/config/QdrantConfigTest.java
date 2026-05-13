@@ -27,6 +27,9 @@ class QdrantConfigTest {
         ReflectionTestUtils.setField(config, "collectionName", "test-collection");
         ReflectionTestUtils.setField(config, "httpPort", 6333);
         ReflectionTestUtils.setField(config, "host", "localhost");
+        ReflectionTestUtils.setField(config, "vectorSize", 2048);
+        ReflectionTestUtils.setField(config, "distance", "Cosine");
+        ReflectionTestUtils.setField(config, "indexType", "keyword");
         
         RestTemplate mockRest = mock(RestTemplate.class);
         ResponseEntity<String> response = new ResponseEntity<>("exists", HttpStatus.OK);
@@ -45,6 +48,9 @@ class QdrantConfigTest {
         ReflectionTestUtils.setField(config, "collectionName", "test-collection");
         ReflectionTestUtils.setField(config, "httpPort", 6333);
         ReflectionTestUtils.setField(config, "host", "localhost");
+        ReflectionTestUtils.setField(config, "vectorSize", 2048);
+        ReflectionTestUtils.setField(config, "distance", "Cosine");
+        ReflectionTestUtils.setField(config, "indexType", "keyword");
         
         RestTemplate mockRest = mock(RestTemplate.class);
         when(mockRest.getForEntity(anyString(), eq(String.class))).thenThrow(new RuntimeException("Not found"));

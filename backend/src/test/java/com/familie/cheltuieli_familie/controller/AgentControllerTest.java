@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -46,5 +47,12 @@ class AgentControllerTest {
         agentController.chat(userMessage);
 
         verify(agentChatService).processQuery(userMessage);
+    }
+
+    @Test
+    void chat_requiresAuthentication() {
+        PreAuthorize preAuthorize = AgentController.class.getAnnotation(PreAuthorize.class);
+        assertNotNull(preAuthorize, "AgentController should have @PreAuthorize");
+        assertEquals("isAuthenticated()", preAuthorize.value());
     }
 }

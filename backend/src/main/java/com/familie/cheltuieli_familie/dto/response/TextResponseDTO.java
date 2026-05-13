@@ -11,7 +11,10 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public class TextResponseDTO extends AgentResponseDTO {
 
-    public TextResponseDTO(String message) {
-        super("text", message);
+    private String text;
+
+    public TextResponseDTO(String text) {
+        super("text", text);
+        this.text = text;
     }
 }

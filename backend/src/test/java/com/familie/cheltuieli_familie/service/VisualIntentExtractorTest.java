@@ -27,14 +27,14 @@ class VisualIntentExtractorTest {
 
     @BeforeEach
     void setUp() {
-        extractor = new VisualIntentExtractor(chatLanguageModel);
+        extractor = new VisualIntentExtractor(chatLanguageModel, 3, new long[]{2000, 4000}, "category", "person");
     }
 
     @Test
     void parseIntent_shouldReturnDefaultsForEmptyJson() {
         ChartQueryIntent intent = extractor.parseIntent("{}");
 
-        assertEquals("text", intent.getResponseType());
+        assertEquals("data_query", intent.getResponseType());
         assertEquals("bar", intent.getChartType());
         assertEquals("sum", intent.getAggregation());
         assertEquals("category", intent.getGroupBy());
@@ -73,7 +73,7 @@ class VisualIntentExtractorTest {
     @Test
     void parseIntent_shouldSanitizeInvalidResponseType() {
         ChartQueryIntent intent = extractor.parseIntent("{\"responseType\": \"invalid\"}");
-        assertEquals("text", intent.getResponseType());
+        assertEquals("data_query", intent.getResponseType());
     }
 
     @Test
@@ -136,9 +136,9 @@ class VisualIntentExtractorTest {
     }
 
     @Test
-    void parseIntent_shouldReturnTextFallbackOnInvalidJson() {
+    void parseIntent_shouldReturnDataQueryFallbackOnInvalidJson() {
         ChartQueryIntent intent = extractor.parseIntent("not valid json");
-        assertEquals("text", intent.getResponseType());
+        assertEquals("data_query", intent.getResponseType());
         assertNull(intent.getChartType());
     }
 
@@ -180,9 +180,15 @@ class VisualIntentExtractorTest {
 
     @Test
     void parseIntent_shouldHandleMissingFiltersNode() {
-        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"text\"}");
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"data_query\"}");
         assertNotNull(intent.getFilters());
         assertNull(intent.getFilters().getCategory());
+    }
+
+    @Test
+    void parseIntent_shouldParseConversationResponseType() {
+        ChartQueryIntent intent = extractor.parseIntent("{\"responseType\":\"conversation\"}");
+        assertEquals("conversation", intent.getResponseType());
     }
 
     @Test
