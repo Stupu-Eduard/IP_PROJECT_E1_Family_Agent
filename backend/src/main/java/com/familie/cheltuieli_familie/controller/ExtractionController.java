@@ -2,16 +2,13 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.model.Transaction;
 import com.familie.cheltuieli_familie.service.ExtractionPipelineService;
 import com.familie.cheltuieli_familie.service.ExtractionService;
-import com.familie.cheltuieli_familie.service.SyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,31 +23,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/extract")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class ExtractionController {
 
     private final ExtractionService extractionService;
-    private final SyncService syncService;
 
     private final ExtractionPipelineService orchestrator;
 
     @PostMapping
     public ResponseEntity<List<ExtractionResponse>> extractDetails(@Valid @RequestBody ExtractionRequest request) {
-        List<ExtractionResponse> responses = extractionService.process(request);
-
-        for (ExtractionResponse response : responses) {
-            Expense expense = Expense.builder()
-                    .amount(response.getAmount())
-                    .aiCategory(response.getCategory())
-                    .aiLocation(response.getLocation())
-                    .aiPerson(response.getPerson())
-                    .expenseDate(response.getTransactionDate().atStartOfDay())
-                    .rawInput(response.getRawInput())
-                    .build();
-            syncService.syncExpense(expense);
-        }
-
-        return ResponseEntity.ok(responses);
+        List<ExtractionResponse> response = extractionService.process(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/validate-ocr")

@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.config;
 
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ExpenseTools;
-import com.familie.cheltuieli_familie.service.HybridExpenseTool;
 import com.familie.cheltuieli_familie.service.QdrantContentRetriever;
 import com.familie.cheltuieli_familie.service.VisualIntentExtractor;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -112,6 +111,36 @@ public class LlmConfig {
         String chat(String userMessage);
     }
 
+    public interface RouterAssistant {
+        @SystemMessage("""
+            Ești un router de interogări pentru un sistem de management al cheltuielilor de familie.
+            Misiunea ta este să clasifici mesajul utilizatorului în funcție de complexitatea sa.
+
+            Categorii:
+            1. SIMPLE:
+               - Căutări de bază ("Cât am cheltuit ieri?")
+               - Întrebări despre o singură cheltuială ("Unde am cumpărat pâine?")
+               - Listări simple ("Arată-mi cheltuielile de la Lidl")
+               - Întrebări factuale directe.
+
+            2. COMPLEX:
+               - Analize de trenduri ("Cum au evoluat cheltuielile pe mâncare în ultimele 3 luni?")
+               - Comparații ("Am cheltuit mai mult luna asta decât luna trecută?")
+               - Planificare bugetară ("Dacă continui așa, cât voi cheltui până la finalul anului?")
+               - Întrebări care necesită corelarea mai multor date sau raționament matematic complex.
+
+            Răspunde DOAR cu cuvântul 'SIMPLE' sau 'COMPLEX'.
+            """)
+        String classify(@UserMessage String userMessage);
+    }
+
+    @Bean
+    public RouterAssistant routerAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel) {
+        return AiServices.builder(RouterAssistant.class)
+                .chatLanguageModel(deepseekModel)
+                .build();
+    }
+
     @Bean
     public RagAssistant ragAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel, RetrievalAugmentor retrievalAugmentor) {
         return AiServices.builder(RagAssistant.class)
@@ -121,10 +150,10 @@ public class LlmConfig {
     }
 
     @Bean
-    public AnalyticsAssistant analyticsAssistant(ChatLanguageModel deepseekModel, ExpenseTools expenseTools, HybridExpenseTool hybridExpenseTool) {
+    public AnalyticsAssistant analyticsAssistant(ChatLanguageModel deepseekModel, ExpenseTools expenseTools) {
         return AiServices.builder(AnalyticsAssistant.class)
                 .chatLanguageModel(deepseekModel)
-                .tools(expenseTools, hybridExpenseTool)
+                .tools(expenseTools)
                 .build();
     }
 
@@ -148,26 +177,7 @@ public class LlmConfig {
                 .build();
     }
 
-    public interface ConversationAssistant {
-        @SystemMessage("""
-            Ești FamilyAgent, un asistent virtual prietenos pentru managementul financiar al familiei.
 
-            REGULI:
-            1. Răspunde natural, prietenos și util.
-            2. NU accesa baza de date — ești în mod conversație pură.
-            3. Dacă utilizatorul cere date concrete (sume, grafice, analize), spune-i politicos
-               că poate folosi comenzi precum "arată-mi cheltuielile pe categorie" sau "cât am cheltuit luna trecută".
-            4. Răspunde întotdeauna în limba română.
-            """)
-        String chat(String userMessage);
-    }
-
-    @Bean
-    public ConversationAssistant conversationAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel) {
-        return AiServices.builder(ConversationAssistant.class)
-                .chatLanguageModel(deepseekModel)
-                .build();
-    }
 
     @Bean
     public VisualIntentExtractor visualIntentExtractor(ChatLanguageModel deepseekModel) {

@@ -1,9 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.config.LlmConfig;
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.Expense;
-import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,57 +14,17 @@ import java.util.List;
 public class RagRetrievalService {
 
     private final QdrantVectorService qdrantVectorService;
-    private final LlmConfig.RagAssistant ragAssistant;
-    private final ExpenseJpaRepository expenseJpaRepository;
+    private final LlmRouterService llmRouterService;
 
     /**
-     * Performs a RAG query: automatically retrieves context and asks the LLM via RagAssistant.
+     * Performs a RAG query: automatically retrieves context and asks the LLM via Router.
      *
      * @param query The user query.
      * @return The LLM's answer based on the retrieved context.
      */
     public String askWithContext(String query) {
-        log.info("Performing RAG query via RagAssistant: {}", query);
-        return ragAssistant.chat(query);
-    }
-
-    /**
-     * Performs hybrid retrieval: semantic search in Qdrant + exact DB records,
-     * then asks the LLM with enriched context.
-     *
-     * @param query The user query.
-     * @return The LLM's answer based on hybrid context.
-     */
-    public String askWithHybridContext(String query) {
-        log.info("Performing hybrid RAG query: {}", query);
-
-        List<EmbeddedExpense> semanticResults = qdrantVectorService.searchSimilar(query, 10);
-        List<Long> ids = semanticResults.stream()
-                .map(EmbeddedExpense::getId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-
-        List<Expense> dbRecords = expenseJpaRepository.findAllById(ids);
-
-        StringBuilder context = new StringBuilder();
-        context.append("Rezultate semantice din Qdrant:\n");
-        for (EmbeddedExpense e : semanticResults) {
-            context.append(String.format("- ID %s: %s, %s RON, %s, scor: %.2f%n",
-                    e.getId() != null ? e.getId() : "N/A",
-                    e.getCategory(),
-                    e.getAmount(),
-                    e.getDate(),
-                    e.getScore()));
-        }
-        context.append("\nDate exacte din baza de date:\n");
-        for (Expense e : dbRecords) {
-            context.append(String.format("- ID %d: %s, %s RON, %s, %s%n",
-                    e.getId(), e.getAiCategory(), e.getAmount(), e.getExpenseDate(), e.getAiPerson()));
-        }
-
-        String enrichedQuery = query + "\n\nContext:\n" + context;
-        return ragAssistant.chat(enrichedQuery);
+        log.info("Performing RAG query via LlmRouterService: {}", query);
+        return llmRouterService.routeAndChat(query);
     }
 
     /**

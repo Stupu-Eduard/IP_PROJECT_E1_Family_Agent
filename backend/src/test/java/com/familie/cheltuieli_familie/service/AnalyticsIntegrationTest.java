@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,11 +37,10 @@ public class AnalyticsIntegrationTest {
     void testLauraAnalyticsFlow_HallucinationGuardCorrection() {
         // GIVEN
         LocalDate date = LocalDate.of(2024, 1, 1);
-        Expense e = Expense.builder()
-                .amount(new BigDecimal("100.50"))
-                .expenseDate(date.atStartOfDay())
-                .aiCategory("Mâncare")
-                .build();
+        ExpenseEntity e = new ExpenseEntity();
+        e.setAmount(new BigDecimal("100.50"));
+        e.setDate(date);
+        e.setCategory("Mâncare");
         
         when(repository.findByDateBetween(date, date)).thenReturn(List.of(e));
 

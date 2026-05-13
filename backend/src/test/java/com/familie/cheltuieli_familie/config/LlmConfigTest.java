@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.config;
 
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ExpenseTools;
-import com.familie.cheltuieli_familie.service.HybridExpenseTool;
 import com.familie.cheltuieli_familie.service.QdrantContentRetriever;
 import com.familie.cheltuieli_familie.service.VisualIntentExtractor;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -29,9 +28,6 @@ class LlmConfigTest {
 
     @Mock
     private ExpenseTools expenseTools;
-
-    @Mock
-    private HybridExpenseTool hybridExpenseTool;
 
     @BeforeEach
     void setUp() {
@@ -93,7 +89,7 @@ class LlmConfigTest {
 
     @Test
     void analyticsAssistant_shouldCreateBean() {
-        AnalyticsAssistant assistant = llmConfig.analyticsAssistant(chatLanguageModel, expenseTools, hybridExpenseTool);
+        AnalyticsAssistant assistant = llmConfig.analyticsAssistant(chatLanguageModel, expenseTools);
         assertNotNull(assistant);
     }
 

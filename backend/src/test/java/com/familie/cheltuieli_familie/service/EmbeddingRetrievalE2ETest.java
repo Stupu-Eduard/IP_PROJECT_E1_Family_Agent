@@ -1,8 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.Expense;
-import java.time.LocalDateTime;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -90,13 +90,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testStoreAndRetrieveExpense() {
         long uniqueId = System.currentTimeMillis();
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("150.00"))
-                .aiCategory("Mâncare")
-                .aiPerson("Alice")
-                .aiLocation("Kaufland")
-                .expenseDate(LocalDateTime.of(2024, 3, 15, 0, 0))
+                .category("Mâncare")
+                .person("Alice")
+                .location("Kaufland")
+                .date(LocalDate.of(2024, 3, 15))
                 .rawInput("Am cumpărat 150 lei de mâncare de la Kaufland")
                 .build();
 
@@ -115,13 +115,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testStoreAndSearchWithFilter() {
         long uniqueId = System.currentTimeMillis();
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("200.00"))
-                .aiCategory("Transport")
-                .aiPerson("Bob")
-                .aiLocation("Metro")
-                .expenseDate(LocalDateTime.of(2024, 4, 10, 0, 0))
+                .category("Transport")
+                .person("Bob")
+                .location("Metro")
+                .date(LocalDate.of(2024, 4, 10))
                 .rawInput("Bilet metro 200 lei")
                 .build();
 
@@ -139,13 +139,13 @@ class EmbeddingRetrievalE2ETest {
     @Test
     void testExistsInVectorStore() {
         long uniqueId = System.currentTimeMillis();
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .id(uniqueId)
                 .amount(new BigDecimal("50.00"))
-                .aiCategory("Divertisment")
-                .aiPerson("Charlie")
-                .aiLocation("Cinema")
-                .expenseDate(LocalDateTime.of(2024, 5, 1, 0, 0))
+                .category("Divertisment")
+                .person("Charlie")
+                .location("Cinema")
+                .date(LocalDate.of(2024, 5, 1))
                 .rawInput("Bilet cinema 50 lei")
                 .build();
 

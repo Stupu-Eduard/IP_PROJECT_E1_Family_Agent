@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
-import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,20 +29,20 @@ class SyncServiceTest {
 
     @Test
     void testSyncExpense() {
-        Expense input = Expense.builder()
+        ExpenseEntity input = ExpenseEntity.builder()
                 .amount(new BigDecimal("150.00"))
-                .aiCategory("Food")
+                .category("Food")
                 .build();
 
-        Expense saved = Expense.builder()
+        ExpenseEntity saved = ExpenseEntity.builder()
                 .id(1L)
                 .amount(new BigDecimal("150.00"))
-                .aiCategory("Food")
+                .category("Food")
                 .build();
 
         when(jpaRepository.save(input)).thenReturn(saved);
 
-        Expense result = syncService.syncExpense(input);
+        ExpenseEntity result = syncService.syncExpense(input);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -51,21 +51,21 @@ class SyncServiceTest {
     }
 
     @Test
-    void testSyncExpense_WithNullRawInput_SetsAiCategoryAsRawInput() {
-        Expense input = Expense.builder()
+    void testSyncExpense_WithNullRawInput_SetsCategoryAsRawInput() {
+        ExpenseEntity input = ExpenseEntity.builder()
                 .amount(new BigDecimal("100.00"))
-                .aiCategory("Transport")
+                .category("Transport")
                 .build();
 
-        Expense saved = Expense.builder()
+        ExpenseEntity saved = ExpenseEntity.builder()
                 .id(2L)
                 .amount(new BigDecimal("100.00"))
-                .aiCategory("Transport")
+                .category("Transport")
                 .build();
 
         when(jpaRepository.save(input)).thenReturn(saved);
 
-        Expense result = syncService.syncExpense(input);
+        ExpenseEntity result = syncService.syncExpense(input);
 
         assertEquals("Transport", result.getRawInput());
         verify(eventPublisher, times(1)).publishEvent(any(ExpenseSyncEvent.class));
@@ -73,41 +73,41 @@ class SyncServiceTest {
 
     @Test
     void testSyncExpense_WithExistingRawInput_KeepsRawInput() {
-        Expense input = Expense.builder()
+        ExpenseEntity input = ExpenseEntity.builder()
                 .amount(new BigDecimal("200.00"))
-                .aiCategory("Food")
+                .category("Food")
                 .rawInput("Custom raw input")
                 .build();
 
-        Expense saved = Expense.builder()
+        ExpenseEntity saved = ExpenseEntity.builder()
                 .id(3L)
                 .amount(new BigDecimal("200.00"))
-                .aiCategory("Food")
+                .category("Food")
                 .rawInput("Custom raw input")
                 .build();
 
         when(jpaRepository.save(input)).thenReturn(saved);
 
-        Expense result = syncService.syncExpense(input);
+        ExpenseEntity result = syncService.syncExpense(input);
 
         assertEquals("Custom raw input", result.getRawInput());
         verify(eventPublisher, times(1)).publishEvent(any(ExpenseSyncEvent.class));
     }
 
     @Test
-    void testSyncExpense_WithNullRawInputAndNullAiCategory() {
-        Expense input = Expense.builder()
+    void testSyncExpense_WithNullRawInputAndNullCategory() {
+        ExpenseEntity input = ExpenseEntity.builder()
                 .amount(new BigDecimal("50.00"))
                 .build();
 
-        Expense saved = Expense.builder()
+        ExpenseEntity saved = ExpenseEntity.builder()
                 .id(4L)
                 .amount(new BigDecimal("50.00"))
                 .build();
 
         when(jpaRepository.save(input)).thenReturn(saved);
 
-        Expense result = syncService.syncExpense(input);
+        ExpenseEntity result = syncService.syncExpense(input);
 
         assertNull(result.getRawInput());
         verify(eventPublisher, times(1)).publishEvent(any(ExpenseSyncEvent.class));

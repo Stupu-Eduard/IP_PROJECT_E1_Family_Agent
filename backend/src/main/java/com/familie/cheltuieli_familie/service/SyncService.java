@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
-import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +27,13 @@ public class SyncService {
      * @return The saved entity.
      */
     @Transactional
-    public Expense syncExpense(Expense entity) {
+    public ExpenseEntity syncExpense(ExpenseEntity entity) {
         log.info("Saving expense to database...");
-        Expense savedEntity = jpaRepository.save(entity);
+        ExpenseEntity savedEntity = jpaRepository.save(entity);
 
         // Ensure rawInput is set for vector store
-        if (savedEntity.getRawInput() == null && savedEntity.getAiCategory() != null) {
-            savedEntity.setRawInput(savedEntity.getAiCategory());
+        if (savedEntity.getRawInput() == null && savedEntity.getCategory() != null) {
+            savedEntity.setRawInput(savedEntity.getCategory());
         }
 
         // Publish event for automatic sync to Qdrant

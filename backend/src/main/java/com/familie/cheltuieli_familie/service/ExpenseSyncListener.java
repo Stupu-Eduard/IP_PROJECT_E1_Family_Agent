@@ -1,7 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
-import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -19,7 +19,7 @@ public class ExpenseSyncListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async
     public void handleExpenseSync(ExpenseSyncEvent event) {
-        Expense expense = event.getExpense();
+        ExpenseEntity expense = event.getExpense();
         log.info("Received sync event for expense ID: {}", expense.getId());
         try {
             qdrantVectorService.storeExpense(expense);

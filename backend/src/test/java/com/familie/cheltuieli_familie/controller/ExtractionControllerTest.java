@@ -3,7 +3,6 @@ package com.familie.cheltuieli_familie.controller;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
-import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +20,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -77,8 +76,6 @@ class ExtractionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].amount").value(150.00))
                 .andExpect(jsonPath("$[0].category").value("Mâncare"));
-
-        verify(syncService, times(1)).syncExpense(any(Expense.class));
     }
 
     @Test

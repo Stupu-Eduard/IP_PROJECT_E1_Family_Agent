@@ -1,9 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.config.LlmConfig;
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
-import com.familie.cheltuieli_familie.model.Expense;
-import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,25 +22,22 @@ class RagRetrievalServiceTest {
     private QdrantVectorService qdrantVectorService;
 
     @Mock
-    private LlmConfig.RagAssistant ragAssistant;
-
-    @Mock
-    private ExpenseJpaRepository expenseJpaRepository;
+    private LlmRouterService llmRouterService;
 
     @InjectMocks
     private RagRetrievalService ragRetrievalService;
 
     @Test
-    void askWithContext_shouldDelegateToRagAssistant() {
+    void askWithContext_shouldDelegateToLlmRouterService() {
         String query = "How much did I spend?";
         String expectedAnswer = "You spent 500 RON.";
 
-        when(ragAssistant.chat(query)).thenReturn(expectedAnswer);
+        when(llmRouterService.routeAndChat(query)).thenReturn(expectedAnswer);
 
         String result = ragRetrievalService.askWithContext(query);
 
         assertEquals(expectedAnswer, result);
-        verify(ragAssistant).chat(query);
+        verify(llmRouterService).routeAndChat(query);
         verifyNoInteractions(qdrantVectorService);
     }
 
@@ -130,79 +124,5 @@ class RagRetrievalServiceTest {
         // First result should be the highest score (0.99)
         assertTrue(result.indexOf("high") < result.indexOf("mid"));
         assertTrue(result.indexOf("mid") < result.indexOf("low"));
-    }
-
-    @Test
-    void askWithHybridContext_shouldEnrichQueryWithSemanticAndDbContext() {
-        String query = "How much did I spend on food?";
-
-        List<EmbeddedExpense> semanticResults = List.of(
-                EmbeddedExpense.builder()
-                        .id(1L)
-                        .category("food")
-                        .amount(new BigDecimal("100.00"))
-                        .date(LocalDate.of(2024, 1, 15))
-                        .score(0.95)
-                        .build()
-        );
-
-        List<Expense> dbRecords = List.of(
-                Expense.builder()
-                        .id(1L)
-                        .aiCategory("food")
-                        .amount(new BigDecimal("100.00"))
-                        .expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay())
-                        .aiPerson("Teodor")
-                        .build()
-        );
-
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(semanticResults);
-        when(expenseJpaRepository.findAllById(List.of(1L))).thenReturn(dbRecords);
-        when(ragAssistant.chat(anyString())).thenReturn("You spent 100 RON on food.");
-
-        String result = ragRetrievalService.askWithHybridContext(query);
-
-        assertEquals("You spent 100 RON on food.", result);
-        verify(qdrantVectorService).searchSimilar(query, 10);
-        verify(expenseJpaRepository).findAllById(List.of(1L));
-        verify(ragAssistant).chat(argThat(arg -> arg.contains("Rezultate semantice din Qdrant") && arg.contains("Date exacte din baza de date")));
-    }
-
-    @Test
-    void askWithHybridContext_shouldHandleEmptySemanticResults() {
-        String query = "Unknown expense";
-
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(Collections.emptyList());
-        when(expenseJpaRepository.findAllById(Collections.emptyList())).thenReturn(Collections.emptyList());
-        when(ragAssistant.chat(anyString())).thenReturn("No relevant expenses found.");
-
-        String result = ragRetrievalService.askWithHybridContext(query);
-
-        assertEquals("No relevant expenses found.", result);
-        verify(ragAssistant).chat(argThat(arg -> arg.contains("Rezultate semantice din Qdrant") && arg.contains("Date exacte din baza de date")));
-    }
-
-    @Test
-    void askWithHybridContext_shouldHandleNullSemanticIds() {
-        String query = "Show latest expenses";
-        List<EmbeddedExpense> semanticResults = List.of(
-                EmbeddedExpense.builder()
-                        .id(null)
-                        .category("food")
-                        .amount(new BigDecimal("45.50"))
-                        .date(LocalDate.of(2024, 2, 2))
-                        .score(0.73)
-                        .build()
-        );
-
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(semanticResults);
-        when(expenseJpaRepository.findAllById(Collections.emptyList())).thenReturn(Collections.emptyList());
-        when(ragAssistant.chat(anyString())).thenReturn("ok");
-
-        String result = ragRetrievalService.askWithHybridContext(query);
-
-        assertEquals("ok", result);
-        verify(expenseJpaRepository).findAllById(Collections.emptyList());
-        verify(ragAssistant).chat(argThat(arg -> arg.contains("- ID N/A: food, 45.50 RON, 2024-02-02, scor: 0.73")));
     }
 }

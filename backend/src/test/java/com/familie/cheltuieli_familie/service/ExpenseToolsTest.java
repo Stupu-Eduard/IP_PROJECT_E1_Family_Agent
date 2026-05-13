@@ -1,6 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -47,10 +47,10 @@ class ExpenseToolsTest {
 
     @Test
     void testDetectAnomalies() {
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .amount(new BigDecimal("500.00"))
-                .aiCategory("Electronics")
-                .expenseDate(LocalDate.of(2024, 1, 15).atStartOfDay())
+                .category("Electronics")
+                .date(LocalDate.of(2024, 1, 15))
                 .build();
 
         when(analyticsService.detectAnomalies(new BigDecimal("200"))).thenReturn(List.of(expense));
@@ -74,10 +74,10 @@ class ExpenseToolsTest {
 
     @Test
     void testByPerson() {
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .amount(new BigDecimal("150.00"))
-                .aiCategory("Food")
-                .expenseDate(LocalDate.of(2024, 1, 10).atStartOfDay())
+                .category("Food")
+                .date(LocalDate.of(2024, 1, 10))
                 .build();
 
         when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
@@ -104,11 +104,11 @@ class ExpenseToolsTest {
 
     @Test
     void testTopExpenses() {
-        Expense expense = Expense.builder()
+        ExpenseEntity expense = ExpenseEntity.builder()
                 .amount(new BigDecimal("400.00"))
-                .aiCategory("Electronics")
-                .aiPerson("Teodor")
-                .expenseDate(LocalDate.of(2024, 1, 5).atStartOfDay())
+                .category("Electronics")
+                .person("Teodor")
+                .date(LocalDate.of(2024, 1, 5))
                 .build();
 
         when(analyticsService.getTopExpenses(3)).thenReturn(List.of(expense));

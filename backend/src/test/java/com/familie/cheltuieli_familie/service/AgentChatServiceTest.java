@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.config.LlmConfig;
 import com.familie.cheltuieli_familie.dto.response.ChartPayload;
 import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
@@ -25,9 +24,6 @@ class AgentChatServiceTest {
 
     @Mock
     private RagRetrievalService ragRetrievalService;
-
-    @Mock
-    private LlmConfig.ConversationAssistant conversationAssistant;
 
     @InjectMocks
     private AgentChatService agentChatService;
@@ -55,43 +51,23 @@ class AgentChatServiceTest {
     }
 
     @Test
-    void processQuery_shouldReturnTextResponse_whenIntentIsDataQuery() {
+    void processQuery_shouldReturnTextResponse_whenIntentIsText() {
         String userMessage = "How much did I spend last month?";
         ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("data_query")
+                .responseType("text")
                 .build();
         String ragAnswer = "You spent 500 RON last month.";
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
         assertInstanceOf(TextResponseDTO.class, result);
         assertEquals("text", result.getType());
         assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithHybridContext(userMessage);
-        verifyNoInteractions(chartGenerationService, conversationAssistant);
-    }
-
-    @Test
-    void processQuery_shouldReturnTextResponse_whenIntentIsConversation() {
-        String userMessage = "Ce faci?";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("conversation")
-                .build();
-        String chatAnswer = "Salut! Sunt aici să te ajut cu bugetul familiei.";
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(conversationAssistant.chat(userMessage)).thenReturn(chatAnswer);
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertEquals("text", result.getType());
-        assertEquals(chatAnswer, result.getMessage());
-        verify(conversationAssistant).chat(userMessage);
-        verifyNoInteractions(ragRetrievalService, chartGenerationService);
+        verify(ragRetrievalService).askWithContext(userMessage);
+        verifyNoInteractions(chartGenerationService);
     }
 
     @Test
@@ -105,13 +81,13 @@ class AgentChatServiceTest {
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
         when(chartGenerationService.generate(intent)).thenThrow(new RuntimeException("Chart failed"));
-        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
         assertInstanceOf(TextResponseDTO.class, result);
         assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithHybridContext(userMessage);
+        verify(ragRetrievalService).askWithContext(userMessage);
     }
 
     @Test
@@ -120,7 +96,7 @@ class AgentChatServiceTest {
         String ragAnswer = "Fallback answer";
 
         when(visualIntentExtractor.extract(userMessage)).thenThrow(new RuntimeException("Extraction failed"));
-        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
@@ -129,7 +105,7 @@ class AgentChatServiceTest {
     }
 
     @Test
-    void processQuery_shouldHandleNullResponseTypeAsDataQuery() {
+    void processQuery_shouldHandleNullResponseTypeAsText() {
         String userMessage = "What is this?";
         ChartQueryIntent intent = ChartQueryIntent.builder()
                 .responseType(null)
@@ -137,11 +113,10 @@ class AgentChatServiceTest {
         String ragAnswer = "Answer";
 
         when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithHybridContext(userMessage)).thenReturn(ragAnswer);
+        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
 
         var result = agentChatService.processQuery(userMessage);
 
         assertInstanceOf(TextResponseDTO.class, result);
-        verify(ragRetrievalService).askWithHybridContext(userMessage);
     }
 }

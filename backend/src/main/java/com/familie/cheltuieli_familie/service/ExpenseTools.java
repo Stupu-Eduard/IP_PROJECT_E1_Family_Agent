@@ -43,7 +43,7 @@ public class ExpenseTools {
         log.info("Tool called: detectAnomalies with threshold {}", thresholdStr);
         BigDecimal threshold = new BigDecimal(thresholdStr);
         return "Anomalies found: " + analyticsService.detectAnomalies(threshold).stream()
-                .map(e -> e.getAiCategory() + " (" + e.getAmount() + " RON on " + e.getExpenseDate().toLocalDate() + ")")
+                .map(e -> e.getCategory() + " (" + e.getAmount() + " RON on " + e.getDate() + ")")
                 .collect(Collectors.joining(", "));
     }
 
@@ -60,7 +60,7 @@ public class ExpenseTools {
     public String byPerson(String person, String from, String to) {
         log.info("Tool called: byPerson for {} from {} to {}", person, from, to);
         return "Expenses for " + person + ": " + analyticsService.findByPerson(person, LocalDate.parse(from), LocalDate.parse(to)).stream()
-                .map(e -> e.getAmount() + " RON for " + e.getAiCategory() + " on " + e.getExpenseDate().toLocalDate())
+                .map(e -> e.getAmount() + " RON for " + e.getCategory() + " on " + e.getDate())
                 .collect(Collectors.joining("; "));
     }
 
@@ -77,7 +77,7 @@ public class ExpenseTools {
     public String topExpenses(String limit) {
         log.info("Tool called: topExpenses with limit {}", limit);
         return "Top expenses: " + analyticsService.getTopExpenses(Integer.parseInt(limit)).stream()
-                .map(e -> e.getAmount() + " RON (" + e.getAiCategory() + ") by " + e.getAiPerson() + " on " + e.getExpenseDate().toLocalDate())
+                .map(e -> e.getAmount() + " RON (" + e.getCategory() + ") by " + e.getPerson() + " on " + e.getDate())
                 .collect(Collectors.joining(", "));
     }
 
