@@ -28,13 +28,22 @@ public class AgentChatService {
 
             // Default to text response via existing RAG pipeline
             String textAnswer = ragRetrievalService.askWithContext(userMessage);
-            return new TextResponseDTO(textAnswer);
+            return toTextResponse(textAnswer);
 
         } catch (Exception e) {
             log.warn("Chart pipeline failed for query '{}', falling back to text RAG: {}",
                     userMessage, e.getMessage());
             String textAnswer = ragRetrievalService.askWithContext(userMessage);
-            return new TextResponseDTO(textAnswer);
+            return toTextResponse(textAnswer);
         }
+    }
+
+    private TextResponseDTO toTextResponse(String textAnswer) {
+        if (textAnswer == null || textAnswer.isBlank()) {
+            log.error("RAG pipeline returned null or blank text answer");
+            return new TextResponseDTO(
+                    "Nu am putut genera un răspuns. Încearcă din nou sau reformulează întrebarea.");
+        }
+        return new TextResponseDTO(textAnswer);
     }
 }
