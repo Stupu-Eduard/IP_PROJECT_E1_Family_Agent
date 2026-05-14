@@ -52,6 +52,9 @@ export const familyApi = {
   inviteMember: (familyId: number, email: string, role: string) =>
     api.post<InvitationDTO>(`/api/v1/families/${familyId}/members`, { email, role }),
 
+  updateMemberRole: (familyId: number, memberId: number, role: string) =>
+    api.patch<GroupMemberDTO>(`/api/v1/families/${familyId}/members/${memberId}/role`, { role }),
+
   removeMember: (familyId: number, memberId: number) =>
     api.delete(`/api/v1/families/${familyId}/members/${memberId}`),
 

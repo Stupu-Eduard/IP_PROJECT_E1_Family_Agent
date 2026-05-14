@@ -48,6 +48,7 @@ export default function FamilySettings() {
     const [createError, setCreateError] = useState<string | null>(null);
 
     const [childBudgets, setChildBudgets] = useState<Record<number, ChildBudgetState>>({});
+    const [roleChanging, setRoleChanging] = useState<number | null>(null);
 
     const loadMembers = useCallback(async () => {
         if (!familyId) return;
@@ -64,13 +65,18 @@ export default function FamilySettings() {
 
     useEffect(() => {
         loadMembers();
-    }, [loadMembers]);
+        if (!familyId) return;
+        const id = setInterval(loadMembers, 20000);
+        return () => clearInterval(id);
+    }, [loadMembers, familyId]);
 
     useEffect(() => {
-        invitationApi.getPending()
-            .then(r => setPendingInvitations(r.data))
-            .catch(() => {});
-    }, []);
+        const load = () => invitationApi.getPending().then(r => setPendingInvitations(r.data)).catch(() => {});
+        load();
+        if (familyId) return;
+        const id = setInterval(load, 15000);
+        return () => clearInterval(id);
+    }, [familyId]);
 
     // Încarcă bugetele copiilor după ce s-au încărcat membrii
     useEffect(() => {
@@ -185,6 +191,20 @@ export default function FamilySettings() {
             alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea familiei.');
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleRoleChange = async (member: GroupMemberDTO, newRole: string) => {
+        if (!familyId) return;
+        setRoleChanging(member.id);
+        try {
+            const { data } = await familyApi.updateMemberRole(familyId, member.id, newRole);
+            setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: data.role } : m));
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Eroare la schimbarea rolului.';
+            alert(typeof msg === 'string' ? msg : 'Eroare la schimbarea rolului.');
+        } finally {
+            setRoleChanging(null);
         }
     };
 
@@ -432,13 +452,33 @@ export default function FamilySettings() {
                                             </div>
                                         </div>
                                         {isAdult && !isMe && (
-                                            <button
-                                                onClick={() => handleRemoveMember(member)}
-                                                className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-[13px] font-medium"
-                                                title="Elimină membru"
-                                            >
-                                                <Trash2 size={16} /> <span className="sm:hidden">Elimină</span>
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                {currentUserRole === 'Parent' && (
+                                                    <div className="relative">
+                                                        {roleChanging === member.id
+                                                            ? <Loader2 size={14} className="animate-spin text-[#9A8A7C]" />
+                                                            : (
+                                                                <select
+                                                                    value={member.role}
+                                                                    onChange={(e) => handleRoleChange(member, e.target.value)}
+                                                                    className="bg-[#FAF8F5] border border-[#EDE9E3] rounded-[8px] py-1.5 px-2 text-[12px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none focus:border-[#C4B9AC] pr-6"
+                                                                >
+                                                                    <option value="Parent">Parent</option>
+                                                                    <option value="Co-Parent">Co-Parent</option>
+                                                                    <option value="Child">Child</option>
+                                                                </select>
+                                                            )
+                                                        }
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRemoveMember(member)}
+                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-[13px] font-medium"
+                                                    title="Elimină membru"
+                                                >
+                                                    <Trash2 size={16} /> <span className="sm:hidden">Elimină</span>
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
 

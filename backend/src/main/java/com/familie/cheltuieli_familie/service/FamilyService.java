@@ -105,6 +105,48 @@ public class FamilyService {
         familyMemberRepository.delete(membership);
     }
 
+    public FamilyMemberDTO updateMemberRole(Long familyId, Long memberId, String newRole, User requester) {
+        FamilyMember requesterMembership = familyMemberRepository
+                .findByFamilyIdAndUserId(familyId, requester.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii."));
+
+        if (!"Parent".equalsIgnoreCase(requesterMembership.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Doar administratorul poate schimba rolurile.");
+        }
+
+        FamilyMember member = familyMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+
+        if (!member.getFamily().getId().equals(familyId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
+        }
+
+        if (member.getUser().getId().equals(requester.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nu îți poți schimba propriul rol.");
+        }
+
+        String normalized = normalizeRole(newRole);
+        if (normalized.equals(normalizeRole(member.getRole()))) {
+            return toDTO(member);
+        }
+
+        // guard: nu putem scoate ultimul Parent
+        if (isParentRole(member.getRole()) && !isParentRole(normalized)) {
+            long parentCount = familyMemberRepository.findByFamilyId(familyId).stream()
+                    .filter(m -> isParentRole(m.getRole()))
+                    .count();
+            if (parentCount == 1) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Nu se poate retrograda singurul administrator. Numește mai întâi un alt administrator.");
+            }
+        }
+
+        member.setRole(normalized);
+        familyMemberRepository.save(member);
+        log.info("Rol schimbat: membrul {} → {} de către {}", member.getUser().getEmail(), normalized, requester.getEmail());
+        return toDTO(member);
+    }
+
     public void removeMember(Long familyId, Long memberId, User requester) {
         verifyAdultRole(familyId, requester);
 

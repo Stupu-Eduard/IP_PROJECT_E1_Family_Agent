@@ -50,6 +50,16 @@ public class FamilyController {
                 .body(invitationService.createInvitation(familyId, request, requester(auth)));
     }
 
+    @PatchMapping("/{familyId}/members/{memberId}/role")
+    public ResponseEntity<FamilyMemberDTO> updateMemberRole(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String newRole = body != null ? body.get("role") : null;
+        return ResponseEntity.ok(familyService.updateMemberRole(familyId, memberId, newRole, requester(auth)));
+    }
+
     @DeleteMapping("/{familyId}/members/{memberId}")
     public ResponseEntity<Void> removeMember(
             @PathVariable Long familyId,
