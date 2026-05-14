@@ -3,6 +3,9 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -11,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -138,33 +142,22 @@ class ExpenseToolsTest {
         assertEquals("Spending on Food increased by 10%", result);
     }
 
-    @Test
-    void testGetVisualDescription_Increased() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending increased by 15.5%");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertEquals("Trendul arată o creștere de 15.5% pentru Food", result);
+    static Stream<Arguments> visualDescriptionSource() {
+        return Stream.of(
+            Arguments.of("Spending increased by 15.5%", "Trendul arată o creștere de 15.5% pentru Food"),
+            Arguments.of("Spending decreased by 8.2%", "Trendul arată o scădere de 8.2% pentru Food"),
+            Arguments.of("Spending remained stable", "Trend stabil pentru Food")
+        );
     }
 
-    @Test
-    void testGetVisualDescription_Decreased() {
+    @ParameterizedTest
+    @MethodSource("visualDescriptionSource")
+    void testGetVisualDescription(String trend, String expected) {
         when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending decreased by 8.2%");
+                .thenReturn(trend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertEquals("Trendul arată o scădere de 8.2% pentru Food", result);
-    }
-
-    @Test
-    void testGetVisualDescription_Stable() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending remained stable");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertEquals("Trend stabil pentru Food", result);
+        assertEquals(expected, result);
     }
 }

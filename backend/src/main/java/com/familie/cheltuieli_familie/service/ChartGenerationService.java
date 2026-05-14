@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -71,7 +70,7 @@ public class ChartGenerationService {
                         return va.compareTo(vb);
                     })
                     .limit(3)
-                    .collect(Collectors.toList());
+                    .toList();
 
             for (Map<String, Object> row : sorted) {
                 String name = String.valueOf(row.get("name"));

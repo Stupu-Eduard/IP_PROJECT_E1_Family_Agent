@@ -9,6 +9,8 @@ import java.time.LocalDate;
  */
 public class NormalizerUtil {
 
+    private NormalizerUtil() {}
+
     public static BigDecimal normalizeAmount(String text) {
         return CurrencyNormalizer.parseRomanianAmount(text);
     }

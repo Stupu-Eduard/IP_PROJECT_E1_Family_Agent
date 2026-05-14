@@ -65,7 +65,7 @@ public class ExpenseAnalyticsService {
         return repository.findByDateBetween(from, to)
                 .stream()
                 .filter(e -> person.equalsIgnoreCase(e.getPerson()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<ExpenseEntity> getTopExpenses(int limit) {

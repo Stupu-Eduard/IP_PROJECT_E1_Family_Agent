@@ -28,19 +28,19 @@ public class ReportService {
         Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to);
 
         StringBuilder summary = new StringBuilder();
-        summary.append(String.format("Monthly Report for %s %d:\n", from.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH), year));
-        summary.append(String.format("- Total Spent: %s RON\n", total));
+        summary.append(String.format("Monthly Report for %s %d:%n", from.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH), year));
+        summary.append(String.format("- Total Spent: %s RON%n", total));
         summary.append("- Breakdown by Category:\n");
-        
-        byCategory.forEach((cat, amount) -> 
-            summary.append(String.format("  * %s: %s RON\n", cat, amount))
+
+        byCategory.forEach((cat, amount) ->
+            summary.append(String.format("  * %s: %s RON%n", cat, amount))
         );
 
         if (!byCategory.isEmpty()) {
             String topCategory = byCategory.entrySet().stream()
                     .max(Map.Entry.comparingByValue())
                     .get().getKey();
-            summary.append(String.format("- Top Category: %s\n", topCategory));
+            summary.append(String.format("- Top Category: %s%n", topCategory));
             summary.append("- Trend: ").append(analyticsService.calculateTrend(topCategory, from, to));
         }
 

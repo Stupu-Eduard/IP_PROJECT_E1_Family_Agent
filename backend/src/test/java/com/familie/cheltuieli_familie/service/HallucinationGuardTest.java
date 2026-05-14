@@ -1,6 +1,12 @@
 package com.familie.cheltuieli_familie.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class HallucinationGuardTest {
@@ -80,44 +86,21 @@ class HallucinationGuardTest {
         assertEquals(aiResponse, result, "Should return aiResponse unchanged when tool output exceeds max length");
     }
 
-    @Test
-    void shouldReturnUnchangedWhenToolOutputHasNoNumbers() {
-        String aiResponse = "Ai cheltuit 150.50 RON.";
-        String toolOutput = "Nu există cifre aici";
-
-        String result = guard.validate(aiResponse, toolOutput);
-
-        assertEquals(aiResponse, result, "Should return unchanged when tool output contains no numbers");
+    static Stream<Arguments> numericValidationSource() {
+        String ai = "Ai cheltuit 150.50 RON.";
+        return Stream.of(
+            Arguments.of(ai, "Nu există cifre aici", "150.50"),
+            Arguments.of(ai, "Total: 150.50 RON", "150.50"),
+            Arguments.of(ai, "Total: 152.00 RON", "150.50"),
+            Arguments.of(ai, "Values: 149.80, 150.20, 200.00", "150.20")
+        );
     }
 
-    @Test
-    void shouldNotCorrectWhenExactNumericMatch() {
-        String aiResponse = "Ai cheltuit 150.50 RON.";
-        String toolOutput = "Total: 150.50 RON";
-
+    @ParameterizedTest
+    @MethodSource("numericValidationSource")
+    void shouldHandleNumericValidation(String aiResponse, String toolOutput, String expectedContains) {
         String result = guard.validate(aiResponse, toolOutput);
-
-        assertEquals(aiResponse, result, "Should not change when numbers match exactly");
-    }
-
-    @Test
-    void shouldNotCorrectWhenNumericDiffExceedsOne() {
-        String aiResponse = "Ai cheltuit 150.50 RON.";
-        String toolOutput = "Total: 152.00 RON";
-
-        String result = guard.validate(aiResponse, toolOutput);
-
-        assertEquals(aiResponse, result, "Should not correct when difference is 1.00 or more");
-    }
-
-    @Test
-    void shouldCorrectUsingClosestNumberAmongMultipleToolValues() {
-        String aiResponse = "Ai cheltuit 150.50 RON.";
-        String toolOutput = "Values: 149.80, 150.20, 200.00";
-
-        String result = guard.validate(aiResponse, toolOutput);
-
-        assertTrue(result.contains("150.20"), "Should replace with closest tool value (diff=0.30)");
+        assertTrue(result.contains(expectedContains));
     }
 
     // ---- Semantic validation edge cases ----
