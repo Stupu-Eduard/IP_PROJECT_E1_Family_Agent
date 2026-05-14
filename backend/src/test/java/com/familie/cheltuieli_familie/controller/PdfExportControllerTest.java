@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -91,9 +90,9 @@ class PdfExportControllerTest {
         pdfExportController.exportPdf("2026-03-01", "2026-03-31", auth);
 
         verify(pdfExportService).generatePdf(
-                eq(LocalDate.of(2026, 3, 1)),
-                eq(LocalDate.of(2026, 3, 31)),
-                eq(auth)
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 3, 31),
+                auth
         );
     }
 
@@ -104,9 +103,9 @@ class PdfExportControllerTest {
         pdfExportController.exportPdf(null, null, auth);
 
         verify(pdfExportService).generatePdf(
-                eq(LocalDate.now().minusDays(6)),
-                eq(LocalDate.now()),
-                eq(auth)
+                LocalDate.now().minusDays(6),
+                LocalDate.now(),
+                auth
         );
     }
 
