@@ -115,6 +115,21 @@ class GlobalExceptionHandlerUnitTest {
     }
 
     @Test
+    void testHandleResponseStatusException() {
+        org.springframework.web.server.ResponseStatusException ex =
+                new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Acces interzis");
+
+        ResponseEntity<Object> response = handler.handleResponseStatusException(ex);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertEquals("Acces interzis", body.get("message"));
+        assertEquals(403, body.get("status"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
     void testHandleGenericException() {
         Exception ex = new Exception("Generic exception");
         ResponseEntity<Object> response = handler.handleGenericException(ex);

@@ -215,6 +215,73 @@ class AuthControllerTest {
     }
 
     @Test
+    void register_CandRolCopil_NuCreeazaFamilie() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Copil User");
+        request.setEmail("copil@example.com");
+        request.setPassword("pass123");
+        request.setRole("Child");
+
+        when(userRepository.findByEmail("copil@example.com")).thenReturn(Optional.empty());
+        when(jwtUtil.generateToken(eq("copil@example.com"), any())).thenReturn("child-token");
+
+        ResponseEntity<Object> result = authController.register(request);
+
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        verify(familyRepository, never()).save(any());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Child", body.get("role"));
+        assertEquals("child-token", body.get("token"));
+    }
+
+    @Test
+    void refresh_CandUserAreFamilie_ReturneazaTokenNou() {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Alex");
+        user.setEmail("alex@example.com");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("Parent");
+        Family family = new Family();
+        family.setId(10L);
+        member.setFamily(family);
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("alex@example.com"), any())).thenReturn("refreshed-token");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("refreshed-token", body.get("token"));
+        assertEquals("Parent", body.get("role"));
+    }
+
+    @Test
+    void refresh_CandUserFaraFamilie_ReturneazaRoleParent() {
+        User user = new User();
+        user.setId(2L);
+        user.setName("Nou");
+        user.setEmail("nou@example.com");
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(Collections.emptyList());
+        when(jwtUtil.generateToken(eq("nou@example.com"), any())).thenReturn("token-fara-familie");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Parent", body.get("role"));
+    }
+
+    @Test
     void logout_CandHeaderLipseste_ReturneazaBadRequest() {
         // GIVEN
         HttpServletRequest request = mock(HttpServletRequest.class);
