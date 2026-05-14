@@ -26,6 +26,7 @@ export default function FamilySettings() {
     const currentUserId: number = (payload as any)?.userId;
     const familyId: number | null = (payload as any)?.familyId ?? null;
     const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
+    const isChild = currentUserRole === 'Child';
 
     const [members, setMembers] = useState<GroupMemberDTO[]>([]);
     const [loading, setLoading] = useState(true);
