@@ -11,6 +11,7 @@ public record ExpenseListDto(
         LocalDateTime expenseDate,
         String category,
         String person,
-        LocationDto location
+        LocationDto location,
+        String sourceType
 ) {
 }
