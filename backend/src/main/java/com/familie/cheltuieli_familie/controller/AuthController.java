@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -126,6 +127,28 @@ public class AuthController {
                         "userName", user.getName(),
                         "role", ROLE_PARENT
                 ));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Object> refresh(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
+
+        String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
+        if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
+        else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("role", role);
+        claims.put("name", user.getName());
+        if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
+            claims.put("familyId", memberships.get(0).getFamily().getId());
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), claims);
+        log.info("Token reîmprospătat pentru: {}", user.getEmail());
+        return ResponseEntity.ok(Map.of("token", token, "role", role));
     }
 
     @PostMapping("/logout")

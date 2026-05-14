@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import type { GroupMemberDTO } from '../types/GroupMemberDTO';
-import { familyApi, invitationApi, type InvitationDTO, api } from '../services/api';
+import { familyApi, invitationApi, authApi, type InvitationDTO, api } from '../services/api';
 import {
     Mail, UserPlus, Trash2, Shield,
     ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX
@@ -56,8 +56,19 @@ export default function FamilySettings() {
             setError(null);
             const { data } = await familyApi.getMembers(familyId);
             setMembers(data);
-        } catch {
-            setError('Nu s-au putut încărca membrii familiei.');
+        } catch (err: any) {
+            if (err?.response?.status === 403) {
+                try {
+                    const { data } = await authApi.refresh();
+                    useAuthStore.getState().setToken(data.token);
+                    window.location.reload();
+                } catch {
+                    useAuthStore.getState().logout();
+                    window.location.replace('/login');
+                }
+            } else {
+                setError('Nu s-au putut încărca membrii familiei.');
+            }
         } finally {
             setLoading(false);
         }

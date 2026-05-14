@@ -65,6 +65,11 @@ export const familyApi = {
     api.delete(`/api/v1/families/${familyId}`),
 }
 
+export const authApi = {
+  refresh: () =>
+    api.post<{ token: string; role: string }>('/api/v1/auth/refresh'),
+}
+
 export const invitationApi = {
   getPending: () =>
     api.get<InvitationDTO[]>('/api/v1/invitations/pending'),
