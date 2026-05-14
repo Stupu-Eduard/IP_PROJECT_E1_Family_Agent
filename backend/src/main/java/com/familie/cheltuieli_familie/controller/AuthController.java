@@ -32,10 +32,13 @@ import java.util.HashMap;
 @CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class AuthController {
 
-    private static final String ROLE_PARENT = "Parent";
-    private static final String ROLE_CHILD = "Child";
-    private static final String MSG_KEY = "message";
-    private static final String ERR_KEY = "error";
+    private static final String ROLE_PARENT  = "Parent";
+    private static final String ROLE_CHILD   = "Child";
+    private static final String MSG_KEY      = "message";
+    private static final String ERR_KEY      = "error";
+    private static final String TOKEN_KEY    = "token";
+    private static final String USER_ID_KEY  = "userId";
+    private static final String FAMILY_ID_KEY = "familyId";
 
     private final UserRepository userRepository;
     private final FamilyMemberRepository familyMemberRepository;
@@ -60,19 +63,19 @@ public class AuthController {
             else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
 
             Map<String, Object> claims = new HashMap<>();
-            claims.put("userId", user.getId());
+            claims.put(USER_ID_KEY, user.getId());
             claims.put("role", role);
             claims.put("name", user.getName());
             
             if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-                claims.put("familyId", memberships.get(0).getFamily().getId());
+                claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
             }
 
             String token = jwtUtil.generateToken(user.getEmail(), claims);
 
             return ResponseEntity.ok(Map.of(
                     MSG_KEY, "Login realizat cu succes!",
-                    "token", token,
+                    TOKEN_KEY, token,
                     "userName", user.getName(),
                     "role", role
             ));
@@ -101,7 +104,7 @@ public class AuthController {
         boolean isChild = ROLE_CHILD.equalsIgnoreCase(registerRequest.getRole());
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getId());
+        claims.put(USER_ID_KEY, user.getId());
         claims.put("name", user.getName());
 
         String role;
@@ -124,7 +127,7 @@ public class AuthController {
             member.setRole(ROLE_PARENT);
             familyMemberRepository.save(member);
 
-            claims.put("familyId", savedFamily.getId());
+            claims.put(FAMILY_ID_KEY,savedFamily.getId());
             log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), savedFamily.getId());
         }
 
@@ -133,7 +136,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                         MSG_KEY, "Înregistrare realizată cu succes!",
-                        "token", token,
+                        TOKEN_KEY, token,
                         "userName", user.getName(),
                         "role", role
                 ));
@@ -149,16 +152,16 @@ public class AuthController {
         else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getId());
+        claims.put(USER_ID_KEY, user.getId());
         claims.put("role", role);
         claims.put("name", user.getName());
         if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-            claims.put("familyId", memberships.get(0).getFamily().getId());
+            claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
         log.info("Token reîmprospătat pentru: {}", user.getEmail());
-        return ResponseEntity.ok(Map.of("token", token, "role", role));
+        return ResponseEntity.ok(Map.of(TOKEN_KEY, token, "role", role));
     }
 
     @PostMapping("/logout")

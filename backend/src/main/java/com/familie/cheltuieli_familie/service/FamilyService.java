@@ -24,6 +24,9 @@ import java.util.Map;
 @Slf4j
 public class FamilyService {
 
+    private static final String ROLE_PARENT    = "Parent";
+    private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
+
     private final FamilyMemberRepository familyMemberRepository;
     private final FamilyRepository       familyRepository;
     private final JwtUtil                jwtUtil;
@@ -42,19 +45,19 @@ public class FamilyService {
         FamilyMember member = new FamilyMember();
         member.setFamily(savedFamily);
         member.setUser(requester);
-        member.setRole("Parent");
+        member.setRole(ROLE_PARENT);
         familyMemberRepository.save(member);
 
         log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",   requester.getId());
-        claims.put("role",     "Parent");
+        claims.put("role",     ROLE_PARENT);
         claims.put("name",     requester.getName());
         claims.put("familyId", savedFamily.getId());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
-        return Map.of("token", newToken, "role", "Parent", "familyId", savedFamily.getId());
+        return Map.of("token", newToken, "role", ROLE_PARENT, "familyId", savedFamily.getId());
     }
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
@@ -68,7 +71,7 @@ public class FamilyService {
     public void deleteFamily(Long familyId, User requester) {
         FamilyMember membership = familyMemberRepository
                 .findByFamilyIdAndUserId(familyId, requester.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, ERR_NOT_MEMBER));
 
         if (!isParentRole(membership.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Doar un părinte poate șterge familia.");
@@ -91,7 +94,7 @@ public class FamilyService {
     public void leaveFamily(Long familyId, User requester) {
         FamilyMember membership = familyMemberRepository
                 .findByFamilyIdAndUserId(familyId, requester.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nu ești membru al acestei familii."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_NOT_MEMBER));
 
         boolean isLastParent = isParentRole(membership.getRole()) &&
                 familyMemberRepository.findByFamilyId(familyId).stream()
@@ -108,9 +111,9 @@ public class FamilyService {
     public FamilyMemberDTO updateMemberRole(Long familyId, Long memberId, String newRole, User requester) {
         FamilyMember requesterMembership = familyMemberRepository
                 .findByFamilyIdAndUserId(familyId, requester.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, ERR_NOT_MEMBER));
 
-        if (!"Parent".equalsIgnoreCase(requesterMembership.getRole())) {
+        if (!ROLE_PARENT.equalsIgnoreCase(requesterMembership.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Doar administratorul poate schimba rolurile.");
         }
 
@@ -173,14 +176,14 @@ public class FamilyService {
 
     private void verifyMembership(Long familyId, User requester) {
         if (!familyMemberRepository.existsByFamilyIdAndUserId(familyId, requester.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, ERR_NOT_MEMBER);
         }
     }
 
     private void verifyAdultRole(Long familyId, User requester) {
         FamilyMember membership = familyMemberRepository
                 .findByFamilyIdAndUserId(familyId, requester.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, ERR_NOT_MEMBER));
 
         if (!isParentRole(membership.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Doar un părinte poate gestiona membrii familiei.");
@@ -188,7 +191,7 @@ public class FamilyService {
     }
 
     private boolean isParentRole(String role) {
-        return "Parent".equalsIgnoreCase(role) || "Co-Parent".equalsIgnoreCase(role);
+        return ROLE_PARENT.equalsIgnoreCase(role) || "Co-Parent".equalsIgnoreCase(role);
     }
 
     private FamilyMemberDTO toDTO(FamilyMember m) {
@@ -204,7 +207,7 @@ public class FamilyService {
     private String normalizeRole(String role) {
         if (role == null) return "Child";
         return switch (role.toLowerCase()) {
-            case "parent"    -> "Parent";
+            case "parent"    -> ROLE_PARENT;
             case "co-parent" -> "Co-Parent";
             default          -> "Child";
         };
