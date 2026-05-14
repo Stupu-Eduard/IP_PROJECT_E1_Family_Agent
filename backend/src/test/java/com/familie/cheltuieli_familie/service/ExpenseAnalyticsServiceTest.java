@@ -1,16 +1,12 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
-import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -19,8 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,19 +23,19 @@ import static org.mockito.Mockito.when;
 class ExpenseAnalyticsServiceTest {
 
     @Mock
-    private ExpenseJpaRepository repository;
+    private JdbcTemplate jdbcTemplate;
 
     @InjectMocks
     private ExpenseAnalyticsService analyticsService;
 
-    private List<ExpenseEntity> sampleExpenses;
+    private List<Map<String, Object>> sampleExpenses;
 
     @BeforeEach
     void setUp() {
         sampleExpenses = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").person("Alice").date(LocalDate.now()).build(),
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Transport").person("Bob").date(LocalDate.now()).build(),
-                ExpenseEntity.builder().amount(new BigDecimal("150.00")).category("Food").person("Alice").date(LocalDate.now()).build()
+                Map.of("amount", new BigDecimal("100.00"), "category", "Food", "person", "Alice", "date", LocalDate.now()),
+                Map.of("amount", new BigDecimal("200.00"), "category", "Transport", "person", "Bob", "date", LocalDate.now()),
+                Map.of("amount", new BigDecimal("150.00"), "category", "Food", "person", "Alice", "date", LocalDate.now())
         );
     }
 
@@ -48,7 +43,8 @@ class ExpenseAnalyticsServiceTest {
     void testCalculateTotal() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any()))
+                .thenReturn(new BigDecimal("450.00"));
 
         BigDecimal total = analyticsService.calculateTotal(from, to);
 
@@ -59,7 +55,11 @@ class ExpenseAnalyticsServiceTest {
     void testByCategory() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(), any()))
+                .thenReturn(List.of(
+                        Map.of("category", "Food", "total", new BigDecimal("250.00")),
+                        Map.of("category", "Transport", "total", new BigDecimal("200.00"))
+                ));
 
         Map<String, BigDecimal> result = analyticsService.byCategory(from, to);
 
@@ -72,7 +72,11 @@ class ExpenseAnalyticsServiceTest {
     void testCompareMembers() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(), any()))
+                .thenReturn(List.of(
+                        Map.of("person", "Alice", "total", new BigDecimal("250.00")),
+                        Map.of("person", "Bob", "total", new BigDecimal("200.00"))
+                ));
 
         Map<String, BigDecimal> result = analyticsService.compareMembers(from, to);
 
@@ -83,51 +87,55 @@ class ExpenseAnalyticsServiceTest {
 
     @Test
     void testDetectAnomalies() {
-        when(repository.findAll()).thenReturn(sampleExpenses);
+        when(jdbcTemplate.queryForList(anyString(), any(BigDecimal.class)))
+                .thenReturn(sampleExpenses);
 
-        List<ExpenseEntity> anomalies = analyticsService.detectAnomalies(new BigDecimal("180.00"));
+        List<Map<String, Object>> anomalies = analyticsService.detectAnomalies(new BigDecimal("180.00"));
 
-        assertEquals(1, anomalies.size());
-        assertEquals(new BigDecimal("200.00"), anomalies.get(0).getAmount());
+        assertEquals(3, anomalies.size());
     }
 
     @Test
     void testFindByPerson() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
+        when(jdbcTemplate.queryForList(anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("100.00"), "category", "Food", "person", "Alice"),
+                        Map.of("amount", new BigDecimal("150.00"), "category", "Food", "person", "Alice")
+                ));
 
-        List<ExpenseEntity> result = analyticsService.findByPerson("Alice", from, to);
+        List<Map<String, Object>> result = analyticsService.findByPerson("Alice", from, to);
 
         assertEquals(2, result.size());
-        assertTrue(result.stream().allMatch(e -> "Alice".equalsIgnoreCase(e.getPerson())));
     }
 
     @Test
     void testFindByPersonNoMatch() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(repository.findByDateBetween(from, to)).thenReturn(sampleExpenses);
+        when(jdbcTemplate.queryForList(anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(List.of());
 
-        List<ExpenseEntity> result = analyticsService.findByPerson("Charlie", from, to);
+        List<Map<String, Object>> result = analyticsService.findByPerson("Charlie", from, to);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     void testGetTopExpenses() {
-        Page<ExpenseEntity> page = new PageImpl<>(sampleExpenses);
-        when(repository.findAll(any(Pageable.class))).thenReturn(page);
+        when(jdbcTemplate.queryForList(anyString(), eq(3)))
+                .thenReturn(sampleExpenses);
 
-        List<ExpenseEntity> result = analyticsService.getTopExpenses(3);
+        List<Map<String, Object>> result = analyticsService.getTopExpenses(3);
 
         assertEquals(3, result.size());
     }
 
     @Test
     void testCalculateMonthlyAverage() {
-        LocalDate now = LocalDate.now();
-        when(repository.findByDateBetween(any(LocalDate.class), eq(now))).thenReturn(sampleExpenses);
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any()))
+                .thenReturn(new BigDecimal("450.00"));
 
         BigDecimal avg = analyticsService.calculateMonthlyAverage(3);
 
@@ -144,18 +152,10 @@ class ExpenseAnalyticsServiceTest {
     void testCalculateTrendIncrease() {
         LocalDate from = LocalDate.of(2024, 3, 1);
         LocalDate to = LocalDate.of(2024, 3, 31);
-        LocalDate prevFrom = LocalDate.of(2024, 1, 30);
-        LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Food").date(from.plusDays(5)).build()
-        );
-        List<ExpenseEntity> previous = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").date(prevFrom.plusDays(5)).build()
-        );
-
-        when(repository.findByDateBetween(from, to)).thenReturn(current);
-        when(repository.findByDateBetween(prevFrom, prevTo)).thenReturn(previous);
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), anyString(), any(), any()))
+                .thenReturn(new BigDecimal("200.00"))
+                .thenReturn(new BigDecimal("100.00"));
 
         String trend = analyticsService.calculateTrend("Food", from, to);
 
@@ -167,18 +167,10 @@ class ExpenseAnalyticsServiceTest {
     void testCalculateTrendDecrease() {
         LocalDate from = LocalDate.of(2024, 3, 1);
         LocalDate to = LocalDate.of(2024, 3, 31);
-        LocalDate prevFrom = LocalDate.of(2024, 1, 30);
-        LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("50.00")).category("Food").date(from.plusDays(5)).build()
-        );
-        List<ExpenseEntity> previous = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("100.00")).category("Food").date(prevFrom.plusDays(5)).build()
-        );
-
-        when(repository.findByDateBetween(from, to)).thenReturn(current);
-        when(repository.findByDateBetween(prevFrom, prevTo)).thenReturn(previous);
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), anyString(), any(), any()))
+                .thenReturn(new BigDecimal("50.00"))
+                .thenReturn(new BigDecimal("100.00"));
 
         String trend = analyticsService.calculateTrend("Food", from, to);
 
@@ -190,18 +182,73 @@ class ExpenseAnalyticsServiceTest {
     void testCalculateTrendNoPreviousData() {
         LocalDate from = LocalDate.of(2024, 3, 1);
         LocalDate to = LocalDate.of(2024, 3, 31);
-        LocalDate prevFrom = LocalDate.of(2024, 1, 30);
-        LocalDate prevTo = LocalDate.of(2024, 2, 29);
 
-        List<ExpenseEntity> current = List.of(
-                ExpenseEntity.builder().amount(new BigDecimal("200.00")).category("Food").date(from.plusDays(5)).build()
-        );
-
-        when(repository.findByDateBetween(from, to)).thenReturn(current);
-        when(repository.findByDateBetween(prevFrom, prevTo)).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), anyString(), any(), any()))
+                .thenReturn(new BigDecimal("200.00"))
+                .thenReturn(BigDecimal.ZERO);
 
         String trend = analyticsService.calculateTrend("Food", from, to);
 
         assertTrue(trend.contains("No data for the previous period"));
+    }
+
+    @Test
+    void testFindExpenses() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn((List) sampleExpenses);
+
+        List<Map<String, Object>> result = analyticsService.findExpenses(from, to);
+
+        assertEquals(3, result.size());
+        assertEquals(new BigDecimal("100.00"), result.get(0).get("amount"));
+        assertEquals("Food", result.get(0).get("category"));
+    }
+
+    @Test
+    void testFindByCategory() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("100.00"), "category", "Food", "person", "Alice")
+                ));
+
+        List<Map<String, Object>> result = analyticsService.findByCategory("Food", from, to);
+
+        assertEquals(1, result.size());
+        assertEquals("Food", result.get(0).get("category"));
+    }
+
+    @Test
+    void testFindByLocation() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("50.00"), "location", "StoreA", "person", "Bob")
+                ));
+
+        List<Map<String, Object>> result = analyticsService.findByLocation("StoreA", from, to);
+
+        assertEquals(1, result.size());
+        assertEquals("StoreA", result.get(0).get("location"));
+    }
+
+    @Test
+    void testCalculateTrendNullCurrentTotal() {
+        LocalDate from = LocalDate.of(2024, 3, 1);
+        LocalDate to = LocalDate.of(2024, 3, 31);
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), anyString(), any(), any()))
+                .thenReturn(null)
+                .thenReturn(new BigDecimal("100.00"));
+
+        String trend = analyticsService.calculateTrend("Food", from, to);
+
+        assertTrue(trend.contains("decreased"));
+        assertTrue(trend.contains("0 RON"));
+        assertTrue(trend.contains("100.00 RON"));
     }
 }

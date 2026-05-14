@@ -17,7 +17,8 @@ import static org.mockito.Mockito.*;
 class StorageManagerTest {
 
     private final ExpenseOCRRepository repository = mock(ExpenseOCRRepository.class);
-    private final StorageManager storageManager = new StorageManager(repository);
+    private final SyncService syncService = mock(SyncService.class);
+    private final StorageManager storageManager = new StorageManager(repository, syncService);
 
     @Test
     void saveShouldStoreValidTransactions() {

@@ -184,21 +184,9 @@ public class ExtractionService {
         // Consistency Validation
         String validationNote = buildValidationNote(node.path("items"), amount);
 
-        String finalRawInput = rawText;
-        if (validationNote != null) {
-            finalRawInput = validationNote + "\n" + finalRawInput;
-        }
-
-        ExpenseEntity entity = ExpenseEntity.builder()
-                .amount(amount)
-                .category(category)
-                .location(location)
-                .person(person)
-                .date(transactionDate)
-                .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
-                .build();
-
-        syncService.syncExpense(entity);
+        // NOTE: Do NOT call syncService.syncExpense() here.
+        // The caller (ExpensePipelineService) is responsible for saving and syncing to Qdrant.
+        // This prevents double-saving and duplicate embeddings.
 
         return ExtractionResponse.builder()
                 .amount(amount)
