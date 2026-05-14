@@ -5,8 +5,6 @@ import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
-import com.familie.cheltuieli_familie.repository.FamilyRepository;
-import com.familie.cheltuieli_familie.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,9 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FamilyService {
 
-    private final FamilyRepository familyRepository;
     private final FamilyMemberRepository familyMemberRepository;
-    private final UserRepository userRepository;
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
         verifyMembership(familyId, requester);
