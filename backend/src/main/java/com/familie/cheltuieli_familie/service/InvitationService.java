@@ -53,11 +53,15 @@ public class InvitationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Utilizatorul este deja membru al unei familii.");
         }
 
-        if (invitationRepository.existsByFamilyIdAndInviteeEmailAndStatus(familyId, request.getEmail(), STATUS_PENDING)) {
+        // upsert: dacă există o invitație anterioară (DECLINED), o resetăm în loc să inserăm duplicate
+        FamilyInvitation inv = invitationRepository
+                .findByFamilyIdAndInviteeEmail(familyId, request.getEmail())
+                .orElse(new FamilyInvitation());
+
+        if (STATUS_PENDING.equals(inv.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "O invitație pentru acest email este deja în așteptare.");
         }
 
-        FamilyInvitation inv = new FamilyInvitation();
         inv.setFamily(family);
         inv.setInviteeEmail(request.getEmail());
         inv.setRole(request.getRole());
