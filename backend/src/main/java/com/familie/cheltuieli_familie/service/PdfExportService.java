@@ -253,44 +253,48 @@ public class PdfExportService {
         cs.stroke();
 
         for (int i = 0; i < barCount; i++) {
-            drawBar(cs, fontRegular, labels.get(i), values.get(i),
-                    maxVal, chartH, chartBaseY, barSpacing, barWidth, i, barCount);
+            drawBar(cs, fontRegular, new BarConfig(
+                    labels.get(i), values.get(i), maxVal,
+                    chartH, chartBaseY, barSpacing, barWidth, i, barCount));
         }
 
         return chartBaseY - 35f;
     }
 
-    private void drawBar(PDPageContentStream cs, PDType1Font fontRegular,
-                         String label, BigDecimal val, BigDecimal maxVal,
-                         float chartH, float chartBaseY,
-                         float barSpacing, float barWidth, int i, int barCount) throws IOException {
+    private record BarConfig(
+            String label, BigDecimal val, BigDecimal maxVal,
+            float chartH, float chartBaseY,
+            float barSpacing, float barWidth, int index, int barCount) {}
 
-        float ratio = val.divide(maxVal, 4, RoundingMode.HALF_UP).floatValue();
-        float barH  = Math.max(ratio * chartH, val.compareTo(BigDecimal.ZERO) > 0 ? 4f : 0f);
-        float barX  = MARGIN + i * barSpacing + (barSpacing - barWidth) / 2f;
+    private void drawBar(PDPageContentStream cs, PDType1Font fontRegular,
+                         BarConfig b) throws IOException {
+
+        float ratio = b.val().divide(b.maxVal(), 4, RoundingMode.HALF_UP).floatValue();
+        float barH  = Math.max(ratio * b.chartH(), b.val().compareTo(BigDecimal.ZERO) > 0 ? 4f : 0f);
+        float barX  = MARGIN + b.index() * b.barSpacing() + (b.barSpacing() - b.barWidth()) / 2f;
 
         if (barH > 0) {
             cs.setNonStrokingColor(0.53f, 0.36f, 0.22f);
-            cs.addRect(barX, chartBaseY, barWidth, barH);
+            cs.addRect(barX, b.chartBaseY(), b.barWidth(), barH);
             cs.fill();
         }
 
-        if (val.compareTo(BigDecimal.ZERO) > 0) {
+        if (b.val().compareTo(BigDecimal.ZERO) > 0) {
             cs.setFont(fontRegular, 7);
             cs.setNonStrokingColor(0.3f, 0.3f, 0.3f);
-            String valStr = val.setScale(0, RoundingMode.HALF_UP).toPlainString();
+            String valStr = b.val().setScale(0, RoundingMode.HALF_UP).toPlainString();
             cs.beginText();
-            cs.newLineAtOffset(barX + barWidth / 2f - (valStr.length() * 2.2f), chartBaseY + barH + 3f);
+            cs.newLineAtOffset(barX + b.barWidth() / 2f - (valStr.length() * 2.2f), b.chartBaseY() + barH + 3f);
             cs.showText(valStr);
             cs.endText();
         }
 
-        if (barCount <= 52) {
+        if (b.barCount() <= 52) {
             cs.setFont(fontRegular, 7);
             cs.setNonStrokingColor(0.55f, 0.55f, 0.55f);
             cs.beginText();
-            cs.newLineAtOffset(barX + barWidth / 2f - (label.length() * 2f), chartBaseY - 12f);
-            cs.showText(label);
+            cs.newLineAtOffset(barX + b.barWidth() / 2f - (b.label().length() * 2f), b.chartBaseY() - 12f);
+            cs.showText(b.label());
             cs.endText();
         }
     }
