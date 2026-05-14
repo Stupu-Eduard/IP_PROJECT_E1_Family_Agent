@@ -126,22 +126,23 @@ public class ExpenseController {
                                  @Valid @RequestBody CreateExpenseRequest request,
                                  Authentication auth) {
         User user = (User) auth.getPrincipal();
-        boolean isParent = isParent(auth);
 
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cheltuiala nu a fost găsită."));
 
-        if (isParent) {
-            checkFamilyAccess(user, expense);
-        } else {
+        boolean isChild = isChildByDb(user);
+
+        if (isChild) {
             if (!SOURCE_MANUAL.equals(expense.getSourceType())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Copiii pot edita doar tranzacțiile manuale.");
             }
-            if (!expense.getUser().getId().equals(user.getId())) {
+            if (expense.getUser() == null || !expense.getUser().getId().equals(user.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Nu poți edita cheltuiala altei persoane.");
             }
+        } else {
+            checkFamilyAccess(user, expense);
         }
 
         Category category = categoryRepository.findByName(request.getCategoryName())
@@ -170,7 +171,7 @@ public class ExpenseController {
     public void delete(@PathVariable Long id, Authentication auth) {
         User user = (User) auth.getPrincipal();
 
-        if (!isParent(auth)) {
+        if (isChildByDb(user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Copiii nu pot șterge tranzacții.");
         }
@@ -188,12 +189,18 @@ public class ExpenseController {
                         || a.getAuthority().equals(ROLE_CO_PARENT));
     }
 
+    private boolean isChildByDb(User user) {
+        return familyMemberRepository.findByUserId(user.getId()).stream()
+                .anyMatch(fm -> "Child".equalsIgnoreCase(fm.getRole()));
+    }
+
     private void checkFamilyAccess(User user, Expense expense) {
-        boolean hasAccess = expense.getUser().getId().equals(user.getId()) ||
-                familyMemberRepository.findByUserId(user.getId()).stream()
-                        .anyMatch(fm -> expense.getFamily() != null
-                                && fm.getFamily().getId().equals(expense.getFamily().getId()));
-        if (!hasAccess) {
+        boolean ownExpense = expense.getUser() != null
+                && expense.getUser().getId().equals(user.getId());
+        boolean sameFamily = expense.getFamily() != null
+                && familyMemberRepository.existsByFamilyIdAndUserId(
+                        expense.getFamily().getId(), user.getId());
+        if (!ownExpense && !sameFamily) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ai acces la această cheltuială.");
         }
     }
