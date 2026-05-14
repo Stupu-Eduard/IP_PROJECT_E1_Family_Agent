@@ -18,7 +18,8 @@ class ParserStorageFlowTest {
     private final BankStatementParser parser = new BankStatementParser();
 
     private final ExpenseOCRRepository repository = mock(ExpenseOCRRepository.class);
-    private final StorageManager storageManager = new StorageManager(repository);
+    private final SyncService syncService = mock(SyncService.class);
+    private final StorageManager storageManager = new StorageManager(repository, syncService);
 
     @Test
     void parserOutputShouldBeSavedByStorageManager() {

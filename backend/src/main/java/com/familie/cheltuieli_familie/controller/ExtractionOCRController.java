@@ -42,7 +42,7 @@ public class ExtractionOCRController {
         try {
             File tempFile = tempFilePath.toFile();
 
-            List<Transaction> transactions = extractionPipelineService.processDocument(tempFile);
+            List<Transaction> transactions = extractionPipelineService.processDocument(tempFile, bank);
             storageService.save(transactions);
 
             return ResponseEntity.ok(transactions);

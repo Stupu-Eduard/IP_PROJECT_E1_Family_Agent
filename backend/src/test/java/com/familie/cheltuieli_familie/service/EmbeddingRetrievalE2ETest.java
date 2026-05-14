@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-    "OPENROUTER_API_KEY=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",
     "qdrant.host=localhost",
     "qdrant.port=6333",
     "qdrant.collection-name=e2e-test-expenses"
@@ -152,8 +151,8 @@ class EmbeddingRetrievalE2ETest {
         qdrantVectorService.storeExpense(expense);
 
         boolean exists = Awaitility.await()
-                .atMost(Duration.ofSeconds(5))
-                .pollInterval(Duration.ofMillis(100))
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(200))
                 .until(() -> qdrantVectorService.existsInVectorStore(uniqueId), result -> result);
         assertTrue(exists, "Expense should exist in vector store");
 

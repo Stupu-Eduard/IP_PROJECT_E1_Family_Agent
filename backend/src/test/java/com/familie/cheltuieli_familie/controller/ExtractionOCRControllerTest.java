@@ -60,7 +60,7 @@ class ExtractionOCRControllerTest {
         );
         List<Transaction> mockTransactions = List.of(mockTransaction);
 
-        when(extractionPipelineService.processDocument(any(File.class))).thenReturn(mockTransactions);
+        when(extractionPipelineService.processDocument(any(File.class), any())).thenReturn(mockTransactions);
         when(storageService.save(any())).thenReturn(new StorageResult(1, 1, 0));
 
         mockMvc.perform(multipart("/api/ocr/extract-and-save")
@@ -81,7 +81,7 @@ class ExtractionOCRControllerTest {
                 "Fisier defect".getBytes()
         );
 
-        when(extractionPipelineService.processDocument(any(File.class)))
+        when(extractionPipelineService.processDocument(any(File.class), any()))
                 .thenThrow(new RuntimeException("OCR a esuat brusc!"));
 
         mockMvc.perform(multipart("/api/ocr/extract-and-save")

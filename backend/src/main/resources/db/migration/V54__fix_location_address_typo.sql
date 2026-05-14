@@ -1,9 +1,11 @@
 -- Adaugare coloana address daca lipseste, sau redenumire din adress/adresa daca exista
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='adress') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='adress')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='address') THEN
         ALTER TABLE locations RENAME COLUMN adress TO address;
-    ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='adresa') THEN
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='adresa')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='address') THEN
         ALTER TABLE locations RENAME COLUMN adresa TO address;
     ELSIF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='locations' AND column_name='address') THEN
         ALTER TABLE locations ADD COLUMN address TEXT;
