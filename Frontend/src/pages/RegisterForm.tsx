@@ -52,6 +52,7 @@ export default function RegisterForm() {
     const [email,           setEmail]           = useState('');
     const [password,        setPassword]        = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [role,            setRole]            = useState<'Parent' | 'Child'>('Parent');
     const [error,           setError]           = useState('');
     const [isLoading,       setIsLoading]       = useState(false);
 
@@ -71,7 +72,7 @@ export default function RegisterForm() {
         try {
             await registerSchema.validate({ name, email, password, confirmPassword });
             setIsLoading(true);
-            const payload: RegisterDTO = { name, email, password };
+            const payload: RegisterDTO = { name, email, password, role };
             const response = await api.post<{ token: string }>('/api/v1/auth/register', payload);
             if (response.data.token) {
                 loginStore(response.data.token);
@@ -166,6 +167,30 @@ export default function RegisterForm() {
                     )}
 
                     <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+                        {/* Selector rol */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                            {([
+                                { value: 'Parent', label: 'Sunt Părinte', sub: 'Creez o familie nouă' },
+                                { value: 'Child',  label: 'Sunt Copil',   sub: 'Aștept o invitație'  },
+                            ] as const).map(({ value, label, sub }) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setRole(value)}
+                                    style={{
+                                        border: `1.5px solid ${role === value ? 'var(--color-ink)' : 'var(--color-border)'}`,
+                                        borderRadius: 12, padding: '12px 14px', background: role === value ? 'var(--color-ink)' : 'transparent',
+                                        color: role === value ? '#fff' : 'var(--color-ink)',
+                                        cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s ease',
+                                        fontFamily: 'inherit',
+                                    }}
+                                >
+                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{label}</div>
+                                    <div style={{ fontSize: 11, opacity: 0.7 }}>{sub}</div>
+                                </button>
+                            ))}
+                        </div>
 
                         {/* Nume */}
                         <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>

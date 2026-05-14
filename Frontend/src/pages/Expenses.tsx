@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { useExpenseStore } from '../store/expenseStore';
 import { useNavigate } from 'react-router-dom';
 import { fetchExpenses } from '../services/expenses';
-import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+import { fetchCategoryNames } from '../services/lookups';
+import { useAuthStore } from '../store/authStore';
+import { decodeJwtPayload } from '../utils/jwt';
+import { familyApi } from '../services/api';
 import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft } from 'lucide-react';
 
 interface ExpenseListDTO {
@@ -27,8 +30,14 @@ const avatarStyle = (name: string) => {
     return { background: 'linear-gradient(135deg, #B5956A, #D4B896)' };
 };
 
+const CHILD_CATEGORIES = ['Mâncare', 'Transport', 'Educație', 'Divertisment', 'Sănătate', 'Shopping'];
+
 export default function Expenses() {
     const navigate = useNavigate();
+    const token = useAuthStore((s) => s.token);
+    const payload = decodeJwtPayload(token ?? '') as any;
+    const isChild  = (payload?.role ?? '') === 'Child';
+    const familyId: number | null = payload?.familyId ?? null;
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 20;
@@ -41,20 +50,25 @@ export default function Expenses() {
     const expenseVersion = useExpenseStore((s) => s.version);
 
     useEffect(() => {
+        if (isChild) {
+            setAvailableCategories(CHILD_CATEGORIES);
+            return;
+        }
         const controller = new AbortController();
         const run = async () => {
             try {
-                const [cats, people] = await Promise.all([
-                    fetchCategoryNames(controller.signal),
-                    fetchUserNames(controller.signal),
-                ]);
+                const catsPromise = fetchCategoryNames(controller.signal);
+                const peoplePromise = familyId
+                    ? familyApi.getMembers(familyId).then(r => r.data.map(m => m.name).filter(Boolean))
+                    : Promise.resolve([]);
+                const [cats, people] = await Promise.all([catsPromise, peoplePromise]);
                 setAvailableCategories((cats ?? []).filter(Boolean));
-                setAvailablePeople((people ?? []).filter(Boolean));
+                setAvailablePeople(people);
             } catch {}
         };
         void run();
         return () => controller.abort();
-    }, []);
+    }, [familyId]);
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -72,7 +86,7 @@ export default function Expenses() {
                     {
                         date: undefined,
                         category: selectedCategory || undefined,
-                        person:   selectedPerson   || undefined,
+                        person: isChild ? undefined : (selectedPerson || undefined),
                     },
                     controller.signal,
                 );
@@ -181,7 +195,7 @@ export default function Expenses() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className={`grid grid-cols-1 ${isChild ? 'md:grid-cols-4' : 'md:grid-cols-5'} gap-3 mb-8 fade-in-up`} style={{ animationDelay: '0.1s' }}>
                 <div className="relative">
                     <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                     <input
@@ -217,6 +231,7 @@ export default function Expenses() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
+                {!isChild && (
                 <div className="relative">
                     <select
                         className={inputStyle}
@@ -232,6 +247,7 @@ export default function Expenses() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
+                )}
                 <button
                     onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
                     className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors"
@@ -296,9 +312,11 @@ export default function Expenses() {
                                     <MapPin size={13} style={{ color: 'var(--color-muted-4)' }} />
                                     <span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>{expense.location}</span>
                                 </button>
+                                {!isChild && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <User size={13} style={{ color: 'var(--color-muted-4)' }} /> {expense.person}
                                 </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -307,9 +325,9 @@ export default function Expenses() {
 
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
-                        {['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ'].map((h, i) => (
-                            <div key={h} className="label" style={{ textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
+                        {(isChild ? ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'SUMĂ'] : ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ']).map((h, i, arr) => (
+                            <div key={h} className="label" style={{ textAlign: i === arr.length - 1 ? 'right' : 'left' }}>{h}</div>
                         ))}
                     </div>
 
@@ -318,7 +336,7 @@ export default function Expenses() {
                             <div
                                 key={expense.id}
                                 className="row-clickable fade-up"
-                                style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
+                                style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
                             >
                                 <div style={{ fontSize: 12.5, color: 'var(--color-muted)', fontWeight: 500 }}>{expense.date}</div>
 
@@ -338,12 +356,14 @@ export default function Expenses() {
                                     </button>
                                 </div>
 
+                                {!isChild && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <div className="avatar avatar-sm" style={avatarStyle(expense.person)}>
                                         {expense.person.charAt(0)}
                                     </div>
                                     <span style={{ fontSize: 12.5, color: 'var(--color-muted)' }}>{expense.person}</span>
                                 </div>
+                                )}
 
                                 <div className="row-amount" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 500, color: 'var(--color-ink)' }}>
                                     {expense.amount.toFixed(2)} <span style={{ color: 'var(--color-muted-2)', fontSize: 11, fontWeight: 400 }}>RON</span>

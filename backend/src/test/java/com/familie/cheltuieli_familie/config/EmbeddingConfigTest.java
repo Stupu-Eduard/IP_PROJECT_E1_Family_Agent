@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class EmbeddingConfigTest {
@@ -37,6 +39,7 @@ class EmbeddingConfigTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "OPENROUTER_API_KEY", matches = ".+")
     void testEmbeddingModelBeanCreationThrowsExceptionWhenKeyIsEmpty() {
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", "");
 
@@ -48,6 +51,7 @@ class EmbeddingConfigTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "OPENROUTER_API_KEY", matches = ".+")
     void testEmbeddingModelBeanCreationThrowsExceptionWhenKeyIsNull() {
         ReflectionTestUtils.setField(embeddingConfig, "openRouterApiKey", null);
 

@@ -10,10 +10,12 @@ import java.util.Properties;
 import java.io.FileInputStream;
 import java.nio.file.Paths;
 
+import org.junit.jupiter.api.Disabled;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
 @Tag("integration")
+@Disabled("Requires active API credits — run manually with live keys")
 class ApiConnectivityTest {
 
     @Test
@@ -66,7 +68,7 @@ class ApiConnectivityTest {
                 ChatLanguageModel openRouterModel = OpenAiChatModel.builder()
                         .apiKey(openRouterKey)
                         .baseUrl("https://openrouter.ai/api/v1")
-                        .modelName("nvidia/nemotron-4-340b-instruct")
+                        .modelName("deepseek/deepseek-chat")
                         .build();
                 
                 String orResponse = openRouterModel.generate("Hello, are you receiving this message? Reply only with 'OpenRouter confirms reception.'");

@@ -2,9 +2,11 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
@@ -35,6 +37,9 @@ class AuthControllerTest {
 
     @Mock
     private FamilyMemberRepository familyMemberRepository;
+
+    @Mock
+    private FamilyRepository familyRepository;
 
     @Mock
     private JwtUtil jwtUtil;
@@ -149,7 +154,11 @@ class AuthControllerTest {
         request.setEmail("new@example.com");
         request.setPassword("password123");
 
+        Family savedFamily = new Family();
+        savedFamily.setId(1L);
+
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(familyRepository.save(any(Family.class))).thenReturn(savedFamily);
         when(jwtUtil.generateToken(eq("new@example.com"), any())).thenReturn("new-jwt-token");
 
         // WHEN
@@ -203,6 +212,73 @@ class AuthControllerTest {
         ResponseEntity<Object> result = authController.logout(request);
 
         assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void register_CandRolCopil_NuCreeazaFamilie() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Copil User");
+        request.setEmail("copil@example.com");
+        request.setPassword("pass123");
+        request.setRole("Child");
+
+        when(userRepository.findByEmail("copil@example.com")).thenReturn(Optional.empty());
+        when(jwtUtil.generateToken(eq("copil@example.com"), any())).thenReturn("child-token");
+
+        ResponseEntity<Object> result = authController.register(request);
+
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        verify(familyRepository, never()).save(any());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Child", body.get("role"));
+        assertEquals("child-token", body.get("token"));
+    }
+
+    @Test
+    void refresh_CandUserAreFamilie_ReturneazaTokenNou() {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Alex");
+        user.setEmail("alex@example.com");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("Parent");
+        Family family = new Family();
+        family.setId(10L);
+        member.setFamily(family);
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("alex@example.com"), any())).thenReturn("refreshed-token");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("refreshed-token", body.get("token"));
+        assertEquals("Parent", body.get("role"));
+    }
+
+    @Test
+    void refresh_CandUserFaraFamilie_ReturneazaRoleParent() {
+        User user = new User();
+        user.setId(2L);
+        user.setName("Nou");
+        user.setEmail("nou@example.com");
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(Collections.emptyList());
+        when(jwtUtil.generateToken(eq("nou@example.com"), any())).thenReturn("token-fara-familie");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Parent", body.get("role"));
     }
 
     @Test

@@ -2,9 +2,11 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -29,13 +32,17 @@ import java.util.HashMap;
 @CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class AuthController {
 
-    private static final String ROLE_PARENT = "Parent";
-    private static final String ROLE_CHILD = "Child";
-    private static final String MSG_KEY = "message";
-    private static final String ERR_KEY = "error";
+    private static final String ROLE_PARENT  = "Parent";
+    private static final String ROLE_CHILD   = "Child";
+    private static final String MSG_KEY      = "message";
+    private static final String ERR_KEY      = "error";
+    private static final String TOKEN_KEY    = "token";
+    private static final String USER_ID_KEY  = "userId";
+    private static final String FAMILY_ID_KEY = "familyId";
 
     private final UserRepository userRepository;
     private final FamilyMemberRepository familyMemberRepository;
+    private final FamilyRepository familyRepository;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService blacklistService;
 
@@ -56,19 +63,19 @@ public class AuthController {
             else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
 
             Map<String, Object> claims = new HashMap<>();
-            claims.put("userId", user.getId());
+            claims.put(USER_ID_KEY, user.getId());
             claims.put("role", role);
             claims.put("name", user.getName());
             
             if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-                claims.put("familyId", memberships.get(0).getFamily().getId());
+                claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
             }
 
             String token = jwtUtil.generateToken(user.getEmail(), claims);
 
             return ResponseEntity.ok(Map.of(
                     MSG_KEY, "Login realizat cu succes!",
-                    "token", token,
+                    TOKEN_KEY, token,
                     "userName", user.getName(),
                     "role", role
             ));
@@ -94,21 +101,67 @@ public class AuthController {
         user.setCreatedAt(java.time.LocalDate.now());
         userRepository.save(user);
 
-        // Generăm token JWT imediat după înregistrare
+        boolean isChild = ROLE_CHILD.equalsIgnoreCase(registerRequest.getRole());
+
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getId());
-        claims.put("role", ROLE_PARENT); // Default role
+        claims.put(USER_ID_KEY, user.getId());
         claims.put("name", user.getName());
+
+        String role;
+        if (isChild) {
+            role = ROLE_CHILD;
+            claims.put("role", ROLE_CHILD);
+            log.info("Cont de copil creat fără familie: {}", user.getEmail());
+        } else {
+            role = ROLE_PARENT;
+            claims.put("role", ROLE_PARENT);
+
+            Family family = new Family();
+            family.setName(registerRequest.getName() + "'s Family");
+            family.setCreatedAt(java.time.LocalDate.now());
+            Family savedFamily = familyRepository.save(family);
+
+            FamilyMember member = new FamilyMember();
+            member.setUser(user);
+            member.setFamily(savedFamily);
+            member.setRole(ROLE_PARENT);
+            familyMemberRepository.save(member);
+
+            claims.put(FAMILY_ID_KEY,savedFamily.getId());
+            log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), savedFamily.getId());
+        }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                         MSG_KEY, "Înregistrare realizată cu succes!",
-                        "token", token,
+                        TOKEN_KEY, token,
                         "userName", user.getName(),
-                        "role", ROLE_PARENT
+                        "role", role
                 ));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Object> refresh(Authentication auth) {
+        User user = (User) auth.getPrincipal();
+        List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
+
+        String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
+        if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
+        else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(USER_ID_KEY, user.getId());
+        claims.put("role", role);
+        claims.put("name", user.getName());
+        if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
+            claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), claims);
+        log.info("Token reîmprospătat pentru: {}", user.getEmail());
+        return ResponseEntity.ok(Map.of(TOKEN_KEY, token, "role", role));
     }
 
     @PostMapping("/logout")
