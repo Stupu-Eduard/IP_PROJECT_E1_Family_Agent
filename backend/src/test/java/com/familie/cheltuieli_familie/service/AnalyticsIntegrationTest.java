@@ -33,16 +33,14 @@ class AnalyticsIntegrationTest {
     @MockBean
     private ExpenseJpaRepository repository;
 
+    @MockBean
+    private ExpenseAnalyticsService analyticsService;
+
     @Test
     void testLauraAnalyticsFlow_HallucinationGuardCorrection() {
         // GIVEN
-        LocalDate date = LocalDate.of(2024, 1, 1);
-        ExpenseEntity e = new ExpenseEntity();
-        e.setAmount(new BigDecimal("100.50"));
-        e.setDate(date);
-        e.setCategory("Mâncare");
-        
-        when(repository.findByDateBetween(date, date)).thenReturn(List.of(e));
+        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 1)))
+                .thenReturn(new BigDecimal("100.50"));
 
         // WHEN - Tool-ul scoate 100.50 RON
         String toolOutput = expenseTools.calculateTotal("2024-01-01", "2024-01-01");

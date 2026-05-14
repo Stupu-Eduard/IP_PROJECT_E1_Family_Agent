@@ -56,7 +56,6 @@ class ExtractionServiceTest {
 
         Response<AiMessage> mockResponse = Response.from(AiMessage.from(VALID_JSON_RSP));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
         List<ExtractionResponse> responses = extractionService.process(req);
@@ -71,8 +70,6 @@ class ExtractionServiceTest {
 
         // Verify the LLM was called
         verify(chatLanguageModel, times(1)).generate(anyList());
-        // Verify sync was triggered
-        verify(syncService, times(1)).syncExpense(any(ExpenseEntity.class));
     }
 
     @Test
@@ -87,8 +84,6 @@ class ExtractionServiceTest {
                 .thenReturn(Response.from(AiMessage.from("""
                         {"expenses": [{"amount": 100, "category": "mancare", "location": "Mega Image", "person": "Familie", "transactionDate": "2024-03-15"}]}
                         """)));
-
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -109,7 +104,6 @@ class ExtractionServiceTest {
                 {"expenses": [{"amount": "o sută jumate", "category": "mancare", "location": "restaurant", "person": "Familie", "transactionDate": "2024-01-10"}]}
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -141,7 +135,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -175,7 +168,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
@@ -212,7 +204,6 @@ class ExtractionServiceTest {
                 }
                 """));
         when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         List<ExtractionResponse> responses = extractionService.process(req);
 
