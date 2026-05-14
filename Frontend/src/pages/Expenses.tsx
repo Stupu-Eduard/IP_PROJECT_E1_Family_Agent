@@ -27,8 +27,20 @@ const avatarStyle = (name: string) => {
     return { background: 'linear-gradient(135deg, #B5956A, #D4B896)' };
 };
 
+const CHILD_CATEGORIES = ['Mâncare', 'Transport', 'Educație', 'Divertisment', 'Sănătate', 'Shopping'];
+
+function getUserRole(): string {
+    try {
+        const token = localStorage.getItem('jwtToken') ?? '';
+        return JSON.parse(atob(token.split('.')[1])).role ?? '';
+    } catch {
+        return '';
+    }
+}
+
 export default function Expenses() {
     const navigate = useNavigate();
+    const isChild = getUserRole() === 'Child';
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 20;
@@ -41,6 +53,10 @@ export default function Expenses() {
     const expenseVersion = useExpenseStore((s) => s.version);
 
     useEffect(() => {
+        if (isChild) {
+            setAvailableCategories(CHILD_CATEGORIES);
+            return;
+        }
         const controller = new AbortController();
         const run = async () => {
             try {
@@ -72,7 +88,7 @@ export default function Expenses() {
                     {
                         date: undefined,
                         category: selectedCategory || undefined,
-                        person:   selectedPerson   || undefined,
+                        person: isChild ? undefined : (selectedPerson || undefined),
                     },
                     controller.signal,
                 );
@@ -181,7 +197,7 @@ export default function Expenses() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <div className={`grid grid-cols-1 ${isChild ? 'md:grid-cols-4' : 'md:grid-cols-5'} gap-3 mb-8 fade-in-up`} style={{ animationDelay: '0.1s' }}>
                 <div className="relative">
                     <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                     <input
@@ -217,6 +233,7 @@ export default function Expenses() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
+                {!isChild && (
                 <div className="relative">
                     <select
                         className={inputStyle}
@@ -232,6 +249,7 @@ export default function Expenses() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
                 </div>
+                )}
                 <button
                     onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
                     className="bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors"

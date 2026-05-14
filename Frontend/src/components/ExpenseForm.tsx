@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { processReceiptOCR, createExpense } from '../services/expenses';
 import { useExpenseStore } from '../store/expenseStore';
@@ -24,6 +24,8 @@ const IcoCamera = () => (
 
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isManualMode = searchParams.get('mode') === 'manual';
   const notifyExpenseAdded = useExpenseStore((s) => s.notifyExpenseAdded);
 
   const [amount,     setAmount]     = useState<number | ''>('');
@@ -103,7 +105,7 @@ const ExpenseForm: React.FC = () => {
           >
             <IcoArrowLeft />
           </button>
-          <div className="chip chip-live">OCR · GATA DE SCANARE</div>
+          <div className="chip chip-live">{isManualMode ? 'MANUAL · FORMULARE' : 'OCR · GATA DE SCANARE'}</div>
         </div>
 
         <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>Adaugă o cheltuială nouă</h1>
@@ -147,9 +149,9 @@ const ExpenseForm: React.FC = () => {
             </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isManualMode ? '1fr' : '1fr 1fr', gap: 18, alignItems: 'start' }}>
 
-          <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+          {!isManualMode && <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
 
             {isAnalyzing && (
                 <div style={{
@@ -205,12 +207,12 @@ const ExpenseForm: React.FC = () => {
                 JPG, PNG · max 5 MB · OCR completează câmpurile automat
               </div>
             </div>
-          </div>
+          </div>}
 
           <div className="card" style={{}}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div className="label">DETALII CHELTUIALĂ</div>
-              {isAnalyzing && (
+              {isAnalyzing && !isManualMode && (
                   <span style={{ fontSize: 11, color: "var(--color-primary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)", display: "inline-block", animation: "pulse-dot 1.4s ease-out infinite" }} />
                 OCR completează automat
