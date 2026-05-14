@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.client.RestTemplate;
+
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -47,8 +47,6 @@ class RagPipelineOcrE2ETest {
 
     @Value("${qdrant.port:6333}")
     private int httpPort;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     @BeforeEach
     void setUp() {

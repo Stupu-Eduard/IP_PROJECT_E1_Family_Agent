@@ -219,7 +219,7 @@ public class QdrantVectorService {
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                Map<String, Object> result = (Map<String, Object>) response.getBody().get("result");
+                Map<String, Object> result = (Map<String, Object>) response.getBody().get(QDRANT_RESULT);
                 List<Map<String, Object>> points = result != null ? (List<Map<String, Object>>) result.get("points") : null;
                 return points != null && !points.isEmpty();
             }

@@ -134,7 +134,6 @@ class ExpenseAnalyticsServiceTest {
 
     @Test
     void testCalculateMonthlyAverage() {
-        LocalDate now = LocalDate.now();
         when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), any(), any()))
                 .thenReturn(new BigDecimal("450.00"));
 

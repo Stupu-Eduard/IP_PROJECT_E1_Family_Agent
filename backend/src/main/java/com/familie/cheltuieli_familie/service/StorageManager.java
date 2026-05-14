@@ -5,6 +5,7 @@ import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
 import com.familie.cheltuieli_familie.repository.ExpenseOCRRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 public class StorageManager implements StorageService {
 
     private static final String DEFAULT_CURRENCY = "RON";
@@ -79,7 +81,7 @@ public class StorageManager implements StorageService {
             syncService.syncExpense(entity);
         } catch (Exception e) {
             // Log but don't fail the main save
-            System.err.println("Failed to sync OCR expense to vector store: " + e.getMessage());
+            log.error("Failed to sync OCR expense to vector store: {}", e.getMessage());
         }
     }
 
