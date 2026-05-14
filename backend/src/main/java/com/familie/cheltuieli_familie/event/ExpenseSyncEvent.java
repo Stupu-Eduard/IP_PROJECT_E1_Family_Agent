@@ -6,7 +6,7 @@ import org.springframework.context.ApplicationEvent;
 
 @Getter
 public class ExpenseSyncEvent extends ApplicationEvent {
-    private final ExpenseEntity expense;
+    private final transient ExpenseEntity expense;
 
     public ExpenseSyncEvent(Object source, ExpenseEntity expense) {
         super(source);

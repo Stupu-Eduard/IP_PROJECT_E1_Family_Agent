@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-public class SeedDataTest {
+class SeedDataTest {
 
     @Autowired
     private UserRepository userRepository;

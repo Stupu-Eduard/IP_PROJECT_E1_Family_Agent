@@ -1,11 +1,13 @@
 package com.familie.cheltuieli_familie.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class NotficationService {
 
     public void sendAlert(String message) {
-        System.out.println("!!! [SMS/FIREBASE ALERT]: " + message);
+        log.info("[SMS/FIREBASE ALERT]: {}", message);
     }
 }

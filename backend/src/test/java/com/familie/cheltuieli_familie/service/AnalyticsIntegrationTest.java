@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
     "DEEPSEEK_API_KEY=test-key",
     "OPENROUTER_API_KEY=test-key"
 })
-public class AnalyticsIntegrationTest {
+class AnalyticsIntegrationTest {
 
     @Autowired
     private ExpenseTools expenseTools;

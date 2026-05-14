@@ -14,10 +14,10 @@ import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
 @Tag("integration")
-public class ApiConnectivityTest {
+class ApiConnectivityTest {
 
     @Test
-    public void testBothApis() {
+    void testBothApis() {
         System.out.println("--- TESTING API CONNECTIVITY ---");
         
         // Read keys manually since we're not starting full Spring Boot with external .env loader

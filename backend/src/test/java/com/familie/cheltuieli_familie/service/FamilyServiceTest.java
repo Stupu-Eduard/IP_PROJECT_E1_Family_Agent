@@ -148,9 +148,10 @@ class FamilyServiceTest {
     void addMember_requesterNotInFamily_throwsForbidden() {
         User requester = mockUser(2L, "Stranger", "s@test.com");
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 2L)).thenReturn(Optional.empty());
+        AddMemberRequest request = req("x@test.com", "Child");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.addMember(10L, req("x@test.com", "Child"), requester));
+                () -> service.addMember(10L, request, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -159,11 +160,11 @@ class FamilyServiceTest {
         User requester = mockUser(3L, "Child", "child@test.com");
         Family family = mockFamily(10L);
         FamilyMember membership = mockMember(3L, family, requester, "Child");
-
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 3L)).thenReturn(Optional.of(membership));
+        AddMemberRequest request = req("x@test.com", "Child");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.addMember(10L, req("x@test.com", "Child"), requester));
+                () -> service.addMember(10L, request, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -172,12 +173,12 @@ class FamilyServiceTest {
         User requester = mockUser(1L, "Parent", "parent@test.com");
         Family family = mockFamily(10L);
         FamilyMember membership = mockMember(1L, family, requester, "Parent");
-
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(membership));
         when(familyRepository.findById(10L)).thenReturn(Optional.empty());
+        AddMemberRequest request = req("x@test.com", "Child");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.addMember(10L, req("x@test.com", "Child"), requester));
+                () -> service.addMember(10L, request, requester));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -186,13 +187,13 @@ class FamilyServiceTest {
         User requester = mockUser(1L, "Parent", "parent@test.com");
         Family family = mockFamily(10L);
         FamilyMember membership = mockMember(1L, family, requester, "Parent");
-
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(membership));
         when(familyRepository.findById(10L)).thenReturn(Optional.of(family));
         when(userRepository.findByEmail("missing@test.com")).thenReturn(Optional.empty());
+        AddMemberRequest request = req("missing@test.com", "Child");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.addMember(10L, req("missing@test.com", "Child"), requester));
+                () -> service.addMember(10L, request, requester));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -202,14 +203,14 @@ class FamilyServiceTest {
         User existing = mockUser(3L, "Existing", "existing@test.com");
         Family family = mockFamily(10L);
         FamilyMember membership = mockMember(1L, family, requester, "Parent");
-
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(membership));
         when(familyRepository.findById(10L)).thenReturn(Optional.of(family));
         when(userRepository.findByEmail("existing@test.com")).thenReturn(Optional.of(existing));
         when(familyMemberRepository.existsByFamilyIdAndUserId(10L, 3L)).thenReturn(true);
+        AddMemberRequest request = req("existing@test.com", "Child");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.addMember(10L, req("existing@test.com", "Child"), requester));
+                () -> service.addMember(10L, request, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 

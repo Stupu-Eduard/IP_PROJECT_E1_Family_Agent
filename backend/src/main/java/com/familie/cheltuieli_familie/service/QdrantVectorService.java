@@ -106,7 +106,7 @@ public class QdrantVectorService {
 
         // Build filter
         Map<String, Object> filter = buildQdrantFilter(category, person, from, to);
-        if (filter != null) {
+        if (!filter.isEmpty()) {
             body.put("filter", filter);
         }
 
@@ -136,7 +136,7 @@ public class QdrantVectorService {
         }
 
         if (conditions.isEmpty()) {
-            return null;
+            return Map.of();
         }
         if (conditions.size() == 1) {
             return conditions.get(0);

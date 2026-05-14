@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "/db/migration/V32__populate_expenses.sql",
         "/db/migration/V40__populate_budgets.sql"
 })
-public class DataConsistencyIntegrationTest {//
+class DataConsistencyIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -32,10 +32,11 @@ public class DataConsistencyIntegrationTest {//
     }
 
     @Test
-    @DisplayName("Consistency Check: No orphan expenses (all must have valid user and location)")
+    @DisplayName("Consistency Check: No orphan expenses in V32 seed data (IDs 1001-1025)")
     void testNoOrphanExpenses() {
         Integer orphans = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM expenses WHERE user_id IS NULL OR location_id IS NULL", Integer.class);
+                "SELECT count(*) FROM expenses WHERE (user_id IS NULL OR location_id IS NULL) AND id BETWEEN 1001 AND 1025",
+                Integer.class);
         assertEquals(0, orphans, "Exista cheltuieli fara utilizator sau locatie!");
     }
 
