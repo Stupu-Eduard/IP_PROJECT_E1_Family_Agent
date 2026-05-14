@@ -3,10 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import type { GroupMemberDTO } from '../types/GroupMemberDTO';
-import { familyApi, api } from '../services/api';
+import { familyApi, invitationApi, type InvitationDTO, api } from '../services/api';
 import {
     Mail, UserPlus, Trash2, Shield,
-    ArrowLeft, Baby, Crown, Loader2, Check
+    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell
 } from 'lucide-react';
 
 interface ChildBudgetState {
@@ -35,6 +35,12 @@ export default function FamilySettings() {
     const [inviteRole, setInviteRole] = useState<'Co-Parent' | 'Child'>('Child');
     const [isAdding, setIsAdding] = useState(false);
     const [addError, setAddError] = useState<string | null>(null);
+    const [addSuccess, setAddSuccess] = useState(false);
+
+    const [pendingInvitations, setPendingInvitations] = useState<InvitationDTO[]>([]);
+    const [invActionId, setInvActionId] = useState<number | null>(null);
+
+    const [isLeaving, setIsLeaving] = useState(false);
 
     const [childBudgets, setChildBudgets] = useState<Record<number, ChildBudgetState>>({});
 
@@ -54,6 +60,12 @@ export default function FamilySettings() {
     useEffect(() => {
         loadMembers();
     }, [loadMembers]);
+
+    useEffect(() => {
+        invitationApi.getPending()
+            .then(r => setPendingInvitations(r.data))
+            .catch(() => {});
+    }, []);
 
     // Încarcă bugetele copiilor după ce s-au încărcat membrii
     useEffect(() => {
@@ -77,21 +89,65 @@ export default function FamilySettings() {
         });
     }, [isAdult, members]);
 
-    const handleAddMember = async (e: React.FormEvent) => {
+    const handleInviteMember = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inviteEmail.trim() || !familyId) return;
 
         setIsAdding(true);
         setAddError(null);
+        setAddSuccess(false);
         try {
-            const { data } = await familyApi.addMember(familyId, inviteEmail.trim(), inviteRole);
-            setMembers(prev => [...prev, data]);
+            await familyApi.inviteMember(familyId, inviteEmail.trim(), inviteRole);
             setInviteEmail('');
+            setAddSuccess(true);
+            setTimeout(() => setAddSuccess(false), 3000);
         } catch (err: any) {
-            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la adăugarea membrului.';
-            setAddError(typeof msg === 'string' ? msg : 'Eroare la adăugarea membrului.');
+            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la trimiterea invitației.';
+            setAddError(typeof msg === 'string' ? msg : 'Eroare la trimiterea invitației.');
         } finally {
             setIsAdding(false);
+        }
+    };
+
+    const handleAcceptInvitation = async (inv: InvitationDTO) => {
+        setInvActionId(inv.id);
+        try {
+            const { data } = await invitationApi.accept(inv.id);
+            useAuthStore.getState().setToken(data.token);
+            setPendingInvitations([]);
+            window.location.reload();
+        } catch (err: any) {
+            alert(err?.response?.data?.message ?? 'Eroare la acceptarea invitației.');
+        } finally {
+            setInvActionId(null);
+        }
+    };
+
+    const handleDeclineInvitation = async (inv: InvitationDTO) => {
+        setInvActionId(inv.id);
+        try {
+            await invitationApi.decline(inv.id);
+            setPendingInvitations(prev => prev.filter(i => i.id !== inv.id));
+        } catch (err: any) {
+            alert(err?.response?.data?.message ?? 'Eroare la refuzarea invitației.');
+        } finally {
+            setInvActionId(null);
+        }
+    };
+
+    const handleLeaveFamily = async () => {
+        if (!familyId) return;
+        if (!window.confirm('Ești sigur că vrei să ieși din familie?')) return;
+        setIsLeaving(true);
+        try {
+            await familyApi.leaveFamily(familyId);
+            useAuthStore.getState().logout();
+            window.location.replace('/login');
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Eroare la ieșirea din familie.';
+            alert(typeof msg === 'string' ? msg : 'Eroare la ieșirea din familie.');
+        } finally {
+            setIsLeaving(false);
         }
     };
 
@@ -148,9 +204,46 @@ export default function FamilySettings() {
                     </button>
                     <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">Familie</h2>
                 </div>
-                <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 text-center text-[#9A8A7C]">
-                    Nu ești încă asociat unei familii.
-                </div>
+
+                {pendingInvitations.length > 0 ? (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden">
+                        <div className="px-6 py-4 border-b border-[#EDE9E3] flex items-center gap-2">
+                            <Bell size={16} className="text-[#C97B4B]" />
+                            <span className="text-[14px] font-medium text-[#2D2926]">Invitații în așteptare</span>
+                        </div>
+                        {pendingInvitations.map(inv => (
+                            <div key={inv.id} className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EDE9E3] last:border-0">
+                                <div>
+                                    <div className="text-[15px] font-medium text-[#2D2926]">{inv.familyName}</div>
+                                    <div className="text-[12px] text-[#9A8A7C] mt-0.5">
+                                        Invitat de <span className="font-medium">{inv.invitedByName}</span> cu rolul <span className="font-medium">{inv.role}</span>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        disabled={invActionId === inv.id}
+                                        onClick={() => handleAcceptInvitation(inv)}
+                                        className="bg-[#2D2926] text-white px-4 py-2 rounded-[10px] text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+                                    >
+                                        {invActionId === inv.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                        Acceptă
+                                    </button>
+                                    <button
+                                        disabled={invActionId === inv.id}
+                                        onClick={() => handleDeclineInvitation(inv)}
+                                        className="bg-white border border-[#EDE9E3] text-[#2D2926] px-4 py-2 rounded-[10px] text-[13px] font-medium hover:border-[#C4B9AC] disabled:opacity-50"
+                                    >
+                                        Refuză
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 text-center text-[#9A8A7C]">
+                        Nu ești încă asociat unei familii și nu ai invitații în așteptare.
+                    </div>
+                )}
             </div>
         );
     }
@@ -161,7 +254,7 @@ export default function FamilySettings() {
                 <button onClick={() => navigate('/dashboard')} className="btn-alive-secondary !p-0 w-10 h-10 justify-center shrink-0">
                     <ArrowLeft size={18} />
                 </button>
-                <div>
+                <div className="flex-1">
                     <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">
                         {isAdult ? 'Gestionare Familie' : 'Membrii Familiei Mele'}
                     </h2>
@@ -169,15 +262,23 @@ export default function FamilySettings() {
                         {isAdult ? 'Administrează rolurile, accesul și bugetele membrilor' : 'Vezi cine mai face parte din grupul tău'}
                     </p>
                 </div>
+                <button
+                    onClick={handleLeaveFamily}
+                    disabled={isLeaving}
+                    className="flex items-center gap-2 px-4 py-2 rounded-[10px] border border-red-200 text-red-500 text-[13px] font-medium hover:bg-red-50 disabled:opacity-50 transition-all shrink-0"
+                >
+                    {isLeaving ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
+                    Ieși din familie
+                </button>
             </div>
 
             {isAdult && (
                 <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-8 stagger-2">
                     <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
                         <UserPlus size={18} className="text-[#C97B4B]" />
-                        Adaugă un membru nou
+                        Invită un membru nou
                     </h3>
-                    <form onSubmit={handleAddMember} className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <form onSubmit={handleInviteMember} className="grid grid-cols-1 md:grid-cols-12 gap-3">
                         <div className="md:col-span-5 relative">
                             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C]" size={16} />
                             <input
@@ -204,7 +305,11 @@ export default function FamilySettings() {
                             disabled={isAdding}
                             className="md:col-span-3 bg-[#2D2926] text-white px-4 py-2.5 rounded-[10px] text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                         >
-                            {isAdding ? <><Loader2 size={14} className="animate-spin" /> Se adaugă...</> : 'Adaugă Membru'}
+                            {isAdding
+                                ? <><Loader2 size={14} className="animate-spin" /> Se trimite...</>
+                                : addSuccess
+                                    ? <><Check size={14} /> Invitație trimisă!</>
+                                    : 'Trimite Invitație'}
                         </button>
                     </form>
                     {addError && <p className="mt-3 text-[12px] text-red-500">{addError}</p>}

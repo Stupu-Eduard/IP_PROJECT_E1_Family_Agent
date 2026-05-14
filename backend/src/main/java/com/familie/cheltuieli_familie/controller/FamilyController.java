@@ -2,8 +2,10 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.AddMemberRequest;
 import com.familie.cheltuieli_familie.dto.FamilyMemberDTO;
+import com.familie.cheltuieli_familie.dto.InvitationDTO;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.service.FamilyService;
+import com.familie.cheltuieli_familie.service.InvitationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,7 +21,8 @@ import java.util.List;
 @CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class FamilyController {
 
-    private final FamilyService familyService;
+    private final FamilyService      familyService;
+    private final InvitationService  invitationService;
 
     @GetMapping("/{familyId}/members")
     public ResponseEntity<List<FamilyMemberDTO>> getMembers(
@@ -29,12 +32,12 @@ public class FamilyController {
     }
 
     @PostMapping("/{familyId}/members")
-    public ResponseEntity<FamilyMemberDTO> addMember(
+    public ResponseEntity<InvitationDTO> inviteMember(
             @PathVariable Long familyId,
             @Valid @RequestBody AddMemberRequest request,
             Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(familyService.addMember(familyId, request, requester(auth)));
+                .body(invitationService.createInvitation(familyId, request, requester(auth)));
     }
 
     @DeleteMapping("/{familyId}/members/{memberId}")
@@ -43,6 +46,14 @@ public class FamilyController {
             @PathVariable Long memberId,
             Authentication auth) {
         familyService.removeMember(familyId, memberId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{familyId}/leave")
+    public ResponseEntity<Void> leaveFamily(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        familyService.leaveFamily(familyId, requester(auth));
         return ResponseEntity.noContent().build();
     }
 

@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.dto.AddMemberRequest;
 import com.familie.cheltuieli_familie.dto.FamilyMemberDTO;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
@@ -30,26 +29,21 @@ public class FamilyService {
                 .toList();
     }
 
-    public FamilyMemberDTO addMember(Long familyId, AddMemberRequest request, User requester) {
-        verifyAdultRole(familyId, requester);
+    public void leaveFamily(Long familyId, User requester) {
+        FamilyMember membership = familyMemberRepository
+                .findByFamilyIdAndUserId(familyId, requester.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nu ești membru al acestei familii."));
 
-        Family family = familyRepository.findById(familyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Familia nu există."));
-
-        User targetUser = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Nu există niciun cont cu adresa " + request.getEmail()));
-
-        if (familyMemberRepository.existsByFamilyIdAndUserId(familyId, targetUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Utilizatorul este deja membru al familiei.");
+        boolean isLastParent = isParentRole(membership.getRole()) &&
+                familyMemberRepository.findByFamilyId(familyId).stream()
+                        .filter(m -> isParentRole(m.getRole()))
+                        .count() == 1;
+        if (isLastParent) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Nu poți ieși din familie dacă ești singurul administrator. Șterge familia sau transferă rolul mai întâi.");
         }
 
-        FamilyMember member = new FamilyMember();
-        member.setFamily(family);
-        member.setUser(targetUser);
-        member.setRole(request.getRole());
-
-        return toDTO(familyMemberRepository.save(member));
+        familyMemberRepository.delete(membership);
     }
 
     public void removeMember(Long familyId, Long memberId, User requester) {
