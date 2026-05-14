@@ -19,6 +19,10 @@ public class ExpenseAnalyticsService {
 
     private final JdbcTemplate jdbcTemplate;
 
+    private static final String KEY_CATEGORY = "category";
+    private static final String KEY_TOTAL = "total";
+    private static final String KEY_PERSON = "person";
+
     // Actual DB schema uses foreign keys with JOINs for names
     private static final String BASE_SQL = """
         SELECT e.id, e.amount, e.description, e.expense_date as date,
@@ -54,14 +58,14 @@ public class ExpenseAnalyticsService {
             GROUP BY COALESCE(e.category, c.name)
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
-                "category", rs.getString("category_name"),
-                "total", rs.getBigDecimal("total")
+                KEY_CATEGORY, rs.getString("category_name"),
+                KEY_TOTAL, rs.getBigDecimal("total")
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
-        .filter(m -> m.get("category") != null)
+        .filter(m -> m.get(KEY_CATEGORY) != null)
         .collect(Collectors.toMap(
-                m -> (String) m.get("category"),
-                m -> (BigDecimal) m.get("total"),
+                m -> (String) m.get(KEY_CATEGORY),
+                m -> (BigDecimal) m.get(KEY_TOTAL),
                 BigDecimal::add
         ));
     }
@@ -76,14 +80,14 @@ public class ExpenseAnalyticsService {
             GROUP BY COALESCE(e.person, u.name)
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
-                "person", rs.getString("person_name"),
-                "total", rs.getBigDecimal("total")
+                KEY_PERSON, rs.getString("person_name"),
+                KEY_TOTAL, rs.getBigDecimal("total")
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
-        .filter(m -> m.get("person") != null)
+        .filter(m -> m.get(KEY_PERSON) != null)
         .collect(Collectors.toMap(
-                m -> (String) m.get("person"),
-                m -> (BigDecimal) m.get("total"),
+                m -> (String) m.get(KEY_PERSON),
+                m -> (BigDecimal) m.get(KEY_TOTAL),
                 BigDecimal::add
         ));
     }

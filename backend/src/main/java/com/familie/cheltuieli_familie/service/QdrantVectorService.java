@@ -210,7 +210,7 @@ public class QdrantVectorService {
         String url = String.format("http://%s:%d/collections/%s/points/scroll", host, httpPort, collectionName);
         try {
             Map<String, Object> filter = Map.of(
-                "must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))
+                "must", List.of(Map.of("key", KEY_ID, MATCH, Map.of(VALUE, id.toString())))
             );
             Map<String, Object> body = Map.of("filter", filter, "limit", 1, "with_payload", false);
             HttpHeaders headers = new HttpHeaders();

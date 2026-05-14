@@ -189,15 +189,6 @@ public class ExtractionService {
             finalRawInput = validationNote + "\n" + finalRawInput;
         }
 
-        ExpenseEntity entity = ExpenseEntity.builder()
-                .amount(amount)
-                .category(category)
-                .location(location)
-                .person(person)
-                .date(transactionDate)
-                .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
-                .build();
-
         // NOTE: Do NOT call syncService.syncExpense() here.
         // The caller (ExpensePipelineService) is responsible for saving and syncing to Qdrant.
         // This prevents double-saving and duplicate embeddings.

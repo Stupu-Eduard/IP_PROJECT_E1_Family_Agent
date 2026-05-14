@@ -19,6 +19,12 @@ public class ExpenseTools {
 
     private static final Pattern PERCENTAGE_PATTERN = Pattern.compile("(\\d{1,10}(\\.\\d{1,10})?)%");
     private static final int MAX_TREND_LENGTH = 1000;
+    private static final String KEY_AMOUNT = "amount";
+    private static final String KEY_CATEGORY = "category";
+    private static final String KEY_DATE = "date";
+    private static final String KEY_PERSON = "person";
+    private static final String KEY_LOCATION = "location";
+    private static final String KEY_DESCRIPTION = "description";
 
     private final ExpenseAnalyticsService analyticsService;
 
@@ -57,7 +63,7 @@ public class ExpenseTools {
             var anomalies = analyticsService.detectAnomalies(threshold);
             if (anomalies.isEmpty()) return "No anomalies found above " + threshold + " RON.";
             return "Anomalies found: " + anomalies.stream()
-                    .map(e -> e.get("category") + " (" + e.get("amount") + " RON on " + e.get("date") + ")")
+                    .map(e -> e.get(KEY_CATEGORY) + " (" + e.get(KEY_AMOUNT) + " RON on " + e.get(KEY_DATE) + ")")
                     .collect(Collectors.joining(", "));
         } catch (Exception e) {
             log.error("Error in detectAnomalies: {}", e.getMessage());
@@ -87,7 +93,7 @@ public class ExpenseTools {
             var expenses = analyticsService.findByPerson(person, LocalDate.parse(from), LocalDate.parse(to));
             if (expenses.isEmpty()) return "No expenses found for " + person + " in the specified period.";
             return "Expenses for " + person + ": " + expenses.stream()
-                    .map(e -> e.get("amount") + " RON for " + e.get("category") + " on " + e.get("date"))
+                    .map(e -> e.get(KEY_AMOUNT) + " RON for " + e.get(KEY_CATEGORY) + " on " + e.get(KEY_DATE))
                     .collect(Collectors.joining("; "));
         } catch (Exception e) {
             log.error("Error in byPerson: {}", e.getMessage());
@@ -116,7 +122,7 @@ public class ExpenseTools {
             var expenses = analyticsService.getTopExpenses(Integer.parseInt(limit));
             if (expenses.isEmpty()) return "No expenses found.";
             return "Top expenses: " + expenses.stream()
-                    .map(e -> e.get("amount") + " RON (" + e.get("category") + ") by " + e.get("person") + " on " + e.get("date"))
+                    .map(e -> e.get(KEY_AMOUNT) + " RON (" + e.get(KEY_CATEGORY) + ") by " + e.get(KEY_PERSON) + " on " + e.get(KEY_DATE))
                     .collect(Collectors.joining(", "));
         } catch (Exception e) {
             log.error("Error in topExpenses: {}", e.getMessage());
@@ -174,7 +180,7 @@ public class ExpenseTools {
             var expenses = analyticsService.findByCategory(category, LocalDate.parse(from), LocalDate.parse(to));
             if (expenses.isEmpty()) return "No expenses found for category '" + category + "' in the specified period.";
             return "Expenses for '" + category + "': " + expenses.stream()
-                    .map(e -> e.get("amount") + " RON at " + e.get("location") + " on " + e.get("date") + " (" + e.get("description") + ")")
+                    .map(e -> e.get(KEY_AMOUNT) + " RON at " + e.get(KEY_LOCATION) + " on " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")")
                     .collect(Collectors.joining("; "));
         } catch (Exception e) {
             log.error("Error in byCategoryDetailed: {}", e.getMessage());
@@ -189,7 +195,7 @@ public class ExpenseTools {
             var expenses = analyticsService.findByLocation(location, LocalDate.parse(from), LocalDate.parse(to));
             if (expenses.isEmpty()) return "No expenses found for location '" + location + "' in the specified period.";
             return "Expenses at '" + location + "': " + expenses.stream()
-                    .map(e -> e.get("amount") + " RON for " + e.get("category") + " on " + e.get("date") + " (" + e.get("description") + ")")
+                    .map(e -> e.get(KEY_AMOUNT) + " RON for " + e.get(KEY_CATEGORY) + " on " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")")
                     .collect(Collectors.joining("; "));
         } catch (Exception e) {
             log.error("Error in byLocation: {}", e.getMessage());
