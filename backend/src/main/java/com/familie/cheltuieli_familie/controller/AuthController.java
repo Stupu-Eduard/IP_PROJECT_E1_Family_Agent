@@ -2,9 +2,11 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
@@ -36,6 +38,7 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final FamilyMemberRepository familyMemberRepository;
+    private final FamilyRepository familyRepository;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService blacklistService;
 
@@ -94,11 +97,25 @@ public class AuthController {
         user.setCreatedAt(java.time.LocalDate.now());
         userRepository.save(user);
 
-        // Generăm token JWT imediat după înregistrare
+        // Creăm automat o familie pentru noul Părinte
+        Family family = new Family();
+        family.setName(registerRequest.getName() + "'s Family");
+        family.setCreatedAt(java.time.LocalDate.now());
+        familyRepository.save(family);
+
+        FamilyMember member = new FamilyMember();
+        member.setUser(user);
+        member.setFamily(family);
+        member.setRole(ROLE_PARENT);
+        familyMemberRepository.save(member);
+
+        log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), family.getId());
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
-        claims.put("role", ROLE_PARENT); // Default role
+        claims.put("role", ROLE_PARENT);
         claims.put("name", user.getName());
+        claims.put("familyId", family.getId());
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
 
