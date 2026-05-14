@@ -72,10 +72,12 @@ export default function Sidebar() {
     const isChild  = userRole === 'Child'
     const navItems = isChild ? childNavItems : parentNavItems
 
-    const activeId = navItems.find(item =>
-        location.pathname === '/' + item.id ||
-        location.pathname.startsWith('/' + item.id)
-    )?.id ?? 'dashboard'
+    const activeId = [...navItems]
+        .sort((a, b) => b.id.length - a.id.length)
+        .find(item =>
+            location.pathname === '/' + item.id ||
+            location.pathname.startsWith('/' + item.id + '/')
+        )?.id ?? 'dashboard'
 
     const handleLogout = () => {
         logout()
