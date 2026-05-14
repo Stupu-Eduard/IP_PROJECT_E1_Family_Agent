@@ -64,6 +64,30 @@ public class FamilyService {
                 .toList();
     }
 
+    @Transactional
+    public void deleteFamily(Long familyId, User requester) {
+        FamilyMember membership = familyMemberRepository
+                .findByFamilyIdAndUserId(familyId, requester.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ești membru al acestei familii."));
+
+        if (!isParentRole(membership.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Doar un părinte poate șterge familia.");
+        }
+
+        List<FamilyMember> allMembers = familyMemberRepository.findByFamilyId(familyId);
+        if (allMembers.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Nu poți șterge familia dacă mai sunt și alți membri. Elimină-i mai întâi.");
+        }
+
+        Family family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Familia nu există."));
+
+        familyMemberRepository.deleteAll(allMembers);
+        familyRepository.delete(family);
+        log.info("Familie ștearsă: id={} de către {}", familyId, requester.getEmail());
+    }
+
     public void leaveFamily(Long familyId, User requester) {
         FamilyMember membership = familyMemberRepository
                 .findByFamilyIdAndUserId(familyId, requester.getId())

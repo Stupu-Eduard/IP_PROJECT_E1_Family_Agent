@@ -59,6 +59,14 @@ public class FamilyController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{familyId}")
+    public ResponseEntity<Void> deleteFamily(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        familyService.deleteFamily(familyId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{familyId}/leave")
     public ResponseEntity<Void> leaveFamily(
             @PathVariable Long familyId,

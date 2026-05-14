@@ -57,6 +57,9 @@ export const familyApi = {
 
   leaveFamily: (familyId: number) =>
     api.delete(`/api/v1/families/${familyId}/leave`),
+
+  deleteFamily: (familyId: number) =>
+    api.delete(`/api/v1/families/${familyId}`),
 }
 
 export const invitationApi = {

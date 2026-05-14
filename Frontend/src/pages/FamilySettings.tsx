@@ -6,7 +6,7 @@ import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 import { familyApi, invitationApi, type InvitationDTO, api } from '../services/api';
 import {
     Mail, UserPlus, Trash2, Shield,
-    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell
+    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX
 } from 'lucide-react';
 
 interface ChildBudgetState {
@@ -41,6 +41,7 @@ export default function FamilySettings() {
     const [invActionId, setInvActionId] = useState<number | null>(null);
 
     const [isLeaving, setIsLeaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const [familyName, setFamilyName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -168,6 +169,22 @@ export default function FamilySettings() {
             alert(typeof msg === 'string' ? msg : 'Eroare la ieșirea din familie.');
         } finally {
             setIsLeaving(false);
+        }
+    };
+
+    const handleDeleteFamily = async () => {
+        if (!familyId) return;
+        if (!window.confirm('Ești sigur că vrei să ștergi familia? Această acțiune este ireversibilă.')) return;
+        setIsDeleting(true);
+        try {
+            await familyApi.deleteFamily(familyId);
+            useAuthStore.getState().logout();
+            window.location.replace('/login');
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Eroare la ștergerea familiei.';
+            alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea familiei.');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -304,14 +321,26 @@ export default function FamilySettings() {
                         {isAdult ? 'Administrează rolurile, accesul și bugetele membrilor' : 'Vezi cine mai face parte din grupul tău'}
                     </p>
                 </div>
-                <button
-                    onClick={handleLeaveFamily}
-                    disabled={isLeaving}
-                    className="flex items-center gap-2 px-4 py-2 rounded-[10px] border border-red-200 text-red-500 text-[13px] font-medium hover:bg-red-50 disabled:opacity-50 transition-all shrink-0"
-                >
-                    {isLeaving ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
-                    Ieși din familie
-                </button>
+                <div className="flex gap-2 shrink-0">
+                    {isAdult && members.length === 1 && (
+                        <button
+                            onClick={handleDeleteFamily}
+                            disabled={isDeleting}
+                            className="flex items-center gap-2 px-4 py-2 rounded-[10px] border border-red-300 bg-red-50 text-red-600 text-[13px] font-medium hover:bg-red-100 disabled:opacity-50 transition-all"
+                        >
+                            {isDeleting ? <Loader2 size={15} className="animate-spin" /> : <FolderX size={15} />}
+                            Șterge familia
+                        </button>
+                    )}
+                    <button
+                        onClick={handleLeaveFamily}
+                        disabled={isLeaving}
+                        className="flex items-center gap-2 px-4 py-2 rounded-[10px] border border-red-200 text-red-500 text-[13px] font-medium hover:bg-red-50 disabled:opacity-50 transition-all"
+                    >
+                        {isLeaving ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
+                        Ieși din familie
+                    </button>
+                </div>
             </div>
 
             {isAdult && (
