@@ -5,7 +5,6 @@ import { processReceiptOCR, createExpense } from '../services/expenses';
 import { useExpenseStore } from '../store/expenseStore';
 import { fetchCategoryNames } from '../services/lookups';
 import { ImageUploader } from './ImageUploader';
-import type { OcrTransactionDTO } from '../types/OcrResponseDTO';
 
 const IcoArrowLeft = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,57 +39,26 @@ const ExpenseForm: React.FC = () => {
   const [ocrError,    setOcrError]    = useState<string | null>(null);
   const [success,     setSuccess]     = useState(false);
 
-  // For multi-transaction OCR results
-  const [ocrTransactions, setOcrTransactions] = useState<OcrTransactionDTO[]>([]);
-  const [currentTxIndex,  setCurrentTxIndex]  = useState(0);
-
   useEffect(() => {
     fetchCategoryNames().then(setCategories).catch(() => {});
   }, []);
-
-  const applyTransaction = (tx: OcrTransactionDTO) => {
-    if (tx.amount > 0)   setAmount(tx.amount);
-    if (tx.description) {
-      // Try to infer category from description
-      const desc = tx.description.toLowerCase();
-      const matchedCat = categories.find(c => desc.includes(c.toLowerCase()));
-      if (matchedCat) setCategory(matchedCat);
-      // Use description as store name if it looks like a store
-      setStoreName(tx.description);
-    }
-    if (tx.date) {
-      const formattedDate = tx.date.includes('T') ? tx.date.split('T')[0] : tx.date;
-      setDate(formattedDate);
-    }
-  };
 
   const handleOcrProcess = async (file: File) => {
     setIsAnalyzing(true);
     setOcrError(null);
     setError('');
-    setOcrTransactions([]);
-    setCurrentTxIndex(0);
     try {
       const data = await processReceiptOCR(file);
-      if (data.transactions && data.transactions.length > 0) {
-        setOcrTransactions(data.transactions);
-        setCurrentTxIndex(0);
-        applyTransaction(data.transactions[0]);
-      } else {
-        setOcrError('Nu am putut extrage tranzacții din fișier. Te rugăm să completezi manual.');
+      if (data.amount)   setAmount(data.amount);
+      if (data.category) setCategory(data.category);
+      if (data.date) {
+        const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
+        setDate(formattedDate);
       }
     } catch {
-      setOcrError('Nu am putut citi automat datele. Te rugăm să le completezi manual.');
+      setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
     } finally {
       setIsAnalyzing(false);
-    }
-  };
-
-  const handleNextTransaction = () => {
-    if (currentTxIndex < ocrTransactions.length - 1) {
-      const nextIndex = currentTxIndex + 1;
-      setCurrentTxIndex(nextIndex);
-      applyTransaction(ocrTransactions[nextIndex]);
     }
   };
 
@@ -113,8 +81,6 @@ const ExpenseForm: React.FC = () => {
       setStoreName('');
       setCity('');
       setOcrError(null);
-      setOcrTransactions([]);
-      setCurrentTxIndex(0);
       setTimeout(() => navigate('/expenses'), 1500);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la salvarea cheltuielii.';
@@ -181,28 +147,6 @@ const ExpenseForm: React.FC = () => {
             </div>
         )}
 
-        {/* Multi-transaction navigation */}
-        {ocrTransactions.length > 1 && (
-          <div className="fade-up" style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'var(--color-primary-tint)', border: '1px solid var(--color-primary-edge)',
-            borderRadius: 12, padding: '12px 16px', marginBottom: 20,
-            color: '#7A5C44', fontSize: 13,
-          }}>
-            <span>📄 Tranzacție {currentTxIndex + 1} din {ocrTransactions.length}</span>
-            {currentTxIndex < ocrTransactions.length - 1 && (
-              <button
-                type="button"
-                onClick={handleNextTransaction}
-                className="btn btn-primary"
-                style={{ fontSize: 12, padding: '6px 12px', marginLeft: 'auto' }}
-              >
-                Următoarea →
-              </button>
-            )}
-          </div>
-        )}
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
 
           <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
@@ -252,15 +196,13 @@ const ExpenseForm: React.FC = () => {
                       handleOcrProcess(file);
                     } else {
                       setOcrError(null);
-                      setOcrTransactions([]);
-                      setCurrentTxIndex(0);
                     }
                   }}
               />
 
               <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-muted)' }}>
                 <IcoCamera />
-                JPG, PNG, PDF · max 5 MB · OCR completează câmpurile automat
+                JPG, PNG · max 5 MB · OCR completează câmpurile automat
               </div>
             </div>
           </div>
