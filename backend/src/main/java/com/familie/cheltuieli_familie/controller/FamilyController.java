@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/families")
@@ -23,6 +24,15 @@ public class FamilyController {
 
     private final FamilyService      familyService;
     private final InvitationService  invitationService;
+
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createFamily(
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String name = body != null ? body.get("name") : null;
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(familyService.createFamily(name, requester(auth)));
+    }
 
     @GetMapping("/{familyId}/members")
     public ResponseEntity<List<FamilyMemberDTO>> getMembers(

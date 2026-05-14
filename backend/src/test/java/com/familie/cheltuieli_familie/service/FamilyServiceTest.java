@@ -5,26 +5,34 @@ import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
+import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class FamilyServiceTest {
 
     private FamilyMemberRepository familyMemberRepository;
+    private FamilyRepository familyRepository;
+    private JwtUtil jwtUtil;
     private FamilyService service;
 
     @BeforeEach
     void setUp() {
         familyMemberRepository = mock(FamilyMemberRepository.class);
-        service = new FamilyService(familyMemberRepository);
+        familyRepository = mock(FamilyRepository.class);
+        jwtUtil = mock(JwtUtil.class);
+        service = new FamilyService(familyMemberRepository, familyRepository, jwtUtil);
     }
 
     private User mockUser(Long id, String name, String email) {
@@ -160,6 +168,39 @@ class FamilyServiceTest {
         service.leaveFamily(10L, requester);
 
         verify(familyMemberRepository).delete(childMembership);
+    }
+
+    // ── createFamily ─────────────────────────────────────────────────────────
+
+    @Test
+    void createFamily_happyPath_returnsTokenAndRole() {
+        User requester = mockUser(1L, "Alex", "alex@test.com");
+        Family saved = mockFamily(10L);
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        when(familyRepository.save(any(Family.class))).thenReturn(saved);
+        when(familyMemberRepository.save(any(FamilyMember.class))).thenReturn(mock(FamilyMember.class));
+        when(jwtUtil.generateToken(anyString(), anyMap())).thenReturn("new-token");
+
+        Map<String, Object> result = service.createFamily("Family Alex", requester);
+
+        assertEquals("new-token", result.get("token"));
+        assertEquals("Parent", result.get("role"));
+        verify(familyRepository).save(any(Family.class));
+        verify(familyMemberRepository).save(any(FamilyMember.class));
+    }
+
+    @Test
+    void createFamily_alreadyInFamily_throwsConflict() {
+        User requester = mockUser(1L, "Alex", "alex@test.com");
+        Family family = mockFamily(10L);
+        FamilyMember existing = mockMember(1L, family, requester, "Parent");
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(existing));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.createFamily("Test", requester));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
     // ── removeMember ─────────────────────────────────────────────────────────

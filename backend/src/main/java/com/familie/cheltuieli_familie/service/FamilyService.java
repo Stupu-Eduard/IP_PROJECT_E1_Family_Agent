@@ -5,18 +5,57 @@ import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
+import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FamilyService {
 
     private final FamilyMemberRepository familyMemberRepository;
+    private final FamilyRepository       familyRepository;
+    private final JwtUtil                jwtUtil;
+
+    @Transactional
+    public Map<String, Object> createFamily(String name, User requester) {
+        if (!familyMemberRepository.findByUserId(requester.getId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ești deja membru al unei familii.");
+        }
+
+        Family family = new Family();
+        family.setName(name != null && !name.isBlank() ? name.trim() : requester.getName() + "'s Family");
+        family.setCreatedAt(LocalDate.now());
+        familyRepository.save(family);
+
+        FamilyMember member = new FamilyMember();
+        member.setFamily(family);
+        member.setUser(requester);
+        member.setRole("Parent");
+        familyMemberRepository.save(member);
+
+        log.info("Familie nouă creată: '{}' (id={}) de către {}", family.getName(), family.getId(), requester.getEmail());
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId",   requester.getId());
+        claims.put("role",     "Parent");
+        claims.put("name",     requester.getName());
+        claims.put("familyId", family.getId());
+        String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
+
+        return Map.of("token", newToken, "role", "Parent", "familyId", family.getId());
+    }
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
         verifyMembership(familyId, requester);

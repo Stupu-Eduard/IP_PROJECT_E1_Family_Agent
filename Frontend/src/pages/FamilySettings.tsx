@@ -42,6 +42,10 @@ export default function FamilySettings() {
 
     const [isLeaving, setIsLeaving] = useState(false);
 
+    const [familyName, setFamilyName] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+
     const [childBudgets, setChildBudgets] = useState<Record<number, ChildBudgetState>>({});
 
     const loadMembers = useCallback(async () => {
@@ -106,6 +110,22 @@ export default function FamilySettings() {
             setAddError(typeof msg === 'string' ? msg : 'Eroare la trimiterea invitației.');
         } finally {
             setIsAdding(false);
+        }
+    };
+
+    const handleCreateFamily = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreating(true);
+        setCreateError(null);
+        try {
+            const { data } = await familyApi.createFamily(familyName.trim());
+            useAuthStore.getState().setToken(data.token);
+            window.location.reload();
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la crearea familiei.';
+            setCreateError(typeof msg === 'string' ? msg : 'Eroare la crearea familiei.');
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -205,7 +225,33 @@ export default function FamilySettings() {
                     <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">Familie</h2>
                 </div>
 
-                {pendingInvitations.length > 0 ? (
+                <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-6">
+                    <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
+                        <UserPlus size={18} className="text-[#C97B4B]" />
+                        Creează o familie nouă
+                    </h3>
+                    <form onSubmit={handleCreateFamily} className="flex gap-3">
+                        <input
+                            type="text"
+                            value={familyName}
+                            onChange={(e) => setFamilyName(e.target.value)}
+                            placeholder="Numele familiei (ex: Familia Popescu)"
+                            className="flex-1 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] focus:outline-none focus:border-[#C4B9AC]"
+                            required
+                        />
+                        <button
+                            type="submit"
+                            disabled={isCreating}
+                            className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2 shrink-0"
+                        >
+                            {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            {isCreating ? 'Se creează...' : 'Creează'}
+                        </button>
+                    </form>
+                    {createError && <p className="mt-3 text-[12px] text-red-500">{createError}</p>}
+                </div>
+
+                {pendingInvitations.length > 0 && (
                     <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden">
                         <div className="px-6 py-4 border-b border-[#EDE9E3] flex items-center gap-2">
                             <Bell size={16} className="text-[#C97B4B]" />
@@ -238,10 +284,6 @@ export default function FamilySettings() {
                                 </div>
                             </div>
                         ))}
-                    </div>
-                ) : (
-                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-10 text-center text-[#9A8A7C]">
-                        Nu ești încă asociat unei familii și nu ai invitații în așteptare.
                     </div>
                 )}
             </div>

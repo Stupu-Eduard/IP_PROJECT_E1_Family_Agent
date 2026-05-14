@@ -43,6 +43,9 @@ export interface InvitationDTO {
 }
 
 export const familyApi = {
+  createFamily: (name: string) =>
+    api.post<{ token: string; role: string; familyId: number }>('/api/v1/families', { name }),
+
   getMembers: (familyId: number) =>
     api.get<GroupMemberDTO[]>(`/api/v1/families/${familyId}/members`),
 
