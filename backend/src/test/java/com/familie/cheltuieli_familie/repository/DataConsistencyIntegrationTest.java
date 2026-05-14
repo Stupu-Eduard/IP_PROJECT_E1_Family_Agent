@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "/db/migration/V32__populate_expenses.sql",
         "/db/migration/V40__populate_budgets.sql"
 })
-public class DataConsistencyIntegrationTest {//
+class DataConsistencyIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

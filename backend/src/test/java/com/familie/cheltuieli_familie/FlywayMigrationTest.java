@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @ActiveProfiles("test")
-public class FlywayMigrationTest {
+class FlywayMigrationTest {
 
     @Autowired
     private DataSource dataSource;

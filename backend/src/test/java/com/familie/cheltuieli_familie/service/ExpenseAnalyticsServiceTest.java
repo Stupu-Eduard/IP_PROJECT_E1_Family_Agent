@@ -127,7 +127,6 @@ class ExpenseAnalyticsServiceTest {
     @Test
     void testCalculateMonthlyAverage() {
         LocalDate now = LocalDate.now();
-        LocalDate from = now.minusMonths(3).withDayOfMonth(1);
         when(repository.findByDateBetween(any(LocalDate.class), eq(now))).thenReturn(sampleExpenses);
 
         BigDecimal avg = analyticsService.calculateMonthlyAverage(3);

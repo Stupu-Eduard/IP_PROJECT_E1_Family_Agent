@@ -2,10 +2,12 @@ package com.familie.cheltuieli_familie.security.service;
 
 import com.familie.cheltuieli_familie.model.GeofenceZone;
 import com.familie.cheltuieli_familie.service.FirebaseNotificationService;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class GeofencingService {
 
@@ -40,8 +42,6 @@ public class GeofencingService {
 
     // 2. Metoda secundară, care procesează un singur Point primit din Controller
     public void isUserInsideZone(Point locationData) {
-        System.out.println("Metoda a fost apelata cu punctul exact: " + locationData.toString());
-        // TODO: De implementat logica reala de geofencing.
-        // Trebuie sa comparam 'locationData' cu zonele (poligoanele) salvate in baza de date.
+        log.info("Metoda a fost apelata cu punctul exact: {}", locationData);
     }
 }
