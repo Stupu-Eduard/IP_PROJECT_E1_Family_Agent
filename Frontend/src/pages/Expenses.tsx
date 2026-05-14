@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useExpenseStore } from '../store/expenseStore';
 import { useNavigate } from 'react-router-dom';
 import { fetchExpenses } from '../services/expenses';
-import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+import { fetchCategoryNames } from '../services/lookups';
 import { useAuthStore } from '../store/authStore';
 import { decodeJwtPayload } from '../utils/jwt';
+import { familyApi } from '../services/api';
 import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft } from 'lucide-react';
 
 interface ExpenseListDTO {
@@ -34,7 +35,9 @@ const CHILD_CATEGORIES = ['Mâncare', 'Transport', 'Educație', 'Divertisment', 
 export default function Expenses() {
     const navigate = useNavigate();
     const token = useAuthStore((s) => s.token);
-    const isChild = ((decodeJwtPayload(token ?? '') as any)?.role ?? '') === 'Child';
+    const payload = decodeJwtPayload(token ?? '') as any;
+    const isChild  = (payload?.role ?? '') === 'Child';
+    const familyId: number | null = payload?.familyId ?? null;
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 20;
@@ -54,17 +57,18 @@ export default function Expenses() {
         const controller = new AbortController();
         const run = async () => {
             try {
-                const [cats, people] = await Promise.all([
-                    fetchCategoryNames(controller.signal),
-                    fetchUserNames(controller.signal),
-                ]);
+                const catsPromise = fetchCategoryNames(controller.signal);
+                const peoplePromise = familyId
+                    ? familyApi.getMembers(familyId).then(r => r.data.map(m => m.name).filter(Boolean))
+                    : Promise.resolve([]);
+                const [cats, people] = await Promise.all([catsPromise, peoplePromise]);
                 setAvailableCategories((cats ?? []).filter(Boolean));
-                setAvailablePeople((people ?? []).filter(Boolean));
+                setAvailablePeople(people);
             } catch {}
         };
         void run();
         return () => controller.abort();
-    }, []);
+    }, [familyId]);
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
