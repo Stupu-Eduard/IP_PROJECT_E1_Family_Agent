@@ -34,6 +34,7 @@ public class QdrantVectorService {
     private static final String KEY_DATE = "date";
     private static final String KEY_AMOUNT = "amount";
     private static final String KEY_ID = "id";
+    private static final String KEY_RAW_INPUT = "raw_input";
     private static final String QDRANT_RESULT = "result";
     private static final String MATCH = "match";
     private static final String VALUE = "value";
@@ -68,6 +69,7 @@ public class QdrantVectorService {
         Metadata metadata = new Metadata();
         metadata.put(KEY_ID, expense.getId());
         metadata.put(KEY_AMOUNT, expense.getAmount().doubleValue());
+        metadata.put(KEY_RAW_INPUT, textToEmbed);
         if (expense.getCategory() != null) metadata.put(KEY_CATEGORY, expense.getCategory());
         if (expense.getPerson() != null) metadata.put(KEY_PERSON, expense.getPerson());
         if (expense.getLocation() != null) metadata.put(KEY_LOCATION, expense.getLocation());
@@ -173,7 +175,7 @@ public class QdrantVectorService {
                 .person(payload != null ? (String) payload.get(KEY_PERSON) : null)
                 .location(payload != null ? (String) payload.get(KEY_LOCATION) : null)
                 .date(parseLocalDate(payload != null ? (String) payload.get(KEY_DATE) : null))
-                .rawInput(payload != null ? (String) payload.get("text_segment") : null)
+                .rawInput(payload != null ? (String) payload.get(KEY_RAW_INPUT) : null)
                 .score(score)
                 .build();
     }
@@ -205,14 +207,25 @@ public class QdrantVectorService {
     }
 
     public boolean existsInVectorStore(Long id) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("vector", new float[2048]);
-        body.put("limit", 1);
-        body.put("with_vector", false);
-        body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, MATCH, Map.of(VALUE, id.toString())))));
-
-        List<Map<String, Object>> results = executeQdrantSearch(body);
-        return results != null && !results.isEmpty();
+        String url = String.format("http://%s:%d/collections/%s/points/scroll", host, httpPort, collectionName);
+        try {
+            Map<String, Object> filter = Map.of(
+                "must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))
+            );
+            Map<String, Object> body = Map.of("filter", filter, "limit", 1, "with_payload", false);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> result = (Map<String, Object>) response.getBody().get("result");
+                List<Map<String, Object>> points = result != null ? (List<Map<String, Object>>) result.get("points") : null;
+                return points != null && !points.isEmpty();
+            }
+        } catch (Exception e) {
+            log.debug("Point with id {} not found in collection {}: {}", id, collectionName, e.getMessage());
+        }
+        return false;
     }
 }

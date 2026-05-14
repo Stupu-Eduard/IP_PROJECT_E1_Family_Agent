@@ -1,17 +1,13 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
-import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,84 +17,133 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExpenseAnalyticsService {
 
-    private final ExpenseJpaRepository repository;
+    private final JdbcTemplate jdbcTemplate;
+
+    // Actual DB schema uses foreign keys with JOINs for names
+    private static final String BASE_SQL = """
+        SELECT e.id, e.amount, e.description, e.expense_date as date,
+               COALESCE(e.category, c.name) as category,
+               COALESCE(e.location, l.store) as location,
+               COALESCE(e.person, u.name) as person,
+               e.currency, e.source_type, e.transaction_type
+        FROM expenses e
+        LEFT JOIN categories c ON e.category_id = c.id
+        LEFT JOIN locations l ON e.location_id = l.id
+        LEFT JOIN users u ON e.user_id = u.id
+        """;
+
+    public List<Map<String, Object>> findExpenses(LocalDate from, LocalDate to) {
+        log.info("Finding expenses from {} to {}", from, to);
+        String sql = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ? ORDER BY e.expense_date DESC";
+        return jdbcTemplate.queryForList(sql, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+    }
 
     public BigDecimal calculateTotal(LocalDate from, LocalDate to) {
         log.info("Calculating total expenses from {} to {}", from, to);
-        return repository.findByDateBetween(from, to)
-                .stream()
-                .map(ExpenseEntity::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        String sql = "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date >= ? AND expense_date <= ?";
+        return jdbcTemplate.queryForObject(sql, BigDecimal.class, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 
     public Map<String, BigDecimal> byCategory(LocalDate from, LocalDate to) {
         log.info("Calculating expenses by category from {} to {}", from, to);
-        return repository.findByDateBetween(from, to)
-                .stream()
-                .collect(Collectors.groupingBy(
-                        ExpenseEntity::getCategory,
-                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntity::getAmount, BigDecimal::add)
-                ));
+        String sql = """
+            SELECT COALESCE(e.category, c.name) as category_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN categories c ON e.category_id = c.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            GROUP BY COALESCE(e.category, c.name)
+            """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
+                "category", rs.getString("category_name"),
+                "total", rs.getBigDecimal("total")
+        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        .stream()
+        .filter(m -> m.get("category") != null)
+        .collect(Collectors.toMap(
+                m -> (String) m.get("category"),
+                m -> (BigDecimal) m.get("total"),
+                BigDecimal::add
+        ));
     }
 
     public Map<String, BigDecimal> compareMembers(LocalDate from, LocalDate to) {
         log.info("Comparing expenses between members from {} to {}", from, to);
-        return repository.findByDateBetween(from, to)
-                .stream()
-                .filter(e -> e.getPerson() != null)
-                .collect(Collectors.groupingBy(
-                        ExpenseEntity::getPerson,
-                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntity::getAmount, BigDecimal::add)
-                ));
+        String sql = """
+            SELECT COALESCE(e.person, u.name) as person_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN users u ON e.user_id = u.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            GROUP BY COALESCE(e.person, u.name)
+            """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
+                "person", rs.getString("person_name"),
+                "total", rs.getBigDecimal("total")
+        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        .stream()
+        .filter(m -> m.get("person") != null)
+        .collect(Collectors.toMap(
+                m -> (String) m.get("person"),
+                m -> (BigDecimal) m.get("total"),
+                BigDecimal::add
+        ));
     }
 
-    public List<ExpenseEntity> detectAnomalies(BigDecimal threshold) {
+    public List<Map<String, Object>> detectAnomalies(BigDecimal threshold) {
         log.info("Detecting expense anomalies above threshold: {}", threshold);
-        return repository.findAll()
-                .stream()
-                .filter(e -> e.getAmount().compareTo(threshold) > 0)
-                .toList();
+        String sql = BASE_SQL + " WHERE e.amount > ? ORDER BY e.amount DESC";
+        return jdbcTemplate.queryForList(sql, threshold);
     }
 
-    public List<ExpenseEntity> findByPerson(String person, LocalDate from, LocalDate to) {
+    public List<Map<String, Object>> findByPerson(String person, LocalDate from, LocalDate to) {
         log.info("Fetching expenses for person: {} from {} to {}", person, from, to);
-        return repository.findByDateBetween(from, to)
-                .stream()
-                .filter(e -> person.equalsIgnoreCase(e.getPerson()))
-                .collect(Collectors.toList());
+        String sql = BASE_SQL + """
+            WHERE (COALESCE(e.person, u.name) ILIKE ? OR u.name ILIKE ?)
+            AND e.expense_date >= ? AND e.expense_date <= ?
+            ORDER BY e.expense_date DESC
+            """;
+        return jdbcTemplate.queryForList(sql, "%" + person + "%", "%" + person + "%",
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 
-    public List<ExpenseEntity> getTopExpenses(int limit) {
+    public List<Map<String, Object>> getTopExpenses(int limit) {
         log.info("Fetching top {} expenses", limit);
-        return repository.findAll(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "amount"))).getContent();
+        String sql = BASE_SQL + " ORDER BY e.amount DESC LIMIT ?";
+        return jdbcTemplate.queryForList(sql, limit);
     }
 
     public BigDecimal calculateMonthlyAverage(int months) {
         log.info("Calculating monthly average for last {} months", months);
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusMonths(months).withDayOfMonth(1);
-        
+
         BigDecimal total = calculateTotal(from, to);
         if (months <= 0) return BigDecimal.ZERO;
-        
+
         return total.divide(new BigDecimal(months), 2, RoundingMode.HALF_UP);
     }
 
     public String calculateTrend(String category, LocalDate from, LocalDate to) {
         log.info("Calculating trend for category: {} from {} to {}", category, from, to);
-        BigDecimal currentTotal = repository.findByDateBetween(from, to).stream()
-                .filter(e -> category.equalsIgnoreCase(e.getCategory()))
-                .map(ExpenseEntity::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        long days = ChronoUnit.DAYS.between(from, to) + 1;
+        String sql = """
+            SELECT SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN categories c ON e.category_id = c.id
+            WHERE (COALESCE(e.category, c.name) ILIKE ?)
+            AND e.expense_date >= ? AND e.expense_date <= ?
+            """;
+
+        BigDecimal currentTotal = jdbcTemplate.queryForObject(sql, BigDecimal.class,
+                "%" + category + "%", from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+        if (currentTotal == null) currentTotal = BigDecimal.ZERO;
+
+        long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
         LocalDate prevTo = from.minusDays(1);
         LocalDate prevFrom = prevTo.minusDays(days - 1);
 
-        BigDecimal prevTotal = repository.findByDateBetween(prevFrom, prevTo).stream()
-                .filter(e -> category.equalsIgnoreCase(e.getCategory()))
-                .map(ExpenseEntity::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal prevTotal = jdbcTemplate.queryForObject(sql, BigDecimal.class,
+                "%" + category + "%", prevFrom.atStartOfDay(), prevTo.plusDays(1).atStartOfDay());
+        if (prevTotal == null) prevTotal = BigDecimal.ZERO;
 
         if (prevTotal.compareTo(BigDecimal.ZERO) == 0) {
             return String.format("Spending on %s is %s RON. No data for the previous period to compare.", category, currentTotal);
@@ -110,5 +155,27 @@ public class ExpenseAnalyticsService {
         String direction = difference.compareTo(BigDecimal.ZERO) >= 0 ? "increased" : "decreased";
         return String.format("Spending on %s has %s by %s%% (%s RON) compared to the previous period (Current: %s RON, Previous: %s RON).",
                 category, direction, percentage.abs(), difference.abs(), currentTotal, prevTotal);
+    }
+
+    public List<Map<String, Object>> findByCategory(String category, LocalDate from, LocalDate to) {
+        log.info("Finding expenses for category: {} from {} to {}", category, from, to);
+        String sql = BASE_SQL + """
+            WHERE (COALESCE(e.category, c.name) ILIKE ?)
+            AND e.expense_date >= ? AND e.expense_date <= ?
+            ORDER BY e.expense_date DESC
+            """;
+        return jdbcTemplate.queryForList(sql, "%" + category + "%",
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+    }
+
+    public List<Map<String, Object>> findByLocation(String location, LocalDate from, LocalDate to) {
+        log.info("Finding expenses for location: {} from {} to {}", location, from, to);
+        String sql = BASE_SQL + """
+            WHERE (COALESCE(e.location, l.store) ILIKE ?)
+            AND e.expense_date >= ? AND e.expense_date <= ?
+            ORDER BY e.expense_date DESC
+            """;
+        return jdbcTemplate.queryForList(sql, "%" + location + "%",
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 }

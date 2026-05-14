@@ -198,7 +198,9 @@ public class ExtractionService {
                 .rawInput(finalRawInput.length() > 1000 ? finalRawInput.substring(0, 999) : finalRawInput)
                 .build();
 
-        syncService.syncExpense(entity);
+        // NOTE: Do NOT call syncService.syncExpense() here.
+        // The caller (ExpensePipelineService) is responsible for saving and syncing to Qdrant.
+        // This prevents double-saving and duplicate embeddings.
 
         return ExtractionResponse.builder()
                 .amount(amount)

@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -47,11 +46,11 @@ class ExpenseToolsTest {
 
     @Test
     void testDetectAnomalies() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("500.00"))
-                .category("Electronics")
-                .date(LocalDate.of(2024, 1, 15))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("500.00"),
+                "category", "Electronics",
+                "date", LocalDate.of(2024, 1, 15)
+        );
 
         when(analyticsService.detectAnomalies(new BigDecimal("200"))).thenReturn(List.of(expense));
 
@@ -74,11 +73,11 @@ class ExpenseToolsTest {
 
     @Test
     void testByPerson() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("150.00"))
-                .category("Food")
-                .date(LocalDate.of(2024, 1, 10))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("150.00"),
+                "category", "Food",
+                "date", LocalDate.of(2024, 1, 10)
+        );
 
         when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
                 .thenReturn(List.of(expense));
@@ -104,12 +103,12 @@ class ExpenseToolsTest {
 
     @Test
     void testTopExpenses() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("400.00"))
-                .category("Electronics")
-                .person("Teodor")
-                .date(LocalDate.of(2024, 1, 5))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("400.00"),
+                "category", "Electronics",
+                "person", "Teodor",
+                "date", LocalDate.of(2024, 1, 5)
+        );
 
         when(analyticsService.getTopExpenses(3)).thenReturn(List.of(expense));
 
@@ -166,5 +165,42 @@ class ExpenseToolsTest {
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
         assertEquals("Trend stabil pentru Food", result);
+    }
+
+    @Test
+    void testByCategoryDetailed() {
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("100.00"),
+                "location", "Kaufland",
+                "date", LocalDate.of(2024, 1, 10),
+                "description", "Groceries"
+        );
+
+        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(List.of(expense));
+
+        String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("100.00 RON"));
+        assertTrue(result.contains("Kaufland"));
+    }
+
+    @Test
+    void testByLocation() {
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("50.00"),
+                "category", "Transport",
+                "date", LocalDate.of(2024, 1, 10),
+                "description", "Bus ticket"
+        );
+
+        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(List.of(expense));
+
+        String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Kaufland"));
+        assertTrue(result.contains("50.00 RON"));
     }
 }

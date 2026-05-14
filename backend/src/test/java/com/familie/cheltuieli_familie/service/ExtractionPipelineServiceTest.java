@@ -16,14 +16,19 @@ class ExtractionPipelineServiceTest {
     void processDocumentShouldExtractTextAndParseTransactions() throws Exception {
         TextBasedPdfExtractor textExtractor = mock(TextBasedPdfExtractor.class);
         BankStatementParser parser = new BankStatementParser();
+        BankOcrService bankOcrService = mock(BankOcrService.class);
+        OcrService ocrService = mock(OcrService.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
-                parser
+                parser,
+                bankOcrService,
+                ocrService
         );
 
         File fakePdf = File.createTempFile("fake-text-pdf-", ".pdf");
 
+        when(textExtractor.isTextBased(fakePdf)).thenReturn(true);
         when(textExtractor.extractText(fakePdf)).thenReturn("""
                 10/03/2025 Lidl 100.50
                 11/03/2025 Netflix 59.99
