@@ -179,8 +179,9 @@ export default function FamilySettings() {
         setIsLeaving(true);
         try {
             await familyApi.leaveFamily(familyId);
-            useAuthStore.getState().logout();
-            window.location.replace('/login');
+            const { data } = await authApi.refresh();
+            useAuthStore.getState().setToken(data.token);
+            window.location.reload();
         } catch (err: any) {
             const msg = err?.response?.data?.message ?? 'Eroare la ieșirea din familie.';
             alert(typeof msg === 'string' ? msg : 'Eroare la ieșirea din familie.');
@@ -195,8 +196,9 @@ export default function FamilySettings() {
         setIsDeleting(true);
         try {
             await familyApi.deleteFamily(familyId);
-            useAuthStore.getState().logout();
-            window.location.replace('/login');
+            const { data } = await authApi.refresh();
+            useAuthStore.getState().setToken(data.token);
+            window.location.reload();
         } catch (err: any) {
             const msg = err?.response?.data?.message ?? 'Eroare la ștergerea familiei.';
             alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea familiei.');
