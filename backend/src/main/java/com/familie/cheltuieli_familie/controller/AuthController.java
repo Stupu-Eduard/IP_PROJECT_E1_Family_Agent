@@ -98,25 +98,35 @@ public class AuthController {
         user.setCreatedAt(java.time.LocalDate.now());
         userRepository.save(user);
 
-        // Creăm automat o familie pentru noul Părinte
-        Family family = new Family();
-        family.setName(registerRequest.getName() + "'s Family");
-        family.setCreatedAt(java.time.LocalDate.now());
-        familyRepository.save(family);
-
-        FamilyMember member = new FamilyMember();
-        member.setUser(user);
-        member.setFamily(family);
-        member.setRole(ROLE_PARENT);
-        familyMemberRepository.save(member);
-
-        log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), family.getId());
+        boolean isChild = ROLE_CHILD.equalsIgnoreCase(registerRequest.getRole());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
-        claims.put("role", ROLE_PARENT);
         claims.put("name", user.getName());
-        claims.put("familyId", family.getId());
+
+        String role;
+        if (isChild) {
+            role = ROLE_CHILD;
+            claims.put("role", ROLE_CHILD);
+            log.info("Cont de copil creat fără familie: {}", user.getEmail());
+        } else {
+            role = ROLE_PARENT;
+            claims.put("role", ROLE_PARENT);
+
+            Family family = new Family();
+            family.setName(registerRequest.getName() + "'s Family");
+            family.setCreatedAt(java.time.LocalDate.now());
+            familyRepository.save(family);
+
+            FamilyMember member = new FamilyMember();
+            member.setUser(user);
+            member.setFamily(family);
+            member.setRole(ROLE_PARENT);
+            familyMemberRepository.save(member);
+
+            claims.put("familyId", family.getId());
+            log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), family.getId());
+        }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
 
@@ -125,7 +135,7 @@ public class AuthController {
                         MSG_KEY, "Înregistrare realizată cu succes!",
                         "token", token,
                         "userName", user.getName(),
-                        "role", ROLE_PARENT
+                        "role", role
                 ));
     }
 
