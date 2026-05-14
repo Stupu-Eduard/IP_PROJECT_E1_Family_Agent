@@ -184,11 +184,6 @@ public class ExtractionService {
         // Consistency Validation
         String validationNote = buildValidationNote(node.path("items"), amount);
 
-        String finalRawInput = rawText;
-        if (validationNote != null) {
-            finalRawInput = validationNote + "\n" + finalRawInput;
-        }
-
         // NOTE: Do NOT call syncService.syncExpense() here.
         // The caller (ExpensePipelineService) is responsible for saving and syncing to Qdrant.
         // This prevents double-saving and duplicate embeddings.

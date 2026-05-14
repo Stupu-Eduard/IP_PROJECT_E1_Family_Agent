@@ -59,7 +59,7 @@ public class ExpenseAnalyticsService {
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 KEY_CATEGORY, rs.getString("category_name"),
-                KEY_TOTAL, rs.getBigDecimal("total")
+                KEY_TOTAL, rs.getBigDecimal(KEY_TOTAL)
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
         .filter(m -> m.get(KEY_CATEGORY) != null)
@@ -81,7 +81,7 @@ public class ExpenseAnalyticsService {
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 KEY_PERSON, rs.getString("person_name"),
-                KEY_TOTAL, rs.getBigDecimal("total")
+                KEY_TOTAL, rs.getBigDecimal(KEY_TOTAL)
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
         .filter(m -> m.get(KEY_PERSON) != null)

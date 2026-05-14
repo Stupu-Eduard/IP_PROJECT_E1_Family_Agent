@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 
@@ -18,7 +17,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import org.awaitility.Awaitility;
 
@@ -60,7 +58,7 @@ class RagPipelineOcrE2ETest {
     }
 
     @Test
-    void testPdfTextExtractionAndEmbedding() throws Exception {
+    void testPdfTextExtractionAndEmbedding() throws java.io.IOException {
         // STEP 1: Load sample PDF from classpath
         ClassPathResource resource = new ClassPathResource("sample.pdf");
         File pdfFile = resource.getFile();
@@ -121,7 +119,7 @@ class RagPipelineOcrE2ETest {
     }
 
     @Test
-    void testImageEmbeddingFromPdfPage() throws Exception {
+    void testImageEmbeddingFromPdfPage() throws java.io.IOException {
         // STEP 1: Render PDF page to image
         ClassPathResource resource = new ClassPathResource("sample.pdf");
         org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.Loader.loadPDF(resource.getFile());
@@ -155,7 +153,7 @@ class RagPipelineOcrE2ETest {
     }
 
     @Test
-    void testFullRagQueryWithOcrContext() throws Exception {
+    void testFullRagQueryWithOcrContext() {
         // This test simulates: User uploads PDF → OCR extracts text → embedded → RAG answers query
 
         // 1. Simulate OCR extraction
