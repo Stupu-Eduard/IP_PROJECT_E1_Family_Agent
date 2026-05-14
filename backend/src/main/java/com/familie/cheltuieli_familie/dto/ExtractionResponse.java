@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 @Builder
 public class ExtractionResponse {
+    private Long id;
     private BigDecimal amount;
     private String category;
     private String location;

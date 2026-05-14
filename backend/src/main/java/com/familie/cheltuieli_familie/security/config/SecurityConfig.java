@@ -47,15 +47,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/parent/stream/**").permitAll()
                         .requestMatchers("/api/ws/**").permitAll() // in caz ca ai un prefix general de ws
                         .requestMatchers("/api/v1/demo/**").permitAll() // <-- ADAUGAT PENTRU BUTOANELE DE TEST
-                        .requestMatchers("/v1/chat/**").permitAll()      // <-- AI CHAT
 
                         // Swagger UI
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
 
-                        // Cheltuieli (folosite de frontend pentru harta/istoric)
-                        .requestMatchers("/api/v1/expenses/**").permitAll()
+                        // Cheltuieli — necesită autentificare (filtrate după familia userului)
+                        // .requestMatchers("/api/v1/expenses/**").permitAll()
 
                         // Lookups pentru filtre
                         .requestMatchers("/api/v1/categories/**").permitAll()

@@ -8,7 +8,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class BankStatementParser {
@@ -21,6 +26,9 @@ public class BankStatementParser {
 
     private static final String DEFAULT_CURRENCY = "RON";
     private static final String DEFAULT_TYPE = "EXPENSE";
+    private static final String TYPE_INCOME = "INCOME";
+    private static final String TYPE_TRANSFER = "TRANSFER";
+    private static final String KEYWORD_TRANSFER = TYPE_TRANSFER;
 
     private static final int MIN_DESCRIPTION_LENGTH = 2;
     private static final int MAX_DESCRIPTION_LENGTH = 120;
@@ -37,75 +45,80 @@ public class BankStatementParser {
         logger.info("START PARSARE | Linii: {}", lines.length);
 
         for (String line : lines) {
-            processSingleLine(line, transactions, uniqueTransactions);
+            parseLine(line).ifPresent(transaction ->
+                    addIfNotDuplicate(transactions, uniqueTransactions, transaction)
+            );
         }
 
         logger.info("FINAL PARSARE | Total: {}", transactions.size());
         return transactions;
     }
 
-    private void processSingleLine(String line, List<Transaction> transactions, Set<String> uniqueTransactions) {
+    private Optional<Transaction> parseLine(String originalLine) {
         try {
-            line = cleanLine(line);
+            String line = cleanLine(originalLine);
 
             if (line.isBlank()) {
-                return;
+                return Optional.empty();
             }
 
             ParsedDate parsedDate = extractDate(line);
-            if (parsedDate == null) {
-                return;
-            }
-
             ParsedAmount parsedAmount = extractAmountAndCurrency(line);
-            if (parsedAmount == null || parsedAmount.amount <= 0) {
-                return;
+
+            if (!hasValidDateAndAmount(parsedDate, parsedAmount)) {
+                return Optional.empty();
             }
 
             String description = extractDescription(
                     line,
-                    parsedDate.endIndex,
-                    parsedAmount.amountStartIndex
+                    parsedDate.endIndex(),
+                    parsedAmount.amountStartIndex()
             );
+
             description = normalizeDiacritics(description);
 
             if (!isValidDescription(description)) {
-                return;
+                return Optional.empty();
             }
 
-            String currency = parsedAmount.currency != null
-                    ? parsedAmount.currency
-                    : extractCurrencyFromLine(line);
-
+            String currency = resolveCurrency(parsedAmount.currency(), line);
             String type = extractType(line);
 
-            String key = buildTransactionKey(
-                    parsedDate.date,
+            return Optional.of(new Transaction(
+                    parsedDate.date(),
                     description,
-                    parsedAmount.amount,
+                    parsedAmount.amount(),
                     currency,
                     type
-            );
-
-            if (uniqueTransactions.contains(key)) {
-                logger.warn("DUPLICAT IGNORAT: {}", key);
-                return;
-            }
-
-            uniqueTransactions.add(key);
-
-            Transaction transaction = new Transaction(
-                    parsedDate.date,
-                    description,
-                    parsedAmount.amount,
-                    currency,
-                    type
-            );
-
-            transactions.add(transaction);
+            ));
 
         } catch (Exception e) {
-            logger.warn("Linie ignorata: {} | {}", line, e.getMessage());
+            logger.warn("Linie ignorata: {} | {}", originalLine, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private boolean hasValidDateAndAmount(ParsedDate parsedDate, ParsedAmount parsedAmount) {
+        return parsedDate != null && parsedAmount != null && parsedAmount.amount() > 0;
+    }
+
+    private void addIfNotDuplicate(
+            List<Transaction> transactions,
+            Set<String> uniqueTransactions,
+            Transaction transaction
+    ) {
+        String key = buildTransactionKey(
+                transaction.getDate(),
+                transaction.getDescription(),
+                transaction.getAmount(),
+                transaction.getCurrency(),
+                transaction.getType()
+        );
+
+        if (uniqueTransactions.add(key)) {
+            transactions.add(transaction);
+        } else {
+            logger.warn("DUPLICAT IGNORAT: {}", key);
         }
     }
 
@@ -118,28 +131,43 @@ public class BankStatementParser {
         boolean previousWasSpace = false;
 
         for (char character : line.trim().toCharArray()) {
-            if (Character.isWhitespace(character)) {
-                if (!previousWasSpace) {
-                    result.append(' ');
-                    previousWasSpace = true;
-                }
-            } else {
-                result.append(character);
-                previousWasSpace = false;
-            }
+            previousWasSpace = appendNormalizedCharacter(result, character, previousWasSpace);
         }
 
         return result.toString().trim();
     }
 
+    private boolean appendNormalizedCharacter(
+            StringBuilder result,
+            char character,
+            boolean previousWasSpace
+    ) {
+        if (Character.isWhitespace(character)) {
+            return appendSingleSpace(result, previousWasSpace);
+        }
+
+        result.append(character);
+        return false;
+    }
+
+    private boolean appendSingleSpace(StringBuilder result, boolean previousWasSpace) {
+        if (!previousWasSpace) {
+            result.append(' ');
+        }
+
+        return true;
+    }
+
     private ParsedDate extractDate(String line) {
-        if (line.length() < 10) {
+        String[] tokens = line.split(" ");
+
+        if (tokens.length == 0) {
             return null;
         }
 
-        String firstToken = line.split(" ")[0];
-
+        String firstToken = tokens[0];
         LocalDate date = parseDate(firstToken);
+
         if (date == null) {
             return null;
         }
@@ -162,17 +190,15 @@ public class BankStatementParser {
             return null;
         }
 
-        int lastIndex = tokens.length - 1;
-        String currency = normalizeCurrency(tokens[lastIndex]);
-
-        int amountTokenIndex = currency != null ? lastIndex - 1 : lastIndex;
+        int amountTokenIndex = findAmountTokenIndex(tokens);
 
         if (amountTokenIndex < 0) {
             return null;
         }
 
-        String amountStr = tokens[amountTokenIndex].replace("O", "0");
-        double amount = parseAmount(amountStr);
+        String currency = findCurrency(tokens);
+        String amountToken = tokens[amountTokenIndex].replace("O", "0");
+        double amount = parseAmount(amountToken);
 
         if (amount <= 0) {
             return null;
@@ -183,6 +209,22 @@ public class BankStatementParser {
         return new ParsedAmount(amount, currency, amountStartIndex);
     }
 
+    private int findAmountTokenIndex(String[] tokens) {
+        int lastIndex = tokens.length - 1;
+        String possibleCurrency = normalizeCurrency(tokens[lastIndex]);
+
+        if (possibleCurrency != null) {
+            return lastIndex - 1;
+        }
+
+        return lastIndex;
+    }
+
+    private String findCurrency(String[] tokens) {
+        String lastToken = tokens[tokens.length - 1];
+        return normalizeCurrency(lastToken);
+    }
+
     private double parseAmount(String amountStr) {
         if (!isValidAmountToken(amountStr)) {
             return -1;
@@ -190,7 +232,7 @@ public class BankStatementParser {
 
         try {
             return Double.parseDouble(amountStr.replace(",", "."));
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return -1;
         }
     }
@@ -200,34 +242,48 @@ public class BankStatementParser {
             return false;
         }
 
+        AmountTokenState state = analyzeAmountToken(value);
+        return state.hasDigits()
+                && (!state.hasSeparator()
+                || isValidDecimalPart(state.digitsAfterSeparator()));
+    }
+
+    private AmountTokenState analyzeAmountToken(String value) {
         int separatorCount = 0;
         int digitsAfterSeparator = 0;
         boolean separatorFound = false;
+        boolean hasDigits = false;
 
         for (int i = 0; i < value.length(); i++) {
             char character = value.charAt(i);
 
-            if (character == '.' || character == ',') {
+            if (isDecimalSeparator(character)) {
                 separatorCount++;
                 separatorFound = true;
 
                 if (separatorCount > 1) {
-                    return false;
+                    return new AmountTokenState(false, true, digitsAfterSeparator);
                 }
+            } else if (Character.isDigit(character)) {
+                hasDigits = true;
 
-                continue;
-            }
-
-            if (!Character.isDigit(character)) {
-                return false;
-            }
-
-            if (separatorFound) {
-                digitsAfterSeparator++;
+                if (separatorFound) {
+                    digitsAfterSeparator++;
+                }
+            } else {
+                return new AmountTokenState(false, separatorFound, digitsAfterSeparator);
             }
         }
 
-        return !separatorFound || (digitsAfterSeparator >= 1 && digitsAfterSeparator <= 2);
+        return new AmountTokenState(hasDigits, separatorFound, digitsAfterSeparator);
+    }
+
+    private boolean isDecimalSeparator(char character) {
+        return character == '.' || character == ',';
+    }
+
+    private boolean isValidDecimalPart(int digitsAfterSeparator) {
+        return digitsAfterSeparator >= 1 && digitsAfterSeparator <= 2;
     }
 
     private String normalizeCurrency(String currencyStr) {
@@ -235,21 +291,21 @@ public class BankStatementParser {
             return null;
         }
 
-        String currency = currencyStr.toUpperCase().replace("0", "O");
+        String currency = currencyStr.toUpperCase(Locale.ROOT).replace("0", "O");
 
-        if (currency.equals("RON")) {
-            return "RON";
+        if (DEFAULT_CURRENCY.equals(currency)) {
+            return DEFAULT_CURRENCY;
         }
 
-        if (currency.equals("EUR")) {
+        if ("EUR".equals(currency)) {
             return "EUR";
         }
 
-        if (currency.equals("USD")) {
+        if ("USD".equals(currency)) {
             return "USD";
         }
 
-        if (currency.equals("GBP")) {
+        if ("GBP".equals(currency)) {
             return "GBP";
         }
 
@@ -257,7 +313,6 @@ public class BankStatementParser {
     }
 
     private String extractDescription(String line, int dateEnd, int amountStart) {
-
         if (amountStart <= dateEnd) {
             return "";
         }
@@ -265,11 +320,19 @@ public class BankStatementParser {
         return cleanLine(line.substring(dateEnd, amountStart));
     }
 
-    private String extractCurrencyFromLine(String line) {
-        String upperLine = line.toUpperCase();
+    private String resolveCurrency(String parsedCurrency, String line) {
+        if (parsedCurrency != null) {
+            return parsedCurrency;
+        }
 
-        if (upperLine.contains("RON") || upperLine.contains("R0N")) {
-            return "RON";
+        return extractCurrencyFromLine(line);
+    }
+
+    private String extractCurrencyFromLine(String line) {
+        String upperLine = line.toUpperCase(Locale.ROOT);
+
+        if (upperLine.contains(DEFAULT_CURRENCY) || upperLine.contains("R0N")) {
+            return DEFAULT_CURRENCY;
         }
 
         if (upperLine.contains("EUR")) {
@@ -288,53 +351,47 @@ public class BankStatementParser {
     }
 
     private String extractType(String line) {
-        String upperLine = line.toUpperCase();
+        String upperLine = line.toUpperCase(Locale.ROOT);
 
-        if (upperLine.contains("INCASARE") ||
-                upperLine.contains("INTRARE") ||
-                upperLine.contains("CREDIT") ||
-                upperLine.contains("SALARIU") ||
-                upperLine.contains("DEPUNERE")) {
-            return "INCOME";
+        if (containsIncomeKeyword(upperLine)) {
+            return TYPE_INCOME;
         }
 
-        if (upperLine.contains("TRANSFER") ||
-                upperLine.contains("VIRAMENT")) {
-            return "TRANSFER";
-        }
-
-        if (upperLine.contains("PLATA") ||
-                upperLine.contains("CARD") ||
-                upperLine.contains("POS") ||
-                upperLine.contains("RETRAGERE") ||
-                upperLine.contains("COMISION")) {
-            return DEFAULT_TYPE;
+        if (containsTransferKeyword(upperLine)) {
+            return TYPE_TRANSFER;
         }
 
         return DEFAULT_TYPE;
     }
 
+    private boolean containsIncomeKeyword(String upperLine) {
+        return upperLine.contains("INCASARE")
+                || upperLine.contains("INTRARE")
+                || upperLine.contains("CREDIT")
+                || upperLine.contains("SALARIU")
+                || upperLine.contains("DEPUNERE");
+    }
+
+    private boolean containsTransferKeyword(String upperLine) {
+        return upperLine.contains(KEYWORD_TRANSFER)
+                || upperLine.contains("VIRAMENT");
+    }
+
     private boolean isValidDescription(String description) {
+        return description != null
+                && !description.isBlank()
+                && hasValidDescriptionLength(description)
+                && !containsOnlyNumbersAndSeparators(description);
+    }
 
-        if (description == null || description.isBlank()) {
-            return false;
-        }
-
-        if (description.length() < MIN_DESCRIPTION_LENGTH ||
-                description.length() > MAX_DESCRIPTION_LENGTH) {
-            return false;
-        }
-
-        return !containsOnlyNumbersAndSeparators(description);
+    private boolean hasValidDescriptionLength(String description) {
+        return description.length() >= MIN_DESCRIPTION_LENGTH
+                && description.length() <= MAX_DESCRIPTION_LENGTH;
     }
 
     private boolean containsOnlyNumbersAndSeparators(String description) {
         for (char character : description.toCharArray()) {
-            if (!Character.isDigit(character) &&
-                    !Character.isWhitespace(character) &&
-                    character != '.' &&
-                    character != ',' &&
-                    character != '-') {
+            if (!isNumberOrSeparator(character)) {
                 return false;
             }
         }
@@ -342,9 +399,18 @@ public class BankStatementParser {
         return true;
     }
 
-    private String normalizeDiacritics(String text) {
+    private boolean isNumberOrSeparator(char character) {
+        return Character.isDigit(character)
+                || Character.isWhitespace(character)
+                || character == '.'
+                || character == ','
+                || character == '-';
+    }
 
-        if (text == null) return null;
+    private String normalizeDiacritics(String text) {
+        if (text == null) {
+            return null;
+        }
 
         return text
                 .replace('Ş', 'Ș')
@@ -366,32 +432,23 @@ public class BankStatementParser {
             String currency,
             String type
     ) {
-        return date + "|" +
-                description.toLowerCase() + "|" +
-                amount + "|" +
-                currency.toUpperCase() + "|" +
-                type.toUpperCase();
+        return date + "|"
+                + description.toLowerCase(Locale.ROOT) + "|"
+                + amount + "|"
+                + currency.toUpperCase(Locale.ROOT) + "|"
+                + type.toUpperCase(Locale.ROOT);
     }
 
-    private static class ParsedDate {
-        private final LocalDate date;
-        private final int endIndex;
-
-        private ParsedDate(LocalDate date, int endIndex) {
-            this.date = date;
-            this.endIndex = endIndex;
-        }
+    private record ParsedDate(LocalDate date, int endIndex) {
     }
 
-    private static class ParsedAmount {
-        private final double amount;
-        private final String currency;
-        private final int amountStartIndex;
+    private record ParsedAmount(double amount, String currency, int amountStartIndex) {
+    }
 
-        private ParsedAmount(double amount, String currency, int amountStartIndex) {
-            this.amount = amount;
-            this.currency = currency;
-            this.amountStartIndex = amountStartIndex;
-        }
+    private record AmountTokenState(
+            boolean hasDigits,
+            boolean hasSeparator,
+            int digitsAfterSeparator
+    ) {
     }
 }

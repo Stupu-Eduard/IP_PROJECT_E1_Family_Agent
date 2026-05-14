@@ -20,7 +20,6 @@ class StorageControllerTest {
 
     @Test
     void saveTransactionsShouldReturnStorageResult() throws Exception {
-
         StorageResult result = new StorageResult(1, 1, 0);
 
         when(storageService.save(anyList())).thenReturn(result);

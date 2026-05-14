@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import type { GroupMemberDTO } from '../types/GroupMemberDTO'
 
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8081',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
   withCredentials: true,
 })
 
@@ -32,4 +33,15 @@ api.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+export const familyApi = {
+  getMembers: (familyId: number) =>
+    api.get<GroupMemberDTO[]>(`/api/v1/families/${familyId}/members`),
+
+  addMember: (familyId: number, email: string, role: string) =>
+    api.post<GroupMemberDTO>(`/api/v1/families/${familyId}/members`, { email, role }),
+
+  removeMember: (familyId: number, memberId: number) =>
+    api.delete(`/api/v1/families/${familyId}/members/${memberId}`),
+}
 

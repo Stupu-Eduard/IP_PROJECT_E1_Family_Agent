@@ -38,6 +38,20 @@ export async function fetchExpenses(filters?: ExpenseFilters, signal?: AbortSign
   return response.data
 }
 
+export interface CreateExpenseDto {
+  amount: number
+  description?: string
+  categoryName: string
+  date: string  // YYYY-MM-DD
+  storeName?: string
+  city?: string
+}
+
+export async function createExpense(payload: CreateExpenseDto): Promise<ApiExpenseListDto> {
+  const response = await api.post<ApiExpenseListDto>('/api/v1/expenses', payload)
+  return response.data
+}
+
 export async function processReceiptOCR(file: File): Promise<OcrResponseDTO> {
   const formData = new FormData();
   formData.append('file', file);
