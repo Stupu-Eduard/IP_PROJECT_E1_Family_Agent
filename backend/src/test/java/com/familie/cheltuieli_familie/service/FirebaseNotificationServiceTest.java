@@ -54,7 +54,6 @@ class FirebaseNotificationServiceTest {
 
         service.sendPushNotification("token_test", "Alertă", "Mesaj de test");
 
-        // Verificăm că a încercat să trimită, dar a intrat elegant pe catch (fără să oprească aplicația)
         Mockito.verify(mockFirebaseMessaging, Mockito.times(1)).send(any(Message.class));
     }
 }
