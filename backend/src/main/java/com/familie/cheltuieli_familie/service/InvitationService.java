@@ -49,8 +49,8 @@ public class InvitationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Nu există niciun cont cu adresa " + request.getEmail()));
 
-        if (familyMemberRepository.existsByFamilyIdAndUserId(familyId, targetUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Utilizatorul este deja membru al familiei.");
+        if (!familyMemberRepository.findByUserId(targetUser.getId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Utilizatorul este deja membru al unei familii.");
         }
 
         if (invitationRepository.existsByFamilyIdAndInviteeEmailAndStatus(familyId, request.getEmail(), STATUS_PENDING)) {
