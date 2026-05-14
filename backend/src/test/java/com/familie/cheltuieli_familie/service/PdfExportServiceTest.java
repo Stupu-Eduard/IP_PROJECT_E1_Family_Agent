@@ -34,7 +34,7 @@ class PdfExportServiceTest {
 
     private record TestProjection(
             Long id, BigDecimal amount, String currency, String description,
-            LocalDateTime expenseDate, String category, String person,
+            LocalDateTime expenseDate, String category, String person, String sourceType,
             Long locationId, String store, String address,
             String city, String country, Double lat, Double lng
     ) implements ExpenseWithLocationProjection {
@@ -45,6 +45,7 @@ class PdfExportServiceTest {
         public LocalDateTime getExpenseDate(){ return expenseDate; }
         public String getCategory()          { return category; }
         public String getPerson()            { return person; }
+        public String getSourceType()        { return sourceType; }
         public Long getLocationId()          { return locationId; }
         public String getStore()             { return store; }
         public String getAddress()           { return address; }
@@ -88,7 +89,7 @@ class PdfExportServiceTest {
     private TestProjection expense(LocalDate date, double amount, String category, String person) {
         return new TestProjection(
                 1L, BigDecimal.valueOf(amount), "RON", "Descriere test",
-                date.atStartOfDay(), category, person,
+                date.atStartOfDay(), category, person, "manual",
                 null, null, null, null, null, null, null
         );
     }
@@ -213,7 +214,7 @@ class PdfExportServiceTest {
         TestProjection expenseWithNulls = new TestProjection(
                 2L, BigDecimal.valueOf(75.0), "RON", null,
                 LocalDate.now().minusDays(1).atStartOfDay(),
-                null, null, null, null, null, null, null, null, null
+                null, null, "manual", null, null, null, null, null, null, null
         );
 
         when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));

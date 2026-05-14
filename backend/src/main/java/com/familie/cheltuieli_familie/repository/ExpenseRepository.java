@@ -22,6 +22,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         LocalDateTime getExpenseDate();
         String getCategory();
         String getPerson();
+        String getSourceType();
         Long getLocationId();
         String getStore();
         String getAddress();
@@ -40,6 +41,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 e.expense_date AS expenseDate,
                 c.name AS category,
                 u.name AS person,
+                e.source_type AS sourceType,
                 l.id AS locationId,
                 l.store AS store,
                 l.address AS address,
@@ -64,6 +66,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 e.expense_date AS expenseDate,
                 c.name AS category,
                 u.name AS person,
+                e.source_type AS sourceType,
                 l.id AS locationId,
                 l.store AS store,
                 l.address AS address,
@@ -95,6 +98,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 e.expense_date AS expenseDate,
                 c.name AS category,
                 u.name AS person,
+                e.source_type AS sourceType,
                 l.id AS locationId,
                 l.store AS store,
                 l.address AS address,
@@ -128,6 +132,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 e.expense_date AS expenseDate,
                 c.name AS category,
                 u.name AS person,
+                e.source_type AS sourceType,
                 l.id AS locationId,
                 l.store AS store,
                 l.address AS address,
@@ -159,6 +164,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
                 e.expense_date AS expenseDate,
                 c.name AS category,
                 u.name AS person,
+                e.source_type AS sourceType,
                 l.id AS locationId,
                 l.store AS store,
                 l.address AS address,

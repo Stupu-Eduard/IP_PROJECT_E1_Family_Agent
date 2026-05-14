@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useExpenseStore } from '../store/expenseStore';
 import { useNavigate } from 'react-router-dom';
-import { fetchExpenses } from '../services/expenses';
+import { fetchExpenses, deleteExpense, updateExpense } from '../services/expenses';
 import { fetchCategoryNames } from '../services/lookups';
 import { useAuthStore } from '../store/authStore';
 import { decodeJwtPayload } from '../utils/jwt';
 import { familyApi } from '../services/api';
-import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft } from 'lucide-react';
+import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft, Pencil, Trash2, X } from 'lucide-react';
 
 interface ExpenseListDTO {
     id: number;
@@ -16,12 +16,14 @@ interface ExpenseListDTO {
     amount: number;
     location: string;
     locationId?: number;
+    locationStore?: string;
     locationCity?: string;
     locationCountry?: string;
     lat?: number;
     lng?: number;
     person: string;
     rawDate?: string;
+    sourceType?: string;
 }
 
 const avatarStyle = (name: string) => {
@@ -47,7 +49,8 @@ export default function Expenses() {
     const [loadError,           setLoadError]           = useState<string | null>(null);
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [availablePeople,     setAvailablePeople]     = useState<string[]>([]);
-    const expenseVersion = useExpenseStore((s) => s.version);
+    const expenseVersion     = useExpenseStore((s) => s.version);
+    const notifyExpenseAdded = useExpenseStore((s) => s.notifyExpenseAdded);
 
     useEffect(() => {
         if (isChild) {
@@ -74,6 +77,70 @@ export default function Expenses() {
     const [endDate, setEndDate] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedPerson,   setSelectedPerson]   = useState('');
+
+    type EditForm = { amount: string; description: string; category: string; date: string; store: string; city: string };
+    const [editingExpense,  setEditingExpense]  = useState<ExpenseListDTO | null>(null);
+    const [editForm,        setEditForm]        = useState<EditForm>({ amount: '', description: '', category: '', date: '', store: '', city: '' });
+    const [showChildConfirm, setShowChildConfirm] = useState(false);
+    const [deletingId,      setDeletingId]      = useState<number | null>(null);
+    const [actionError,     setActionError]     = useState<string | null>(null);
+    const [isSaving,        setIsSaving]        = useState(false);
+
+    const openEdit = (expense: ExpenseListDTO) => {
+        setEditingExpense(expense);
+        setEditForm({
+            amount:      expense.amount.toString(),
+            description: expense.description,
+            category:    expense.category === 'Fără categorie' ? '' : expense.category,
+            date:        expense.rawDate ?? '',
+            store:       expense.locationStore ?? '',
+            city:        expense.locationCity  ?? '',
+        });
+        setShowChildConfirm(false);
+        setActionError(null);
+    };
+
+    const handleEditSave = () => {
+        if (isChild) { setShowChildConfirm(true); } else { void submitEdit(); }
+    };
+
+    const submitEdit = async () => {
+        if (!editingExpense) return;
+        setIsSaving(true);
+        try {
+            await updateExpense(editingExpense.id, {
+                amount:       parseFloat(editForm.amount),
+                description:  editForm.description,
+                categoryName: editForm.category,
+                date:         editForm.date,
+                storeName:    editForm.store  || undefined,
+                city:         editForm.city   || undefined,
+            });
+            setEditingExpense(null);
+            setShowChildConfirm(false);
+            notifyExpenseAdded();
+        } catch {
+            setActionError('Nu s-a putut salva cheltuiala.');
+            setShowChildConfirm(false);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (deletingId === null) return;
+        setIsSaving(true);
+        try {
+            await deleteExpense(deletingId);
+            setDeletingId(null);
+            notifyExpenseAdded();
+        } catch {
+            setActionError('Nu s-a putut șterge cheltuiala.');
+            setDeletingId(null);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     useEffect(() => {
         let isCancelled = false;
@@ -109,12 +176,14 @@ export default function Expenses() {
                         amount:          Number.isFinite(amountNumber) ? amountNumber : 0,
                         location,
                         locationId:      expense.location?.id      ?? undefined,
+                        locationStore:   expense.location?.store   ?? undefined,
                         locationCity:    expense.location?.city    ?? undefined,
                         locationCountry: expense.location?.country ?? undefined,
                         lat:             expense.location?.lat     ?? undefined,
                         lng:             expense.location?.lng     ?? undefined,
                         person:          expense.person            ?? 'N/A',
                         rawDate:         datePart,
+                        sourceType:      expense.sourceType        ?? 'manual',
                     };
                 });
                 setExpenses(mapped);
@@ -266,12 +335,13 @@ export default function Expenses() {
             {isLoading && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '18px 24px', borderBottom: '1px solid var(--color-border)', gap: 16 }}>
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 120px 80px' : '90px 1.4fr 1fr 1fr 120px 80px', padding: '18px 24px', borderBottom: '1px solid var(--color-border)', gap: 16 }}>
                             <div className="skeleton" style={{ height: 14, width: '80%' }} />
                             <div className="skeleton" style={{ height: 14, width: '60%' }} />
                             <div className="skeleton" style={{ height: 14, width: '70%' }} />
-                            <div className="skeleton" style={{ height: 14, width: '40%' }} />
+                            {!isChild && <div className="skeleton" style={{ height: 14, width: '40%' }} />}
                             <div className="skeleton" style={{ height: 14, width: '50%', marginLeft: 'auto' }} />
+                            <div />
                         </div>
                     ))}
                 </div>
@@ -325,9 +395,9 @@ export default function Expenses() {
 
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
-                        {(isChild ? ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'SUMĂ'] : ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ']).map((h, i, arr) => (
-                            <div key={h} className="label" style={{ textAlign: i === arr.length - 1 ? 'right' : 'left' }}>{h}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 120px 80px' : '90px 1.4fr 1fr 1fr 120px 80px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
+                        {(isChild ? ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'SUMĂ', ''] : ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ', '']).map((h, i, arr) => (
+                            <div key={i} className="label" style={{ textAlign: i === arr.length - 2 ? 'right' : 'left' }}>{h}</div>
                         ))}
                     </div>
 
@@ -336,7 +406,7 @@ export default function Expenses() {
                             <div
                                 key={expense.id}
                                 className="row-clickable fade-up"
-                                style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
+                                style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 120px 80px' : '90px 1.4fr 1fr 1fr 120px 80px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
                             >
                                 <div style={{ fontSize: 12.5, color: 'var(--color-muted)', fontWeight: 500 }}>{expense.date}</div>
 
@@ -367,6 +437,29 @@ export default function Expenses() {
 
                                 <div className="row-amount" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 500, color: 'var(--color-ink)' }}>
                                     {expense.amount.toFixed(2)} <span style={{ color: 'var(--color-muted-2)', fontSize: 11, fontWeight: 400 }}>RON</span>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                                    {(!isChild || expense.sourceType === 'manual') && (
+                                        <button
+                                            type="button"
+                                            title="Editează"
+                                            onClick={() => openEdit(expense)}
+                                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid var(--color-border)', background: 'var(--color-bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-muted)' }}
+                                        >
+                                            <Pencil size={13} />
+                                        </button>
+                                    )}
+                                    {!isChild && (
+                                        <button
+                                            type="button"
+                                            title="Șterge"
+                                            onClick={() => { setDeletingId(expense.id); setActionError(null); }}
+                                            style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid #FDE8E8', background: '#FFF5F5', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C0392B' }}
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -402,6 +495,100 @@ export default function Expenses() {
                                 style={{ width: 34, height: 34, opacity: currentPage === totalPages ? 0.4 : 1 }}
                             >
                                 <ChevronRight size={15} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit modal */}
+            {editingExpense && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, padding: 28, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)' }}>Editează cheltuiala</span>
+                            <button type="button" onClick={() => setEditingExpense(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted)' }}><X size={18} /></button>
+                        </div>
+                        {actionError && <div style={{ marginBottom: 14, fontSize: 12.5, color: '#C0392B', background: '#FFF5F5', border: '1px solid #FDE8E8', borderRadius: 8, padding: '8px 12px' }}>{actionError}</div>}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Sumă (RON)
+                                <input type="number" min="0.01" step="0.01" value={editForm.amount}
+                                    onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }} />
+                            </label>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Descriere
+                                <input type="text" value={editForm.description}
+                                    onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }} />
+                            </label>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Categorie
+                                <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }}>
+                                    <option value="">Selectează categoria</option>
+                                    {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </label>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Dată
+                                <input type="date" value={editForm.date}
+                                    onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }} />
+                            </label>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Magazin (opțional)
+                                <input type="text" value={editForm.store}
+                                    onChange={e => setEditForm(f => ({ ...f, store: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }} />
+                            </label>
+                            <label style={{ fontSize: 12, color: 'var(--color-muted)', fontWeight: 500 }}>Oraș (opțional)
+                                <input type="text" value={editForm.city}
+                                    onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                                    className={inputStyle} style={{ marginTop: 4 }} />
+                            </label>
+                        </div>
+                        {showChildConfirm ? (
+                            <div style={{ marginTop: 20, background: '#FFF8F0', border: '1px solid #F5CBA7', borderRadius: 10, padding: 16 }}>
+                                <div style={{ fontSize: 13.5, color: 'var(--color-ink)', marginBottom: 14 }}>Ești sigur că vrei să salvezi modificările?</div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button type="button" onClick={() => setShowChildConfirm(false)}
+                                        style={{ flex: 1, height: 36, borderRadius: 8, border: '1px solid var(--color-border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--color-ink)' }}>
+                                        Înapoi
+                                    </button>
+                                    <button type="button" onClick={() => void submitEdit()} disabled={isSaving}
+                                        style={{ flex: 1, height: 36, borderRadius: 8, border: 'none', background: '#2D2926', color: '#fff', fontSize: 13, cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}>
+                                        {isSaving ? 'Se salvează...' : 'Confirmă'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                                <button type="button" onClick={() => setEditingExpense(null)}
+                                    style={{ flex: 1, height: 38, borderRadius: 9, border: '1px solid var(--color-border)', background: '#fff', fontSize: 13.5, cursor: 'pointer', color: 'var(--color-ink)' }}>
+                                    Anulează
+                                </button>
+                                <button type="button" onClick={handleEditSave} disabled={isSaving}
+                                    style={{ flex: 1, height: 38, borderRadius: 9, border: 'none', background: '#2D2926', color: '#fff', fontSize: 13.5, cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}>
+                                    {isSaving ? 'Se salvează...' : 'Salvează'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Delete confirmation modal */}
+            {deletingId !== null && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 380, padding: 28, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 10 }}>Șterge cheltuiala</div>
+                        <div style={{ fontSize: 13.5, color: 'var(--color-muted)', marginBottom: 20 }}>Această acțiune este ireversibilă. Ești sigur că vrei să ștergi cheltuiala?</div>
+                        {actionError && <div style={{ marginBottom: 14, fontSize: 12.5, color: '#C0392B', background: '#FFF5F5', border: '1px solid #FDE8E8', borderRadius: 8, padding: '8px 12px' }}>{actionError}</div>}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button type="button" onClick={() => setDeletingId(null)}
+                                style={{ flex: 1, height: 38, borderRadius: 9, border: '1px solid var(--color-border)', background: '#fff', fontSize: 13.5, cursor: 'pointer', color: 'var(--color-ink)' }}>
+                                Anulează
+                            </button>
+                            <button type="button" onClick={() => void handleDelete()} disabled={isSaving}
+                                style={{ flex: 1, height: 38, borderRadius: 9, border: 'none', background: '#C0392B', color: '#fff', fontSize: 13.5, cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}>
+                                {isSaving ? 'Se șterge...' : 'Șterge'}
                             </button>
                         </div>
                     </div>
