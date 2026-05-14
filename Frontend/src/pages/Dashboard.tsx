@@ -366,58 +366,63 @@ export default function Dashboard() {
               <span className="chip chip-live">LIVE</span>
             </div>
 
-            {liveLocation?.lat && liveLocation?.lng && isLoaded ? (
-                <div style={{ padding: '0 16px 16px' }}>
-                  <GoogleMap
-                      mapContainerStyle={containerStyle}
-                      center={{ lat: liveLocation.lat, lng: liveLocation.lng }}
-                      zoom={15}
-                      options={{ disableDefaultUI: true }}
-                  >
-                    <Marker position={{ lat: liveLocation.lat, lng: liveLocation.lng }} />
-                  </GoogleMap>
-                  <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-muted-2)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Lat: {liveLocation.lat.toFixed(4)}</span>
-                    <span>Lng: {liveLocation.lng.toFixed(4)}</span>
-                    <span style={{ color: liveLocation.isRestricted ? '#E24B4A' : 'var(--color-primary)', fontWeight: 500 }}>
-                      {liveLocation.isRestricted ? '⚠ ZONĂ RESTRICȚIONATĂ!' : '✓ Zonă Sigură'}
-                    </span>
+            <div
+                style={{ position: 'relative', isolation: 'isolate' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+              {liveLocation?.lat && liveLocation?.lng && isLoaded ? (
+                  <div style={{ padding: '0 16px 16px' }}>
+                    <GoogleMap
+                        mapContainerStyle={containerStyle}
+                        center={{ lat: liveLocation.lat, lng: liveLocation.lng }}
+                        zoom={15}
+                        options={{ disableDefaultUI: true, gestureHandling: 'cooperative' }}
+                    >
+                      <Marker position={{ lat: liveLocation.lat, lng: liveLocation.lng }} />
+                    </GoogleMap>
+                    <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-muted-2)', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Lat: {liveLocation.lat.toFixed(4)}</span>
+                      <span>Lng: {liveLocation.lng.toFixed(4)}</span>
+                      <span style={{ color: liveLocation.isRestricted ? '#E24B4A' : 'var(--color-primary)', fontWeight: 500 }}>
+                        {liveLocation.isRestricted ? '⚠ ZONĂ RESTRICȚIONATĂ!' : '✓ Zonă Sigură'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-            ) : (
-                <>
-                  <div className="map-wrap" style={{ margin: '4px 16px 16px', height: 200 }}>
-                    <div className="map-grid" />
-                    <svg viewBox="0 0 400 200" preserveAspectRatio="none"
-                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                      <path className="map-route" d="M 40 170 Q 110 130, 160 140 T 280 60 T 360 40" />
-                      <circle cx="40" cy="170" r="5" fill="var(--color-muted)" />
-                      <circle cx="360" cy="40" r="6" fill="var(--color-primary)" />
-                    </svg>
-                    <div className="map-pin" style={{ left: '68%', top: '48%' }}>
-                      <div className="map-pin-dot" />
-                      <div style={{
-                        marginTop: 6, background: 'var(--color-ink)', color: '#fff',
-                        padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 500,
-                        whiteSpace: 'nowrap', transform: 'translateX(-50%)', position: 'relative', left: '50%',
-                      }}>
-                        Așteptare semnal GPS...
+              ) : (
+                  <>
+                    <div className="map-wrap" style={{ margin: '4px 16px 16px', height: 200 }}>
+                      <div className="map-grid" />
+                      <svg viewBox="0 0 400 200" preserveAspectRatio="none"
+                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                        <path className="map-route" d="M 40 170 Q 110 130, 160 140 T 280 60 T 360 40" />
+                        <circle cx="40" cy="170" r="5" fill="var(--color-muted)" />
+                        <circle cx="360" cy="40" r="6" fill="var(--color-primary)" />
+                      </svg>
+                      <div className="map-pin" style={{ left: '68%', top: '48%' }}>
+                        <div className="map-pin-dot" />
+                        <div style={{
+                          marginTop: 6, background: 'var(--color-ink)', color: '#fff',
+                          padding: '5px 9px', borderRadius: 8, fontSize: 11, fontWeight: 500,
+                          whiteSpace: 'nowrap', transform: 'translateX(-50%)', position: 'relative', left: '50%',
+                        }}>
+                          Așteptare semnal GPS...
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div style={{ padding: '0 24px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: 'var(--color-muted)' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 22s7-7.4 7-13a7 7 0 0 0-14 0c0 5.6 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/>
-                      </svg>
-                      Așteptând date de localizare...
+                    <div style={{ padding: '0 24px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: 'var(--color-muted)' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22s7-7.4 7-13a7 7 0 0 0-14 0c0 5.6 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/>
+                        </svg>
+                        Așteptând date de localizare...
+                      </div>
+                      <span className="chip" style={{ background: '#E8F5EE', color: '#2E7B4F', borderColor: '#CDE8D8', fontSize: 11 }}>
+                        ✓ Conectat
+                      </span>
                     </div>
-                    <span className="chip" style={{ background: '#E8F5EE', color: '#2E7B4F', borderColor: '#CDE8D8', fontSize: 11 }}>
-                      ✓ Conectat
-                    </span>
-                  </div>
-                </>
-            )}
+                  </>
+              )}
+            </div>
 
             <div style={{ padding: '12px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
               <div style={{ color: 'var(--color-muted)' }}>Actualizat acum {tick % 5 + 1}s</div>
