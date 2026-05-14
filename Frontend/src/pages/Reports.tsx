@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, RefreshCw, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, RefreshCw, X, AlertCircle, Download } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../services/api';
 
@@ -106,6 +106,7 @@ export default function Reports() {
     const [endDate,        setEndDate]        = useState('');
     const [data,           setData]           = useState<ExpenseReportDTO[]>([]);
     const [totalAmount,    setTotalAmount]    = useState(0);
+    const [isExporting,    setIsExporting]    = useState(false);
 
     // ── Validare date custom (NEATINSĂ) ────────────────────────────────────
     const startObj          = parseDate(startDate);
@@ -158,6 +159,31 @@ export default function Reports() {
         setShowDatePicker(false);
         setStartDate('');
         setEndDate('');
+    };
+
+    const handleExportPdf = async () => {
+        if (isExporting) return;
+        setIsExporting(true);
+        try {
+            const { from, to } = timeRange === 'CUSTOM' && startObj && endObj
+                ? { from: startObj.toISOString().slice(0, 10), to: endObj.toISOString().slice(0, 10) }
+                : getRangeDates(timeRange);
+
+            const response = await api.get('/api/v1/expenses/export/pdf', {
+                params: { from, to },
+                responseType: 'blob',
+            });
+            const url     = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+            const link    = document.createElement('a');
+            link.href     = url;
+            link.download = `evolutie-cheltuieli-${from}-${to}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Eroare export PDF:', err);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -220,6 +246,18 @@ export default function Reports() {
 
                     {/* Total perioadă — acum din date reale */}
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button
+                            className="btn btn-ghost"
+                            style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+                            onClick={handleExportPdf}
+                            disabled={isExporting || isLoading || data.length === 0}
+                            title="Exportă perioada curentă ca PDF"
+                        >
+                            {isExporting
+                                ? <><RefreshCw size={13} style={{ animation: 'ring-rotate 0.9s linear infinite' }} /> Se generează...</>
+                                : <><Download size={13} /> Export PDF</>
+                            }
+                        </button>
                         <div style={{ width: 1, height: 28, background: 'var(--color-border)' }} />
                         <div>
                             <div className="label" style={{ marginBottom: 2 }}>TOTAL PERIOADĂ</div>
