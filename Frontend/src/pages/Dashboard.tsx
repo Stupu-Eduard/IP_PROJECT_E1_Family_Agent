@@ -1,14 +1,27 @@
-  import { useEffect, useState } from 'react'
-  import { useNavigate } from 'react-router-dom'
-  import { useAuthStore } from '../store/authStore'
-  import { useExpenseStore } from '../store/expenseStore'
+    import { useEffect, useState } from 'react'
+    import { useNavigate } from 'react-router-dom'
+    import { useAuthStore } from '../store/authStore'
+    import { useExpenseStore } from '../store/expenseStore'
   import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
-  import { api } from '../services/api'
-  import KidDashboard from './KidDashboard'
+    import { api } from '../services/api'
+    import KidDashboard from './KidDashboard'
 
   // ─── Google Maps container style ─────────────────────────────────────────────
   const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
+  // ─── Google Maps container style ─────────────────────────────────────────────
+  const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
 
+  // ─── Quick actions (statice, nu se schimbă) ───────────────────────────────────
+  const quickActions = [
+    { label: 'Adaugă cheltuială', sub: 'Înregistrează manual o sumă',   nav: '/add-expense', dark: true,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg> },
+    { label: 'Scanează bon',      sub: 'OCR completează totul automat', nav: '/add-expense', dark: false,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg> },
+    { label: 'Evoluție cheltuieli', sub: 'Grafic lunar și export PDF',  nav: '/reports',     dark: false,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20v-4"/></svg> },
+    { label: 'Membri familie',    sub: 'Permisiuni și invitații',       nav: '/family',      dark: false,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2 21c0-3.3 3-6 7-6s7 2.7 7 6"/><circle cx="17" cy="9" r="2.6"/><path d="M22 20c0-2.6-2.2-4.7-5-4.7"/></svg> },
+  ]
   // ─── Quick actions (statice, nu se schimbă) ───────────────────────────────────
   const quickActions = [
     { label: 'Adaugă cheltuială', sub: 'Înregistrează manual o sumă',   nav: '/add-expense', dark: true,
@@ -85,7 +98,25 @@
     const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
     return days[new Date(dateStr).getDay()]
   }
+  // ─── Helper: ziua săptămânii scurtă în română ────────────────────────────────
+  function shortDay(dateStr: string): string {
+    const days = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+    return days[new Date(dateStr).getDay()]
+  }
 
+  // ─── Tipuri ──────────────────────────────────────────────────────────────────
+  interface ApiExpense {
+    id: number
+    amount: string | number
+    description: string | null
+    expenseDate: string | null
+    category: string | null
+    person: string | null
+    location: {
+      store: string | null
+      city: string | null
+    } | null
+  }
   // ─── Tipuri ──────────────────────────────────────────────────────────────────
   interface ApiExpense {
     id: number
@@ -106,13 +137,27 @@
     tranzactiiLuna: number
     deltaLuna: string
   }
+  interface KpiData {
+    lunaAceasta: number
+    total: number
+    tranzactiiLuna: number
+    deltaLuna: string
+  }
 
   interface BarDay {
     day: string
     amount: number
     h: number
   }
+  interface BarDay {
+    day: string
+    amount: number
+    h: number
+  }
 
+  export default function Dashboard() {
+    const token    = useAuthStore((state) => state.token)
+    const navigate = useNavigate()
   export default function Dashboard() {
     const token    = useAuthStore((state) => state.token)
     const navigate = useNavigate()
