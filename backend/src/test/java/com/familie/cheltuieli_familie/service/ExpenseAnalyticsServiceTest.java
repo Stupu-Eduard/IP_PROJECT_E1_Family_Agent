@@ -192,4 +192,64 @@ class ExpenseAnalyticsServiceTest {
 
         assertTrue(trend.contains("No data for the previous period"));
     }
+
+    @Test
+    void testFindExpenses() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn((List) sampleExpenses);
+
+        List<Map<String, Object>> result = analyticsService.findExpenses(from, to);
+
+        assertEquals(3, result.size());
+        assertEquals(new BigDecimal("100.00"), result.get(0).get("amount"));
+        assertEquals("Food", result.get(0).get("category"));
+    }
+
+    @Test
+    void testFindByCategory() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("100.00"), "category", "Food", "person", "Alice")
+                ));
+
+        List<Map<String, Object>> result = analyticsService.findByCategory("Food", from, to);
+
+        assertEquals(1, result.size());
+        assertEquals("Food", result.get(0).get("category"));
+    }
+
+    @Test
+    void testFindByLocation() {
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now();
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(java.time.LocalDateTime.class), any(java.time.LocalDateTime.class)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("50.00"), "location", "StoreA", "person", "Bob")
+                ));
+
+        List<Map<String, Object>> result = analyticsService.findByLocation("StoreA", from, to);
+
+        assertEquals(1, result.size());
+        assertEquals("StoreA", result.get(0).get("location"));
+    }
+
+    @Test
+    void testCalculateTrendNullCurrentTotal() {
+        LocalDate from = LocalDate.of(2024, 3, 1);
+        LocalDate to = LocalDate.of(2024, 3, 31);
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(BigDecimal.class), anyString(), any(), any()))
+                .thenReturn(null)
+                .thenReturn(new BigDecimal("100.00"));
+
+        String trend = analyticsService.calculateTrend("Food", from, to);
+
+        assertTrue(trend.contains("decreased"));
+        assertTrue(trend.contains("0 RON"));
+        assertTrue(trend.contains("100.00 RON"));
+    }
 }
