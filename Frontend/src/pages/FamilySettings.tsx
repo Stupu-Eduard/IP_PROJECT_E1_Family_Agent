@@ -275,6 +275,7 @@ export default function FamilySettings() {
                     <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">Familie</h2>
                 </div>
 
+                {!isChild && (
                 <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-6">
                     <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
                         <UserPlus size={18} className="text-[#C97B4B]" />
@@ -300,6 +301,15 @@ export default function FamilySettings() {
                     </form>
                     {createError && <p className="mt-3 text-[12px] text-red-500">{createError}</p>}
                 </div>
+                )}
+
+                {isChild && pendingInvitations.length === 0 && (
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-8 text-center">
+                        <Bell size={28} className="text-[#C4B9AC] mx-auto mb-3" />
+                        <p className="text-[14px] font-medium text-[#2D2926] mb-1">Nicio invitație în așteptare</p>
+                        <p className="text-[12px] text-[#9A8A7C]">Cere unui părinte să te invite prin email pentru a face parte dintr-o familie.</p>
+                    </div>
+                )}
 
                 {pendingInvitations.length > 0 && (
                     <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden">
