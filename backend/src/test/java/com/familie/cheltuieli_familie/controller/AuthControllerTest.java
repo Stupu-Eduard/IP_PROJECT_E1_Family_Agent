@@ -2,9 +2,11 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
@@ -35,6 +37,9 @@ class AuthControllerTest {
 
     @Mock
     private FamilyMemberRepository familyMemberRepository;
+
+    @Mock
+    private FamilyRepository familyRepository;
 
     @Mock
     private JwtUtil jwtUtil;
@@ -149,7 +154,11 @@ class AuthControllerTest {
         request.setEmail("new@example.com");
         request.setPassword("password123");
 
+        Family savedFamily = new Family();
+        savedFamily.setId(1L);
+
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(familyRepository.save(any(Family.class))).thenReturn(savedFamily);
         when(jwtUtil.generateToken(eq("new@example.com"), any())).thenReturn("new-jwt-token");
 
         // WHEN

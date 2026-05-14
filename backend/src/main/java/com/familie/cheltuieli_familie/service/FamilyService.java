@@ -37,24 +37,24 @@ public class FamilyService {
         Family family = new Family();
         family.setName(name != null && !name.isBlank() ? name.trim() : requester.getName() + "'s Family");
         family.setCreatedAt(LocalDate.now());
-        familyRepository.save(family);
+        Family savedFamily = familyRepository.save(family);
 
         FamilyMember member = new FamilyMember();
-        member.setFamily(family);
+        member.setFamily(savedFamily);
         member.setUser(requester);
         member.setRole("Parent");
         familyMemberRepository.save(member);
 
-        log.info("Familie nouă creată: '{}' (id={}) de către {}", family.getName(), family.getId(), requester.getEmail());
+        log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",   requester.getId());
         claims.put("role",     "Parent");
         claims.put("name",     requester.getName());
-        claims.put("familyId", family.getId());
+        claims.put("familyId", savedFamily.getId());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
-        return Map.of("token", newToken, "role", "Parent", "familyId", family.getId());
+        return Map.of("token", newToken, "role", "Parent", "familyId", savedFamily.getId());
     }
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {

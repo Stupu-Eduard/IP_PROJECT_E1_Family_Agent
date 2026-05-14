@@ -8,6 +8,7 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.rag.RetrievalAugmentor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -68,6 +69,8 @@ class LlmConfigTest {
     }
 
     @Test
+    @DisabledIfEnvironmentVariable(named = "DEEPSEEK_API_KEY", matches = ".+")
+    @DisabledIfEnvironmentVariable(named = "OPENROUTER_API_KEY", matches = ".+")
     void deepseekModel_shouldThrowWhenNoKeyConfigured() {
         ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "");
         ReflectionTestUtils.setField(llmConfig, "openRouterApiKey", "");

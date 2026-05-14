@@ -116,16 +116,16 @@ public class AuthController {
             Family family = new Family();
             family.setName(registerRequest.getName() + "'s Family");
             family.setCreatedAt(java.time.LocalDate.now());
-            familyRepository.save(family);
+            Family savedFamily = familyRepository.save(family);
 
             FamilyMember member = new FamilyMember();
             member.setUser(user);
-            member.setFamily(family);
+            member.setFamily(savedFamily);
             member.setRole(ROLE_PARENT);
             familyMemberRepository.save(member);
 
-            claims.put("familyId", family.getId());
-            log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), family.getId());
+            claims.put("familyId", savedFamily.getId());
+            log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), savedFamily.getId());
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
