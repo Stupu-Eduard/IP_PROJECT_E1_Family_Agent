@@ -3,6 +3,8 @@ import { useExpenseStore } from '../store/expenseStore';
 import { useNavigate } from 'react-router-dom';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+import { useAuthStore } from '../store/authStore';
+import { decodeJwtPayload } from '../utils/jwt';
 import { ChevronDown, MapPin, User, Calendar, ChevronLeft, ChevronRight, Search, Filter, Plus, ArrowLeft } from 'lucide-react';
 
 interface ExpenseListDTO {
@@ -29,18 +31,10 @@ const avatarStyle = (name: string) => {
 
 const CHILD_CATEGORIES = ['Mâncare', 'Transport', 'Educație', 'Divertisment', 'Sănătate', 'Shopping'];
 
-function getUserRole(): string {
-    try {
-        const token = localStorage.getItem('jwtToken') ?? '';
-        return JSON.parse(atob(token.split('.')[1])).role ?? '';
-    } catch {
-        return '';
-    }
-}
-
 export default function Expenses() {
     const navigate = useNavigate();
-    const isChild = getUserRole() === 'Child';
+    const token = useAuthStore((s) => s.token);
+    const isChild = ((decodeJwtPayload(token ?? '') as any)?.role ?? '') === 'Child';
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 20;
@@ -314,9 +308,11 @@ export default function Expenses() {
                                     <MapPin size={13} style={{ color: 'var(--color-muted-4)' }} />
                                     <span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>{expense.location}</span>
                                 </button>
+                                {!isChild && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <User size={13} style={{ color: 'var(--color-muted-4)' }} /> {expense.person}
                                 </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -325,9 +321,9 @@ export default function Expenses() {
 
             {!isLoading && filteredExpenses.length > 0 && (
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
-                        {['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ'].map((h, i) => (
-                            <div key={h} className="label" style={{ textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '12px 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
+                        {(isChild ? ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'SUMĂ'] : ['DATĂ', 'DESCRIERE', 'LOCAȚIE', 'PERSOANĂ', 'SUMĂ']).map((h, i, arr) => (
+                            <div key={h} className="label" style={{ textAlign: i === arr.length - 1 ? 'right' : 'left' }}>{h}</div>
                         ))}
                     </div>
 
@@ -336,7 +332,7 @@ export default function Expenses() {
                             <div
                                 key={expense.id}
                                 className="row-clickable fade-up"
-                                style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 1fr 130px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
+                                style={{ display: 'grid', gridTemplateColumns: isChild ? '90px 1.4fr 1fr 130px' : '90px 1.4fr 1fr 1fr 130px', padding: '16px 24px', borderBottom: '1px solid var(--color-border)', alignItems: 'center' }}
                             >
                                 <div style={{ fontSize: 12.5, color: 'var(--color-muted)', fontWeight: 500 }}>{expense.date}</div>
 
@@ -356,12 +352,14 @@ export default function Expenses() {
                                     </button>
                                 </div>
 
+                                {!isChild && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <div className="avatar avatar-sm" style={avatarStyle(expense.person)}>
                                         {expense.person.charAt(0)}
                                     </div>
                                     <span style={{ fontSize: 12.5, color: 'var(--color-muted)' }}>{expense.person}</span>
                                 </div>
+                                )}
 
                                 <div className="row-amount" style={{ textAlign: 'right', fontSize: 14.5, fontWeight: 500, color: 'var(--color-ink)' }}>
                                     {expense.amount.toFixed(2)} <span style={{ color: 'var(--color-muted-2)', fontSize: 11, fontWeight: 400 }}>RON</span>
