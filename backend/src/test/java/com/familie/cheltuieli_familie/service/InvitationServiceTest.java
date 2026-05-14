@@ -107,8 +107,9 @@ class InvitationServiceTest {
         User requester = mockUser(1L, "X", "x@test.com");
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
 
+        AddMemberRequest req1 = makeRequest("y@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("y@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req1, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -119,8 +120,9 @@ class InvitationServiceTest {
         FamilyMember childMembership = mockMember(1L, family, requester, "Child");
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(childMembership));
 
+        AddMemberRequest req2 = makeRequest("other@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("other@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req2, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -132,8 +134,9 @@ class InvitationServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(membership));
         when(familyRepository.findById(10L)).thenReturn(Optional.empty());
 
+        AddMemberRequest req3 = makeRequest("x@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("x@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req3, requester));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -146,8 +149,9 @@ class InvitationServiceTest {
         when(familyRepository.findById(10L)).thenReturn(Optional.of(family));
         when(userRepository.findByEmail("notfound@test.com")).thenReturn(Optional.empty());
 
+        AddMemberRequest req4 = makeRequest("notfound@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("notfound@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req4, requester));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
@@ -165,8 +169,9 @@ class InvitationServiceTest {
         when(userRepository.findByEmail("child@test.com")).thenReturn(Optional.of(target));
         when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of(targetMembership));
 
+        AddMemberRequest req5 = makeRequest("child@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("child@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req5, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
@@ -184,8 +189,9 @@ class InvitationServiceTest {
         when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of());
         when(invitationRepository.findByFamilyIdAndInviteeEmail(10L, "child@test.com")).thenReturn(Optional.of(existing));
 
+        AddMemberRequest req6 = makeRequest("child@test.com", "Child");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.createInvitation(10L, makeRequest("child@test.com", "Child"), requester));
+                () -> service.createInvitation(10L, req6, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
