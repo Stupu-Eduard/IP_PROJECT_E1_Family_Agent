@@ -52,11 +52,14 @@ export async function createExpense(payload: CreateExpenseDto): Promise<ApiExpen
   return response.data
 }
 
-export async function processReceiptOCR(file: File): Promise<OcrResponseDTO> {
+export async function processReceiptOCR(file: File, bank?: string): Promise<OcrResponseDTO> {
   const formData = new FormData();
   formData.append('file', file);
+  if (bank) {
+    formData.append('bank', bank);
+  }
 
-  const response = await api.post<OcrResponseDTO>('/api/v1/ocr/process', formData);
+  const response = await api.post<OcrResponseDTO>('/api/ocr/extract-and-save', formData);
 
   return response.data;
 }
