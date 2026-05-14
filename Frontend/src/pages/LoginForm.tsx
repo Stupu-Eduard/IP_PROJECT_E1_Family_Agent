@@ -23,7 +23,9 @@ export default function Login() {
   const loginStore      = useAuthStore((state) => state.login);
 
   if (isAuthenticated && token && !isTokenExpired(token)) {
-    return <Navigate to="/dashboard" replace />;
+    const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
+    const dest = payload?.role === 'Child' ? '/kid-dashboard' : '/dashboard';
+    return <Navigate to={dest} replace />;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,7 +39,8 @@ export default function Login() {
       
       if (response.token) {
         loginStore(response.token);
-        navigate('/dashboard', { replace: true });
+        const dest = response.role === 'Child' ? '/kid-dashboard' : '/dashboard';
+        navigate(dest, { replace: true });
       } else {
         setError('Eroare la autentificare: Token lipsă.');
       }

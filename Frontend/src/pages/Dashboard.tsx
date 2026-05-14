@@ -1,6 +1,7 @@
   import { useEffect, useState } from 'react'
   import { useNavigate } from 'react-router-dom'
   import { useAuthStore } from '../store/authStore'
+  import { useExpenseStore } from '../store/expenseStore'
   import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
   import { api } from '../services/api'
   import KidDashboard from './KidDashboard'
@@ -23,12 +24,59 @@
   // ─── Helper: emoji după categorie ────────────────────────────────────────────
   function categoryEmoji(cat: string): string {
     const c = (cat ?? '').toLowerCase()
-    if (c.includes('aliment') || c.includes('mancare') || c.includes('food')) return '🛒'
-    if (c.includes('transport') || c.includes('combustibil')) return '🚗'
+    // Mâncare & sub
+    if (c === 'supermarket') return '🛒'
+    if (c === 'restaurant') return '🍽️'
+    if (c === 'cafenea') return '☕'
+    if (c === 'lactate') return '🥛'
+    if (c.includes('fructe') || c.includes('legume')) return '🥦'
+    if (c.includes('mâncare') || c.includes('mancare') || c.includes('aliment')) return '🛒'
+    // Transport & sub
+    if (c === 'taxi') return '🚕'
+    if (c.includes('transport public')) return '🚌'
+    if (c.includes('carburant') || c.includes('benzin') || c.includes('combustibil')) return '⛽'
+    if (c === 'parcare') return '🅿️'
+    if (c.includes('service auto')) return '🔧'
+    if (c === 'rovinieta') return '🛣️'
+    if (c.includes('transport')) return '🚗'
+    // Sănătate & sub
+    if (c.includes('medicamente')) return '💊'
+    if (c.includes('consultat')) return '🩺'
+    if (c.includes('sanat') || c.includes('medic') || c.includes('health')) return '🏥'
+    // Educatie & sub
+    if (c.includes('rechizite')) return '✏️'
+    if (c.includes('cursuri') || c.includes('curs')) return '🎓'
+    if (c.includes('gradinit')) return '🧒'
+    if (c.includes('extrascolar')) return '⚽'
     if (c.includes('educa')) return '📚'
-    if (c.includes('sanat') || c.includes('medic') || c.includes('health')) return '💊'
+    // Divertisment & sub
+    if (c.includes('streaming')) return '📺'
+    if (c.includes('cinema')) return '🎬'
     if (c.includes('divertis') || c.includes('entertainment')) return '🎮'
-    if (c.includes('factur') || c.includes('utilit')) return '📄'
+    // Servicii & sub
+    if (c.includes('utilit')) return '💡'
+    if (c.includes('telefonie') || c.includes('telefon')) return '📞'
+    if (c === 'internet') return '🌐'
+    if (c.includes('asigurar')) return '🛡️'
+    if (c.includes('abonament') || c.includes('servicii') || c.includes('serviciu')) return '📋'
+    // Shopping & sub
+    if (c.includes('haine') || c.includes('imbracaminte')) return '👗'
+    if (c.includes('electronic')) return '💻'
+    if (c.includes('ingrijire personala') || c.includes('cosmetice')) return '🧴'
+    if (c.includes('jucarii') || c.includes('jucărie')) return '🧸'
+    if (c.includes('carti') || c.includes('carte')) return '📖'
+    if (c.includes('shopping') || c.includes('cumpar')) return '🛍️'
+    // Numerar & sub
+    if (c.includes('bancomat')) return '🏧'
+    if (c.includes('numerar') || c.includes('cash')) return '💵'
+    // Pentru casa & sub
+    if (c.includes('chirie')) return '🏠'
+    if (c.includes('curatenie') || c.includes('menaj')) return '🧹'
+    if (c.includes('mobila') || c.includes('mobilă')) return '🛋️'
+    if (c.includes('reparatii') || c.includes('reparații')) return '🔨'
+    if (c.includes('decorat')) return '🎨'
+    if (c.includes('pentru casa') || c.includes('locuint')) return '🏠'
+    // Fallback
     return '💳'
   }
 
@@ -75,6 +123,7 @@
     const [barData,        setBarData]        = useState<BarDay[]>([])
     const [userName,       setUserName]       = useState<string>('')
     const [isLoading,      setIsLoading]      = useState(true)
+    const expenseVersion = useExpenseStore((s) => s.version)
 
     // ── State WebSocket locație live (NEATINS) ─────────────────────────────────
     const [liveLocation, setLiveLocation] = useState<any>(null)
@@ -210,7 +259,7 @@
 
       void run()
       return () => controller.abort()
-    }, [userRole, token])
+    }, [userRole, token, expenseVersion])
 
     // ── WebSocket conexiune (NEATINS) ─────────────────────────────────────────
     useEffect(() => {
@@ -429,7 +478,7 @@
               <div style={{ padding: '12px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                 <div style={{ color: 'var(--color-muted)' }}>Actualizat acum {tick % 5 + 1}s</div>
                 <button
-                    onClick={() => navigate('/expenses/map')}
+                    onClick={() => navigate('/expenses/all-map')}
                     style={{ color: 'var(--color-primary)', fontWeight: 500, fontSize: 12.5, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
                   Vezi traseul complet →
@@ -509,7 +558,7 @@
                     const cat   = r.category ?? 'Altele'
                     const store = r.location?.store ?? ''
                     const city  = r.location?.city  ?? ''
-                    const desc  = [store, city].filter(Boolean).join(' · ') || r.description || 'Fără detalii'
+                    const desc  = [store, city].filter(Boolean).join(' · ') || r.description || null
                     const amt   = Number(r.amount).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
                     return (
@@ -531,9 +580,11 @@
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                               <span className="chip" style={{ fontSize: 10.5, padding: '2px 8px' }}>{cat}</span>
                             </div>
-                            <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {desc}
-                            </div>
+                            {desc && (
+                              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {desc}
+                              </div>
+                            )}
                           </div>
                           {r.person && (
                               <div style={{ fontSize: 12, color: 'var(--color-muted)', flexShrink: 0 }}>{r.person}</div>

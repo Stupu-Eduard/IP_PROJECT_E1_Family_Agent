@@ -53,8 +53,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
 
-                        // Cheltuieli (folosite de frontend pentru harta/istoric)
-                        .requestMatchers("/api/v1/expenses/**").permitAll()
+                        // Cheltuieli — necesită autentificare (filtrate după familia userului)
+                        // .requestMatchers("/api/v1/expenses/**").permitAll()
 
                         // Lookups pentru filtre
                         .requestMatchers("/api/v1/categories/**").permitAll()
