@@ -162,8 +162,9 @@ class BudgetControllerTest {
         when(familyMemberRepository.findByUserId(3L)).thenReturn(List.of(parentMember));
         when(familyMemberRepository.findByUserId(30L)).thenReturn(List.of(childMember));
 
+        Authentication auth30 = authFor(parent);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.getChildBudget(30L, authFor(parent)));
+                () -> controller.getChildBudget(30L, auth30));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
@@ -173,8 +174,9 @@ class BudgetControllerTest {
         User parent = mockUser(4L);
         when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of());
 
+        Authentication auth40 = authFor(parent);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.getChildBudget(40L, authFor(parent)));
+                () -> controller.getChildBudget(40L, auth40));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
@@ -187,8 +189,9 @@ class BudgetControllerTest {
         when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of(parentMember));
         when(familyMemberRepository.findByUserId(50L)).thenReturn(List.of());
 
+        Authentication auth50 = authFor(parent);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.getChildBudget(50L, authFor(parent)));
+                () -> controller.getChildBudget(50L, auth50));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
@@ -254,8 +257,9 @@ class BudgetControllerTest {
         when(userRepository.findById(80L)).thenReturn(Optional.empty());
 
         BudgetController.SetBudgetRequest req = new BudgetController.SetBudgetRequest(BigDecimal.valueOf(300));
+        Authentication auth80 = authFor(parent);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.setChildBudget(80L, req, authFor(parent)));
+                () -> controller.setChildBudget(80L, req, auth80));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
@@ -274,8 +278,9 @@ class BudgetControllerTest {
         when(familyMemberRepository.findByUserId(9L)).thenReturn(List.of());
 
         BudgetController.SetBudgetRequest req = new BudgetController.SetBudgetRequest(BigDecimal.valueOf(200));
+        Authentication auth90 = authFor(parent);
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.setChildBudget(90L, req, authFor(parent)));
+                () -> controller.setChildBudget(90L, req, auth90));
 
         assertTrue(ex.getStatusCode() == HttpStatus.FORBIDDEN || ex.getStatusCode() == HttpStatus.BAD_REQUEST);
     }
