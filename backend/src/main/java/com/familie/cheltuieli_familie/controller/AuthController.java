@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -45,6 +46,7 @@ public class AuthController {
     private final FamilyRepository familyRepository;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService blacklistService;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<Object> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -52,7 +54,7 @@ public class AuthController {
 
         Optional<User> userOpt = userRepository.findByEmail(loginRequest.getEmail());
 
-        if (userOpt.isPresent() && userOpt.get().getPasswordH().equals(loginRequest.getPassword())) {
+        if (userOpt.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPasswordH())) {
             User user = userOpt.get();
 
             List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
@@ -97,7 +99,7 @@ public class AuthController {
         User user = new User();
         user.setName(registerRequest.getName());
         user.setEmail(registerRequest.getEmail());
-        user.setPasswordH(registerRequest.getPassword());
+        user.setPasswordH(passwordEncoder.encode(registerRequest.getPassword()));
         user.setCreatedAt(java.time.LocalDate.now());
         userRepository.save(user);
 
