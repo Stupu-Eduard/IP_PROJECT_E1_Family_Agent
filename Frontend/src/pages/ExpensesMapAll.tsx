@@ -429,6 +429,7 @@ export default function ExpensesMapAll() {
                             position={{ lat: e.lat, lng: e.lng }}
                             clusterer={clusterer}
                             title={e.description || e.location || ''}
+                            icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new (window as any).google.maps.Size(32, 32) }}
                             label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
                             onClick={() => {
                               setSelectedExpense(e);

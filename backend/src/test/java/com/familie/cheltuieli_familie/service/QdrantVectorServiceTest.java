@@ -100,10 +100,9 @@ class QdrantVectorServiceTest {
         ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
         ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
 
-        Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
-                "score", 0.95,
-                "payload", Map.of("id", "1")
-        )));
+        Map<String, Object> mockResponse = Map.of("result", Map.of(
+                "points", List.of(Map.of("id", "some-uuid"))
+        ));
 
         when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
@@ -120,10 +119,8 @@ class QdrantVectorServiceTest {
         ReflectionTestUtils.setField(qdrantVectorService, "httpPort", 6333);
         ReflectionTestUtils.setField(qdrantVectorService, "collectionName", "test-collection");
 
-        Map<String, Object> mockResponse = Map.of("result", List.of());
-
         when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
-                .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
+                .thenReturn(new ResponseEntity<>(Map.of("result", Map.of("points", List.of())), HttpStatus.OK));
 
         boolean exists = qdrantVectorService.existsInVectorStore(999L);
 

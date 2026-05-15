@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
-import type { ExpenseDTO } from '../types/ExpenseDTO';
-import { processReceiptOCR } from '../services/expenses';
+import { processReceiptOCR, createExpense } from '../services/expenses';
+import { useExpenseStore } from '../store/expenseStore';
+import { fetchCategoryNames } from '../services/lookups';
 import { ImageUploader } from './ImageUploader';
 
 const IcoArrowLeft = () => (
@@ -23,16 +24,26 @@ const IcoCamera = () => (
 
 const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isManualMode = searchParams.get('mode') === 'manual';
+  const notifyExpenseAdded = useExpenseStore((s) => s.notifyExpenseAdded);
 
-  const [amount,   setAmount]   = useState<number | ''>('');
-  const [category, setCategory] = useState('');
-  const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
+  const [amount,     setAmount]     = useState<number | ''>('');
+  const [category,   setCategory]   = useState('');
+  const [date,       setDate]       = useState(new Date().toISOString().split('T')[0]);
+  const [storeName,  setStoreName]  = useState('');
+  const [city,       setCity]       = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
 
   const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error,       setError]       = useState('');
   const [ocrError,    setOcrError]    = useState<string | null>(null);
   const [success,     setSuccess]     = useState(false);
+
+  useEffect(() => {
+    fetchCategoryNames().then(setCategories).catch(() => {});
+  }, []);
 
   const handleOcrProcess = async (file: File) => {
     setIsAnalyzing(true);
@@ -53,7 +64,7 @@ const ExpenseForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
@@ -62,17 +73,23 @@ const ExpenseForm: React.FC = () => {
       return;
     }
     setLoading(true);
-    const payload: ExpenseDTO = { amount: Number(amount), category, date };
-    console.log('Date pregătite pentru trimitere:', payload);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createExpense({ amount: Number(amount), categoryName: category, date, description: undefined, storeName: storeName || undefined, city: city || undefined });
+      notifyExpenseAdded();
       setSuccess(true);
       setAmount('');
       setCategory('');
       setDate(new Date().toISOString().split('T')[0]);
+      setStoreName('');
+      setCity('');
       setOcrError(null);
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1000);
+      setTimeout(() => navigate('/expenses'), 1500);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la salvarea cheltuielii.';
+      setError(typeof msg === 'string' ? msg : 'Eroare la salvarea cheltuielii.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isInputDisabled = loading;
@@ -88,7 +105,7 @@ const ExpenseForm: React.FC = () => {
           >
             <IcoArrowLeft />
           </button>
-          <div className="chip chip-live">OCR · GATA DE SCANARE</div>
+          <div className="chip chip-live">{isManualMode ? 'MANUAL · FORMULARE' : 'OCR · GATA DE SCANARE'}</div>
         </div>
 
         <h1 className="h1 fade-up" style={{ marginBottom: 8 }}>Adaugă o cheltuială nouă</h1>
@@ -132,9 +149,9 @@ const ExpenseForm: React.FC = () => {
             </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isManualMode ? '1fr' : '1fr 1fr', gap: 18, alignItems: 'start' }}>
 
-          <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+          {!isManualMode && <div className="card card-xl" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
 
             {isAnalyzing && (
                 <div style={{
@@ -190,12 +207,12 @@ const ExpenseForm: React.FC = () => {
                 JPG, PNG · max 5 MB · OCR completează câmpurile automat
               </div>
             </div>
-          </div>
+          </div>}
 
           <div className="card" style={{}}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
               <div className="label">DETALII CHELTUIALĂ</div>
-              {isAnalyzing && (
+              {isAnalyzing && !isManualMode && (
                   <span style={{ fontSize: 11, color: "var(--color-primary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)", display: "inline-block", animation: "pulse-dot 1.4s ease-out infinite" }} />
                 OCR completează automat
@@ -238,10 +255,9 @@ const ExpenseForm: React.FC = () => {
                       disabled={isInputDisabled}
                   >
                     <option value="" disabled>Selectează o categorie...</option>
-                    <option value="mancare">🍕 Mâncare & Alimente</option>
-                    <option value="facturi">📄 Facturi & Utilități</option>
-                    <option value="transport">🚗 Transport</option>
-                    <option value="divertisment">🎮 Divertisment</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                   <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-muted)' }}>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -263,6 +279,39 @@ const ExpenseForm: React.FC = () => {
                     disabled={isInputDisabled}
                     style={{ opacity: isInputDisabled ? 0.6 : 1 }}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label htmlFor="storeName" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                    Magazin <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(opțional)</span>
+                  </label>
+                  <input
+                      id="storeName"
+                      type="text"
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="input"
+                      placeholder="Ex: Lidl, Kaufland..."
+                      disabled={isInputDisabled}
+                      style={{ opacity: isInputDisabled ? 0.6 : 1 }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="city" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                    Oraș <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(opțional)</span>
+                  </label>
+                  <input
+                      id="city"
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="input"
+                      placeholder="Ex: Cluj-Napoca"
+                      disabled={isInputDisabled}
+                      style={{ opacity: isInputDisabled ? 0.6 : 1 }}
+                  />
+                </div>
               </div>
 
               <button

@@ -20,6 +20,7 @@ export interface ApiExpenseListDto {
   category: string | null
   person: string | null
   location: ApiLocationDto | null
+  sourceType: string | null
 }
 
 export type ExpenseFilters = {
@@ -36,6 +37,29 @@ export async function fetchExpenses(filters?: ExpenseFilters, signal?: AbortSign
 
   const response = await api.get<ApiExpenseListDto[]>('/api/v1/expenses', { params, signal })
   return response.data
+}
+
+export interface CreateExpenseDto {
+  amount: number
+  description?: string
+  categoryName: string
+  date: string  // YYYY-MM-DD
+  storeName?: string
+  city?: string
+}
+
+export async function createExpense(payload: CreateExpenseDto): Promise<ApiExpenseListDto> {
+  const response = await api.post<ApiExpenseListDto>('/api/v1/expenses', payload)
+  return response.data
+}
+
+export async function updateExpense(id: number, payload: CreateExpenseDto): Promise<ApiExpenseListDto> {
+  const response = await api.put<ApiExpenseListDto>(`/api/v1/expenses/${id}`, payload)
+  return response.data
+}
+
+export async function deleteExpense(id: number): Promise<void> {
+  await api.delete(`/api/v1/expenses/${id}`)
 }
 
 export async function processReceiptOCR(file: File): Promise<OcrResponseDTO> {

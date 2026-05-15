@@ -1,0 +1,91 @@
+package com.familie.cheltuieli_familie.controller;
+
+import com.familie.cheltuieli_familie.dto.AddMemberRequest;
+import com.familie.cheltuieli_familie.dto.FamilyMemberDTO;
+import com.familie.cheltuieli_familie.dto.InvitationDTO;
+import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.service.FamilyService;
+import com.familie.cheltuieli_familie.service.InvitationService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/families")
+@RequiredArgsConstructor
+@CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
+public class FamilyController {
+
+    private final FamilyService      familyService;
+    private final InvitationService  invitationService;
+
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createFamily(
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String name = body != null ? body.get("name") : null;
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(familyService.createFamily(name, requester(auth)));
+    }
+
+    @GetMapping("/{familyId}/members")
+    public ResponseEntity<List<FamilyMemberDTO>> getMembers(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        return ResponseEntity.ok(familyService.getMembers(familyId, requester(auth)));
+    }
+
+    @PostMapping("/{familyId}/members")
+    public ResponseEntity<InvitationDTO> inviteMember(
+            @PathVariable Long familyId,
+            @Valid @RequestBody AddMemberRequest request,
+            Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(invitationService.createInvitation(familyId, request, requester(auth)));
+    }
+
+    @PatchMapping("/{familyId}/members/{memberId}/role")
+    public ResponseEntity<FamilyMemberDTO> updateMemberRole(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String newRole = body != null ? body.get("role") : null;
+        return ResponseEntity.ok(familyService.updateMemberRole(familyId, memberId, newRole, requester(auth)));
+    }
+
+    @DeleteMapping("/{familyId}/members/{memberId}")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            Authentication auth) {
+        familyService.removeMember(familyId, memberId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{familyId}")
+    public ResponseEntity<Void> deleteFamily(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        familyService.deleteFamily(familyId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{familyId}/leave")
+    public ResponseEntity<Void> leaveFamily(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        familyService.leaveFamily(familyId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    private User requester(Authentication auth) {
+        return (User) auth.getPrincipal();
+    }
+}

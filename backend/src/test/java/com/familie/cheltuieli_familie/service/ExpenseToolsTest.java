@@ -1,16 +1,21 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -35,6 +40,16 @@ class ExpenseToolsTest {
     }
 
     @Test
+    void testCalculateTotalError() {
+        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
+
+        assertEquals("Error calculating total: fail", result);
+    }
+
+    @Test
     void testCompareMembers() {
         when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
                 .thenReturn(Map.of("Teodor", new BigDecimal("300.00"), "Maria", new BigDecimal("200.00")));
@@ -46,12 +61,32 @@ class ExpenseToolsTest {
     }
 
     @Test
+    void testCompareMembersEmpty() {
+        when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(Collections.emptyMap());
+
+        String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
+
+        assertEquals("No spending data found for the specified period.", result);
+    }
+
+    @Test
+    void testCompareMembersError() {
+        when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
+
+        assertEquals("Error comparing members: fail", result);
+    }
+
+    @Test
     void testDetectAnomalies() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("500.00"))
-                .category("Electronics")
-                .date(LocalDate.of(2024, 1, 15))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("500.00"),
+                "category", "Electronics",
+                "date", LocalDate.of(2024, 1, 15)
+        );
 
         when(analyticsService.detectAnomalies(new BigDecimal("200"))).thenReturn(List.of(expense));
 
@@ -59,6 +94,26 @@ class ExpenseToolsTest {
 
         assertTrue(result.contains("Electronics"));
         assertTrue(result.contains("500.00 RON"));
+    }
+
+    @Test
+    void testDetectAnomaliesEmpty() {
+        when(analyticsService.detectAnomalies(new BigDecimal("200")))
+                .thenReturn(Collections.emptyList());
+
+        String result = expenseTools.detectAnomalies("200");
+
+        assertEquals("No anomalies found above 200 RON.", result);
+    }
+
+    @Test
+    void testDetectAnomaliesError() {
+        when(analyticsService.detectAnomalies(new BigDecimal("200")))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.detectAnomalies("200");
+
+        assertEquals("Error detecting anomalies: fail", result);
     }
 
     @Test
@@ -73,12 +128,32 @@ class ExpenseToolsTest {
     }
 
     @Test
+    void testByCategoryEmpty() {
+        when(analyticsService.byCategory(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(Collections.emptyMap());
+
+        String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
+
+        assertEquals("No expenses found for the specified period.", result);
+    }
+
+    @Test
+    void testByCategoryError() {
+        when(analyticsService.byCategory(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
+
+        assertEquals("Error getting category breakdown: fail", result);
+    }
+
+    @Test
     void testByPerson() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("150.00"))
-                .category("Food")
-                .date(LocalDate.of(2024, 1, 10))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("150.00"),
+                "category", "Food",
+                "date", LocalDate.of(2024, 1, 10)
+        );
 
         when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
                 .thenReturn(List.of(expense));
@@ -87,6 +162,26 @@ class ExpenseToolsTest {
 
         assertTrue(result.contains("Teodor"));
         assertTrue(result.contains("150.00 RON"));
+    }
+
+    @Test
+    void testByPersonEmpty() {
+        when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(Collections.emptyList());
+
+        String result = expenseTools.byPerson("Teodor", "2024-01-01", "2024-01-31");
+
+        assertEquals("No expenses found for Teodor in the specified period.", result);
+    }
+
+    @Test
+    void testByPersonError() {
+        when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.byPerson("Teodor", "2024-01-01", "2024-01-31");
+
+        assertEquals("Error finding expenses for person: fail", result);
     }
 
     @Test
@@ -103,13 +198,23 @@ class ExpenseToolsTest {
     }
 
     @Test
+    void testComparePeriodsError() {
+        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.comparePeriods("2024-01-01", "2024-01-31", "2024-02-01", "2024-02-29");
+
+        assertEquals("Error comparing periods: fail", result);
+    }
+
+    @Test
     void testTopExpenses() {
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .amount(new BigDecimal("400.00"))
-                .category("Electronics")
-                .person("Teodor")
-                .date(LocalDate.of(2024, 1, 5))
-                .build();
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("400.00"),
+                "category", "Electronics",
+                "person", "Teodor",
+                "date", LocalDate.of(2024, 1, 5)
+        );
 
         when(analyticsService.getTopExpenses(3)).thenReturn(List.of(expense));
 
@@ -120,12 +225,42 @@ class ExpenseToolsTest {
     }
 
     @Test
+    void testTopExpensesEmpty() {
+        when(analyticsService.getTopExpenses(3))
+                .thenReturn(Collections.emptyList());
+
+        String result = expenseTools.topExpenses("3");
+
+        assertEquals("No expenses found.", result);
+    }
+
+    @Test
+    void testTopExpensesError() {
+        when(analyticsService.getTopExpenses(3))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.topExpenses("3");
+
+        assertEquals("Error getting top expenses: fail", result);
+    }
+
+    @Test
     void testMonthlyAverage() {
         when(analyticsService.calculateMonthlyAverage(3)).thenReturn(new BigDecimal("450.00"));
 
         String result = expenseTools.monthlyAverage("3");
 
         assertEquals("Monthly average for the last 3 months: 450.00 RON", result);
+    }
+
+    @Test
+    void testMonthlyAverageError() {
+        when(analyticsService.calculateMonthlyAverage(3))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.monthlyAverage("3");
+
+        assertEquals("Error calculating monthly average: fail", result);
     }
 
     @Test
@@ -139,32 +274,150 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void testGetVisualDescription_Increased() {
+    void testDescribeTrendError() {
         when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending increased by 15.5%");
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Error calculating trend: fail", result);
+    }
+
+    static Stream<Arguments> visualDescriptionSource() {
+        return Stream.of(
+            Arguments.of("Spending increased by 15.5%", "Trendul arată o creștere de 15.5% pentru Food"),
+            Arguments.of("Spending decreased by 8.2%", "Trendul arată o scădere de 8.2% pentru Food"),
+            Arguments.of("Spending remained stable", "Trend stabil pentru Food")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("visualDescriptionSource")
+    void testGetVisualDescription(String trend, String expected) {
+        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(trend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertEquals("Trendul arată o creștere de 15.5% pentru Food", result);
+        assertEquals(expected, result);
     }
 
     @Test
-    void testGetVisualDescription_Decreased() {
+    void testGetVisualDescriptionError() {
         when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending decreased by 8.2%");
+                .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertEquals("Trendul arată o scădere de 8.2% pentru Food", result);
+        assertEquals("Error getting visual description: fail", result);
     }
 
     @Test
-    void testGetVisualDescription_Stable() {
+    void testByCategoryDetailed() {
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("100.00"),
+                "location", "Kaufland",
+                "date", LocalDate.of(2024, 1, 10),
+                "description", "Groceries"
+        );
+
+        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(List.of(expense));
+
+        String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("100.00 RON"));
+        assertTrue(result.contains("Kaufland"));
+    }
+
+    @Test
+    void testByCategoryDetailedEmpty() {
+        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(Collections.emptyList());
+
+        String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("No expenses found for category 'Food' in the specified period.", result);
+    }
+
+    @Test
+    void testByCategoryDetailedError() {
+        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Error finding category expenses: fail", result);
+    }
+
+    @Test
+    void testByLocation() {
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("50.00"),
+                "category", "Transport",
+                "date", LocalDate.of(2024, 1, 10),
+                "description", "Bus ticket"
+        );
+
+        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(List.of(expense));
+
+        String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Kaufland"));
+        assertTrue(result.contains("50.00 RON"));
+    }
+
+    @Test
+    void testByLocationEmpty() {
+        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn(Collections.emptyList());
+
+        String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
+
+        assertEquals("No expenses found for location 'Kaufland' in the specified period.", result);
+    }
+
+    @Test
+    void testByLocationError() {
+        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
+
+        assertEquals("Error finding location expenses: fail", result);
+    }
+
+    @Test
+    void testExtractPercentageNull() {
+        String result = ReflectionTestUtils.invokeMethod(expenseTools, "extractPercentage", (String) null);
+        assertEquals("0", result);
+    }
+
+    @Test
+    void testExtractPercentageTooLong() {
+        StringBuilder sb = new StringBuilder("Spending increased by ");
+        while (sb.length() <= 1000) {
+            sb.append("a lot ");
+        }
+        String longTrend = sb.toString();
+
         when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
-                .thenReturn("Spending remained stable");
+                .thenReturn(longTrend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertEquals("Trend stabil pentru Food", result);
+        assertEquals("Trendul arată o creștere de 0% pentru Food", result);
+    }
+
+    @Test
+    void testExtractPercentageNoMatch() {
+        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+                .thenReturn("Spending increased but no percent here");
+
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertEquals("Trendul arată o creștere de 0% pentru Food", result);
     }
 }

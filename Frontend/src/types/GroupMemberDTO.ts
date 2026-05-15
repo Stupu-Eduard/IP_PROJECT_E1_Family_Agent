@@ -1,7 +1,7 @@
 export interface GroupMemberDTO {
-    id: string;
+    id: number;
+    userId: number;
     name: string;
     email: string;
     role: 'Parent' | 'Co-Parent' | 'Child';
-    status: 'Accepted' | 'Pending';
 }

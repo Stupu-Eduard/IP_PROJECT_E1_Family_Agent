@@ -12,6 +12,7 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.qdrant.QdrantEmbeddingStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -34,7 +34,10 @@ public class QdrantVectorService {
     private static final String KEY_DATE = "date";
     private static final String KEY_AMOUNT = "amount";
     private static final String KEY_ID = "id";
+    private static final String KEY_RAW_INPUT = "raw_input";
     private static final String QDRANT_RESULT = "result";
+    private static final String MATCH = "match";
+    private static final String VALUE = "value";
 
     private final QdrantEmbeddingStore embeddingStore;
     private final EmbeddingModel embeddingModel;
@@ -66,6 +69,7 @@ public class QdrantVectorService {
         Metadata metadata = new Metadata();
         metadata.put(KEY_ID, expense.getId());
         metadata.put(KEY_AMOUNT, expense.getAmount().doubleValue());
+        metadata.put(KEY_RAW_INPUT, textToEmbed);
         if (expense.getCategory() != null) metadata.put(KEY_CATEGORY, expense.getCategory());
         if (expense.getPerson() != null) metadata.put(KEY_PERSON, expense.getPerson());
         if (expense.getLocation() != null) metadata.put(KEY_LOCATION, expense.getLocation());
@@ -102,29 +106,16 @@ public class QdrantVectorService {
 
         // Build filter
         Map<String, Object> filter = buildQdrantFilter(category, person, from, to);
-        if (filter != null) {
+        if (!filter.isEmpty()) {
             body.put("filter", filter);
         }
 
-        String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
-                if (results != null) {
-                    return results.stream()
-                            .map(this::mapRestResultToEmbeddedExpense)
-                            .collect(Collectors.toList());
-                }
-            }
-        } catch (Exception e) {
-            log.error("Qdrant search failed: {}", e.getMessage());
+        List<Map<String, Object>> results = executeQdrantSearch(body);
+        if (results != null) {
+            return results.stream()
+                    .map(this::mapRestResultToEmbeddedExpense)
+                    .toList();
         }
-
         return List.of();
     }
 
@@ -132,10 +123,10 @@ public class QdrantVectorService {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
-            conditions.add(Map.of("key", KEY_CATEGORY, "match", Map.of("value", category)));
+            conditions.add(Map.of("key", KEY_CATEGORY, MATCH, Map.of(VALUE, category)));
         }
         if (person != null && !person.isEmpty()) {
-            conditions.add(Map.of("key", KEY_PERSON, "match", Map.of("value", person)));
+            conditions.add(Map.of("key", KEY_PERSON, MATCH, Map.of(VALUE, person)));
         }
         if (from != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("gte", from.toString())));
@@ -145,7 +136,7 @@ public class QdrantVectorService {
         }
 
         if (conditions.isEmpty()) {
-            return null;
+            return Map.of();
         }
         if (conditions.size() == 1) {
             return conditions.get(0);
@@ -160,8 +151,8 @@ public class QdrantVectorService {
         Long id = null;
         if (payload != null && payload.get(KEY_ID) != null) {
             Object idObj = payload.get(KEY_ID);
-            if (idObj instanceof Number) {
-                id = ((Number) idObj).longValue();
+            if (idObj instanceof Number number) {
+                id = number.longValue();
             } else {
                 id = Long.parseLong(idObj.toString());
             }
@@ -170,8 +161,8 @@ public class QdrantVectorService {
         BigDecimal amount = null;
         if (payload != null && payload.get(KEY_AMOUNT) != null) {
             Object amtObj = payload.get(KEY_AMOUNT);
-            if (amtObj instanceof Number) {
-                amount = BigDecimal.valueOf(((Number) amtObj).doubleValue());
+            if (amtObj instanceof Number number) {
+                amount = BigDecimal.valueOf(number.doubleValue());
             } else {
                 amount = new BigDecimal(amtObj.toString());
             }
@@ -184,7 +175,7 @@ public class QdrantVectorService {
                 .person(payload != null ? (String) payload.get(KEY_PERSON) : null)
                 .location(payload != null ? (String) payload.get(KEY_LOCATION) : null)
                 .date(parseLocalDate(payload != null ? (String) payload.get(KEY_DATE) : null))
-                .rawInput(payload != null ? (String) payload.get("text_segment") : null)
+                .rawInput(payload != null ? (String) payload.get(KEY_RAW_INPUT) : null)
                 .score(score)
                 .build();
     }
@@ -198,27 +189,42 @@ public class QdrantVectorService {
         }
     }
 
-    public boolean existsInVectorStore(Long id) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("vector", new float[2048]);
-        body.put("limit", 1);
-        body.put("with_vector", false);
-        body.put("with_payload", true);
-        body.put("filter", Map.of("must", List.of(Map.of("key", KEY_ID, "match", Map.of("value", id.toString())))));
-
+    private List<Map<String, Object>> executeQdrantSearch(Map<String, Object> body) {
         String url = String.format("http://%s:%d/collections/%s/points/search", host, httpPort, collectionName);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
-                return results != null && !results.isEmpty();
+                return (List<Map<String, Object>>) response.getBody().get(QDRANT_RESULT);
             }
         } catch (Exception e) {
-            log.error("Qdrant exists check failed: {}", e.getMessage());
+            log.error("Qdrant search failed: {}", e.getMessage());
+        }
+        return List.of();
+    }
+
+    public boolean existsInVectorStore(Long id) {
+        String url = String.format("http://%s:%d/collections/%s/points/scroll", host, httpPort, collectionName);
+        try {
+            Map<String, Object> filter = Map.of(
+                "must", List.of(Map.of("key", KEY_ID, MATCH, Map.of(VALUE, id.toString())))
+            );
+            Map<String, Object> body = Map.of("filter", filter, "limit", 1, "with_payload", false);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> result = (Map<String, Object>) response.getBody().get(QDRANT_RESULT);
+                List<Map<String, Object>> points = result != null ? (List<Map<String, Object>>) result.get("points") : null;
+                return points != null && !points.isEmpty();
+            }
+        } catch (Exception e) {
+            log.debug("Point with id {} not found in collection {}: {}", id, collectionName, e.getMessage());
         }
         return false;
     }

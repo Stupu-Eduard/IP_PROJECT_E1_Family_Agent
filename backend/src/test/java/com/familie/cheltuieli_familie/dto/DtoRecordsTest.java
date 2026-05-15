@@ -40,7 +40,8 @@ class DtoRecordsTest {
                 dt,
                 "Food",
                 "Family",
-                loc
+                loc,
+                "manual"
         );
 
         assertEquals(100L, dto.id());

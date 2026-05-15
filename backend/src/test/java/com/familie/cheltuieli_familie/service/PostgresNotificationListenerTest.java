@@ -1,100 +1,101 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.postgresql.PGConnection;
-import org.postgresql.PGNotification;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Method;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.DatabaseMetaData;
 import java.sql.Statement;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PostgresNotificationListenerTest {
 
     @Mock
     private DataSource dataSource;
-
-    @Mock
-    private ThePipeHandler thePipeHandler;
-
     @Mock
     private Connection connection;
-
+    @Mock
+    private DatabaseMetaData metaData;
     @Mock
     private PGConnection pgConnection;
-
     @Mock
     private Statement statement;
-
     @Mock
-    private PreparedStatement preparedStatement;
-
+    private ThePipeHandler thePipeHandler;
     @Mock
-    private ResultSet resultSet;
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private PostgresNotificationListener listener;
 
-    @Mock
-    private java.sql.DatabaseMetaData databaseMetaData;
-
     @Test
-    void processNotification_ShouldHandleInvalidJson() throws Exception {
-        // GIVEN
+    void listenToEvents_ShouldAbort_WhenNotPostgres() throws Exception {
         when(dataSource.getConnection()).thenReturn(connection);
-        when(connection.getMetaData()).thenReturn(databaseMetaData);
-        when(databaseMetaData.getDriverName()).thenReturn("PostgreSQL Driver");
-        when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
-        when(connection.createStatement()).thenReturn(statement);
+        when(connection.getMetaData()).thenReturn(metaData);
+        when(metaData.getDriverName()).thenReturn("H2 Driver");
 
-        PGNotification mockNotification = mock(PGNotification.class);
-        when(mockNotification.getParameter()).thenReturn("{invalid}"); 
-        
-        when(pgConnection.getNotifications(anyInt()))
-                .thenReturn(new PGNotification[]{mockNotification})
-                .thenAnswer(inv -> { Thread.currentThread().interrupt(); return null; });
-        
-        // WHEN & THEN
-        assertDoesNotThrow(() -> listener.listenToLocationUpdates());
+        listener.listenToEvents();
+
+        verify(connection, never()).unwrap(PGConnection.class);
     }
 
     @Test
-    void processNotification_ShouldHandleMissingId() throws Exception {
-        // GIVEN
+    void listenToEvents_ShouldStartListening_WhenPostgres() throws Exception {
         when(dataSource.getConnection()).thenReturn(connection);
-        when(connection.getMetaData()).thenReturn(databaseMetaData);
-        when(databaseMetaData.getDriverName()).thenReturn("PostgreSQL Driver");
+        when(connection.getMetaData()).thenReturn(metaData);
+        when(metaData.getDriverName()).thenReturn("PostgreSQL JDBC Driver");
         when(connection.unwrap(PGConnection.class)).thenReturn(pgConnection);
         when(connection.createStatement()).thenReturn(statement);
-        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
-        when(preparedStatement.executeQuery()).thenReturn(resultSet);
 
-        PGNotification mockNotification = mock(PGNotification.class);
-        when(mockNotification.getParameter()).thenReturn("{\"id\": 999}"); 
+        // Simulate interruption to exit the loop immediately
+        Thread.currentThread().interrupt();
+
+        listener.listenToEvents();
+
+        verify(statement).execute("LISTEN location_updates");
+        verify(statement).execute("LISTEN general_notifications");
+    }
+
+    @Test
+    void listenToEvents_ShouldLogAndRecover_WhenExceptionOccurs() throws Exception {
+        when(dataSource.getConnection()).thenThrow(new RuntimeException("DB Down"));
+
+        listener.listenToEvents();
+
+        // Should not crash, just log error
+        verify(dataSource).getConnection();
+    }
+
+    @Test
+    void processNotification_ShouldBroadcastPayload() throws Exception {
+        String payload = "{\"test\": \"data\"}";
         
-        when(pgConnection.getNotifications(anyInt()))
-                .thenReturn(new PGNotification[]{mockNotification})
-                .thenAnswer(inv -> { Thread.currentThread().interrupt(); return null; });
+        // Use reflection to call private method for unit testing coverage
+        Method method = PostgresNotificationListener.class.getDeclaredMethod("processNotification", String.class, String.class);
+        method.setAccessible(true);
+        method.invoke(listener, "location_updates", payload);
 
-        when(resultSet.next()).thenReturn(false);
+        verify(thePipeHandler).broadcast(payload);
+    }
 
-        // WHEN
-        listener.listenToLocationUpdates();
+    @Test
+    void processNotification_ShouldLogError_WhenInvalidJson() throws Exception {
+        String payload = "invalid-json";
+        when(objectMapper.readTree(payload)).thenThrow(new RuntimeException("JSON Error"));
 
-        // THEN
+        Method method = PostgresNotificationListener.class.getDeclaredMethod("processNotification", String.class, String.class);
+        method.setAccessible(true);
+        method.invoke(listener, "some-channel", payload);
+
         verify(thePipeHandler, never()).broadcast(anyString());
     }
 }

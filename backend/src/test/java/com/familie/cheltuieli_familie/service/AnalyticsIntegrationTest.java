@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +10,6 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -22,7 +20,7 @@ import static org.mockito.Mockito.when;
     "DEEPSEEK_API_KEY=test-key",
     "OPENROUTER_API_KEY=test-key"
 })
-public class AnalyticsIntegrationTest {
+class AnalyticsIntegrationTest {
 
     @Autowired
     private ExpenseTools expenseTools;
@@ -33,16 +31,14 @@ public class AnalyticsIntegrationTest {
     @MockBean
     private ExpenseJpaRepository repository;
 
+    @MockBean
+    private ExpenseAnalyticsService analyticsService;
+
     @Test
     void testLauraAnalyticsFlow_HallucinationGuardCorrection() {
         // GIVEN
-        LocalDate date = LocalDate.of(2024, 1, 1);
-        ExpenseEntity e = new ExpenseEntity();
-        e.setAmount(new BigDecimal("100.50"));
-        e.setDate(date);
-        e.setCategory("Mâncare");
-        
-        when(repository.findByDateBetween(date, date)).thenReturn(List.of(e));
+        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 1)))
+                .thenReturn(new BigDecimal("100.50"));
 
         // WHEN - Tool-ul scoate 100.50 RON
         String toolOutput = expenseTools.calculateTotal("2024-01-01", "2024-01-01");

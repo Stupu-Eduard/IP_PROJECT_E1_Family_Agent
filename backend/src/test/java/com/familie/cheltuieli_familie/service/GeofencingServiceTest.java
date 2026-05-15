@@ -86,8 +86,8 @@ class GeofencingServiceTest {
 
     @Test
     void testDummyMethod() {
-        GeometryFactory factory = new GeometryFactory();
-        Point dummyPoint = factory.createPoint(new Coordinate(0, 0));
+        GeometryFactory localFactory = new GeometryFactory();
+        Point dummyPoint = localFactory.createPoint(new Coordinate(0, 0));
         assertDoesNotThrow(() -> service.isUserInsideZone(dummyPoint));
     }
 }

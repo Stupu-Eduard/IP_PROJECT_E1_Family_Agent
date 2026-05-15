@@ -1,7 +1,10 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
+import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -19,6 +23,9 @@ class LocationAdapterServiceTest {
     @Mock
     private MinorSafetyFilterService minorSafetyFilterService;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private LocationAdapterService locationAdapterService;
 
@@ -26,6 +33,13 @@ class LocationAdapterServiceTest {
     private static final Long PARENT_ID = 2L;
     private static final double LATITUDE = 47.1585;
     private static final double LONGITUDE = 27.6014;
+
+    @BeforeEach
+    void setUp() {
+        User mockUser = mock(User.class);
+        when(mockUser.getName()).thenReturn("Copil Test");
+        when(userRepository.findById(CHILD_ID)).thenReturn(Optional.of(mockUser));
+    }
 
     // =====================================================================
     // TESTE PENTRU adapt()

@@ -1,85 +1,104 @@
 package com.familie.cheltuieli_familie.config;
 
+import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
+import com.familie.cheltuieli_familie.service.ExpenseTools;
+import com.familie.cheltuieli_familie.service.QdrantContentRetriever;
+import com.familie.cheltuieli_familie.service.VisualIntentExtractor;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.rag.RetrievalAugmentor;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(MockitoExtension.class)
 class LlmConfigTest {
 
-    @Test
-    void testResolveKeyWithSpringValue() {
-        LlmConfig config = new LlmConfig();
-        String result = ReflectionTestUtils.invokeMethod(config, "resolveKey", "spring-key", "ENV_VAR");
-        assertEquals("spring-key", result);
+    private LlmConfig llmConfig;
+
+    @Mock
+    private ChatLanguageModel chatLanguageModel;
+
+    @Mock
+    private QdrantContentRetriever qdrantContentRetriever;
+
+    @Mock
+    private ExpenseTools expenseTools;
+
+    @BeforeEach
+    void setUp() {
+        llmConfig = new LlmConfig();
     }
 
     @Test
-    void testResolveKeyWithEmptySpringValue() {
-        LlmConfig config = new LlmConfig();
-        String result = ReflectionTestUtils.invokeMethod(config, "resolveKey", "", "PATH");
-        // Should fall through to env or .env
-        assertNotNull(result);
+    void visualIntentExtractor_shouldCreateBeanWithProvidedModel() {
+        ReflectionTestUtils.setField(llmConfig, "intentMaxRetries", 3);
+        ReflectionTestUtils.setField(llmConfig, "retryDelaysMsStr", "2000,4000");
+        ReflectionTestUtils.setField(llmConfig, "defaultGroupBy", "category");
+        ReflectionTestUtils.setField(llmConfig, "defaultSeriesBy", "person");
+        VisualIntentExtractor extractor = llmConfig.visualIntentExtractor(chatLanguageModel);
+        assertNotNull(extractor);
     }
 
     @Test
-    void testLoadDotEnvReturnsMap() {
-        LlmConfig config = new LlmConfig();
-        Map<String, String> result = ReflectionTestUtils.invokeMethod(config, "loadDotEnv");
-        assertNotNull(result);
-    }
-
-    @Test
-    void testDeepseekModelWithTestKey() {
-        LlmConfig config = new LlmConfig();
-        ReflectionTestUtils.setField(config, "deepseekApiKey", "test-key");
-        
-        var model = config.deepseekModel();
+    void deepseekModel_shouldCreateBeanWithDeepseekKey() {
+        ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "sk-test-deepseek");
+        ReflectionTestUtils.setField(llmConfig, "deepseekBaseUrl", "https://api.deepseek.com");
+        ReflectionTestUtils.setField(llmConfig, "deepseekModelName", "deepseek-chat");
+        ReflectionTestUtils.setField(llmConfig, "temperature", 0.1);
+        ReflectionTestUtils.setField(llmConfig, "timeoutSeconds", 60L);
+        ChatLanguageModel model = llmConfig.deepseekModel();
         assertNotNull(model);
     }
 
     @Test
-    void testDeepseekModelWithOpenRouterFallback() {
-        LlmConfig config = new LlmConfig();
-        ReflectionTestUtils.setField(config, "deepseekApiKey", "");
-        ReflectionTestUtils.setField(config, "openRouterApiKey", "test-key");
-        
-        var model = config.deepseekModel();
+    void deepseekModel_shouldCreateBeanWithOpenRouterKey() {
+        ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "");
+        ReflectionTestUtils.setField(llmConfig, "openRouterApiKey", "sk-test-openrouter");
+        ReflectionTestUtils.setField(llmConfig, "openRouterBaseUrl", "https://openrouter.ai/api/v1");
+        ReflectionTestUtils.setField(llmConfig, "openRouterModelName", "deepseek/deepseek-chat");
+        ReflectionTestUtils.setField(llmConfig, "temperature", 0.1);
+        ReflectionTestUtils.setField(llmConfig, "timeoutSeconds", 60L);
+        ChatLanguageModel model = llmConfig.deepseekModel();
         assertNotNull(model);
     }
 
     @Test
-    void testRetrievalAugmentorBean() {
-        LlmConfig config = new LlmConfig();
-        var retriever = new com.familie.cheltuieli_familie.service.QdrantContentRetriever(null);
-        var augmentor = config.retrievalAugmentor(retriever);
+    @DisabledIfEnvironmentVariable(named = "DEEPSEEK_API_KEY", matches = ".+")
+    @DisabledIfEnvironmentVariable(named = "OPENROUTER_API_KEY", matches = ".+")
+    void deepseekModel_shouldThrowWhenNoKeyConfigured() {
+        ReflectionTestUtils.setField(llmConfig, "deepseekApiKey", "");
+        ReflectionTestUtils.setField(llmConfig, "openRouterApiKey", "");
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> llmConfig.deepseekModel());
+        assertEquals("DEEPSEEK_API_KEY or OPENROUTER_API_KEY is required.", exception.getMessage());
+    }
+
+    @Test
+    void retrievalAugmentor_shouldCreateBean() {
+        RetrievalAugmentor augmentor = llmConfig.retrievalAugmentor(qdrantContentRetriever);
         assertNotNull(augmentor);
     }
 
     @Test
-    void testRouterAssistantBean() {
-        LlmConfig config = new LlmConfig();
-        var mockModel = org.mockito.Mockito.mock(dev.langchain4j.model.chat.ChatLanguageModel.class);
-        var assistant = config.routerAssistant(mockModel);
+    void ragAssistant_shouldCreateBean() {
+        LlmConfig.RagAssistant assistant = llmConfig.ragAssistant(chatLanguageModel, llmConfig.retrievalAugmentor(qdrantContentRetriever));
         assertNotNull(assistant);
     }
 
     @Test
-    void testAnalyticsAssistantBean() {
-        LlmConfig config = new LlmConfig();
-        var mockModel = org.mockito.Mockito.mock(dev.langchain4j.model.chat.ChatLanguageModel.class);
-        var mockTools = org.mockito.Mockito.mock(com.familie.cheltuieli_familie.service.ExpenseTools.class);
-        var assistant = config.analyticsAssistant(mockModel, mockTools);
+    void analyticsAssistant_shouldCreateBean() {
+        AnalyticsAssistant assistant = llmConfig.analyticsAssistant(chatLanguageModel, expenseTools);
         assertNotNull(assistant);
     }
 
     @Test
-    void testReportAssistantBean() {
-        LlmConfig config = new LlmConfig();
-        var mockModel = org.mockito.Mockito.mock(dev.langchain4j.model.chat.ChatLanguageModel.class);
-        var assistant = config.reportAssistant(mockModel);
+    void reportAssistant_shouldCreateBean() {
+        LlmConfig.ReportAssistant assistant = llmConfig.reportAssistant(chatLanguageModel);
         assertNotNull(assistant);
     }
 }

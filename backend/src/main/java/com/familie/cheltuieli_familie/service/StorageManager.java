@@ -1,9 +1,11 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.entity.ExpenseOCREntity;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
 import com.familie.cheltuieli_familie.repository.ExpenseOCRRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -11,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 public class StorageManager implements StorageService {
 
     private static final String DEFAULT_CURRENCY = "RON";
@@ -18,9 +21,11 @@ public class StorageManager implements StorageService {
     private static final String SOURCE_TYPE = "OCR";
 
     private final ExpenseOCRRepository expenseRepository;
+    private final SyncService syncService;
 
-    public StorageManager(ExpenseOCRRepository expenseRepository) {
+    public StorageManager(ExpenseOCRRepository expenseRepository, SyncService syncService) {
         this.expenseRepository = expenseRepository;
+        this.syncService = syncService;
     }
 
     @Override
@@ -33,7 +38,7 @@ public class StorageManager implements StorageService {
         int failed = 0;
 
         for (Transaction transaction : transactions) {
-            if (saveTransaction(transaction)) {
+            if (saveAndSyncTransaction(transaction)) {
                 saved++;
             } else {
                 failed++;
@@ -43,7 +48,7 @@ public class StorageManager implements StorageService {
         return new StorageResult(transactions.size(), saved, failed);
     }
 
-    private boolean saveTransaction(Transaction transaction) {
+    private boolean saveAndSyncTransaction(Transaction transaction) {
         try {
             if (!isValid(transaction)) {
                 return false;
@@ -51,10 +56,32 @@ public class StorageManager implements StorageService {
 
             ExpenseOCREntity expense = createExpenseEntity(transaction);
             expenseRepository.save(expense);
+
+            // Also sync to Qdrant via ExpenseEntity for RAG context
+            syncToVectorStore(expense);
+
             return true;
 
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    private void syncToVectorStore(ExpenseOCREntity ocrExpense) {
+        try {
+            ExpenseEntity entity = ExpenseEntity.builder()
+                    .id(ocrExpense.getId())
+                    .amount(ocrExpense.getAmount())
+                    .category(ocrExpense.getDescription())  // Use description as category fallback
+                    .location("OCR")
+                    .person("OCR")
+                    .date(ocrExpense.getDate() != null ? ocrExpense.getDate().toLocalDate() : null)
+                    .rawInput(ocrExpense.getDescription())
+                    .build();
+            syncService.syncExpense(entity);
+        } catch (Exception e) {
+            // Log but don't fail the main save
+            log.error("Failed to sync OCR expense to vector store: {}", e.getMessage());
         }
     }
 
