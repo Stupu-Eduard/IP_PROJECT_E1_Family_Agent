@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/geofencing")
@@ -75,7 +74,7 @@ public class GeofenceController {
     }
 
     @GetMapping("/zones/my")
-    public ResponseEntity<?> getMyZone(Authentication auth) {
+    public ResponseEntity<Object> getMyZone(Authentication auth) {
         Long familyId = getFamilyId(auth);
         if (familyId == null) return ResponseEntity.noContent().build();
 
@@ -84,8 +83,8 @@ public class GeofenceController {
                     Coordinate[] coords = z.getArea().getExteriorRing().getCoordinates();
                     List<LatLngDto> latLngs = Arrays.stream(coords)
                             .map(c -> new LatLngDto(c.y, c.x))
-                            .collect(Collectors.toList());
-                    return ResponseEntity.ok(new GeofenceZoneResponseDto(z.getId(), z.getName(), latLngs));
+                            .toList();
+                    return ResponseEntity.<Object>ok(new GeofenceZoneResponseDto(z.getId(), z.getName(), latLngs));
                 })
                 .orElse(ResponseEntity.noContent().build());
     }
