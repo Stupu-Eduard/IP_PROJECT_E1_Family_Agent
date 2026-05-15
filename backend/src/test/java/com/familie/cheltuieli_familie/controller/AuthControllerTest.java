@@ -2,8 +2,12 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.dto.ForgotPasswordRequest;
+import com.familie.cheltuieli_familie.dto.ResetPasswordRequest;
+import com.familie.cheltuieli_familie.dto.SecurityQuestion;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
+import com.familie.cheltuieli_familie.model.Answer;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
@@ -255,6 +259,110 @@ class AuthControllerTest {
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertEquals("Child", body.get("role"));
         assertEquals("child-token", body.get("token"));
+    }
+
+    @Test
+    void forgotPassword_CandRaspunsurileSuntCorecte_ReturneazaVerificareReusita() {
+        User user = new User();
+        user.setId(3L);
+        user.setEmail("reset@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("reset@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("reset@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(3L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("cat", "encoded-cat")).thenReturn(true);
+        when(passwordEncoder.matches("blue", "encoded-blue")).thenReturn(true);
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Verificare reușită.", body.get("message"));
+    }
+
+    @Test
+    void forgotPassword_CandIntrebarileSuntIdentice_ReturneazaBadRequest() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("reset@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.ANIMAL);
+        request.setAnswer2("cat");
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void resetPassword_CandRaspunsurileSuntCorecte_ActualizeazaParola() {
+        User user = new User();
+        user.setId(4L);
+        user.setEmail("reset2@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-dog");
+        answers.setColor("encoded-green");
+        answers.setStreet("encoded-road");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("reset2@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("dog");
+        request.setQuestion2(SecurityQuestion.STREET);
+        request.setAnswer2("road");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("reset2@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(4L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("dog", "encoded-dog")).thenReturn(true);
+        when(passwordEncoder.matches("road", "encoded-road")).thenReturn(true);
+        when(passwordEncoder.encode("NewPassword123!")).thenReturn("encoded-new-pass");
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        verify(userRepository).save(argThat(savedUser -> "encoded-new-pass".equals(savedUser.getPasswordH())));
+    }
+
+    @Test
+    void resetPassword_CandRaspunsurileSuntGresite_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("reset3@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("reset3@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("wrong");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("reset3@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(5L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("wrong", "encoded-cat")).thenReturn(false);
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
