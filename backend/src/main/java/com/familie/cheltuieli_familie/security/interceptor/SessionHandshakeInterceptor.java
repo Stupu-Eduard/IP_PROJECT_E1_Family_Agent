@@ -24,6 +24,8 @@ import java.util.Optional;
 @Slf4j
 public class SessionHandshakeInterceptor implements HandshakeInterceptor {
 
+    private static final String HANDSHAKE_REFUSED_MSG = "🔴 Handshake refuzat: Token invalid sau inexistent.";
+
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final FamilyMemberRepository familyMemberRepository;
@@ -33,19 +35,19 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
         if (!(request instanceof ServletServerHttpRequest servletRequest)) {
-            log.warn("🔴 Handshake refuzat: Token invalid sau inexistent.");
+            log.warn(HANDSHAKE_REFUSED_MSG);
             return false;
         }
 
         String token = extractToken(servletRequest);
         if (token == null) {
-            log.warn("🔴 Handshake refuzat: Token invalid sau inexistent.");
+            log.warn(HANDSHAKE_REFUSED_MSG);
             return false;
         }
 
         Optional<User> userOpt = authenticateToken(token);
         if (userOpt.isEmpty()) {
-            log.warn("🔴 Handshake refuzat: Token invalid sau inexistent.");
+            log.warn(HANDSHAKE_REFUSED_MSG);
             return false;
         }
 
