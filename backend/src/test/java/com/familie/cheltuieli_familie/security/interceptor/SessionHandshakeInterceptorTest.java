@@ -213,4 +213,24 @@ class SessionHandshakeInterceptorTest {
         // THEN
         assertFalse(result);
     }
+
+    @Test
+    @DisplayName("❌ Should return false when extracted email is null")
+    void beforeHandshake_WhenEmailIsNull_ReturnsFalse() {
+        // GIVEN
+        String token = "token-with-null-email";
+        String jti = "jti-null-email";
+        MockHttpServletRequest mockRequest = new MockHttpServletRequest();
+        mockRequest.setQueryString("token=" + token);
+        ServletServerHttpRequest request = new ServletServerHttpRequest(mockRequest);
+
+        when(jwtUtil.extractEmail(token)).thenReturn(null);
+        when(jwtUtil.extractJti(token)).thenReturn(jti);
+
+        // WHEN
+        boolean result = interceptor.beforeHandshake(request, null, wsHandler, new HashMap<>());
+
+        // THEN
+        assertFalse(result);
+    }
 }
