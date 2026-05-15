@@ -8,6 +8,7 @@ import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
+import com.familie.cheltuieli_familie.repository.AnswerRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +36,10 @@ class AuthControllerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private AnswerRepository answerRepository;
+
 
     @Mock
     private FamilyMemberRepository familyMemberRepository;
@@ -160,6 +165,9 @@ class AuthControllerTest {
         request.setName("Nou User");
         request.setEmail("new@example.com");
         request.setPassword("password123");
+        request.setFavoriteAnimal("cat");
+        request.setFavoriteColor("blue");
+        request.setChildhoodStreet("Oak Street");
 
         Family savedFamily = new Family();
         savedFamily.setId(1L);
@@ -185,6 +193,9 @@ class AuthControllerTest {
         // GIVEN
         RegisterRequest request = new RegisterRequest();
         request.setEmail("existent@example.com");
+        request.setFavoriteAnimal("cat");
+        request.setFavoriteColor("blue");
+        request.setChildhoodStreet("Oak Street");
 
         when(userRepository.findByEmail("existent@example.com")).thenReturn(Optional.of(new User()));
 
@@ -229,6 +240,9 @@ class AuthControllerTest {
         request.setEmail("copil@example.com");
         request.setPassword("pass123");
         request.setRole("Child");
+        request.setFavoriteAnimal("dog");
+        request.setFavoriteColor("green");
+        request.setChildhoodStreet("Maple Ave");
 
         when(userRepository.findByEmail("copil@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("pass123")).thenReturn("encoded-child-pass");
