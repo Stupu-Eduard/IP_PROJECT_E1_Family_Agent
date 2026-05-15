@@ -1,6 +1,8 @@
 package com.familie.cheltuieli_familie.security.interceptor;
 
+import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,6 +26,7 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final TokenBlacklistService blacklistService;
 
     @Override
@@ -41,8 +45,16 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
                         Optional<User> userOpt = userRepository.findByEmail(email);
                         
                         if (userOpt.isPresent() && jwtUtil.validateToken(token, email)) {
+                            User user = userOpt.get();
                             log.info("🟢 Handshake permis pentru user: {}", email);
-                            attributes.put("user", userOpt.get());
+                            attributes.put("user", user);
+                            List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
+                            if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
+                                attributes.put("familyId", memberships.get(0).getFamily().getId());
+                                log.info("🟢 THE PIPE: familyId={} asociat sesiunii pentru user={}", memberships.get(0).getFamily().getId(), email);
+                            } else {
+                                log.warn("⚠️ THE PIPE: User {} nu are familie asociată.", email);
+                            }
                             return true;
                         }
                     }
