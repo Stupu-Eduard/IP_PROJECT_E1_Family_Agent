@@ -1,5 +1,7 @@
 package com.familie.cheltuieli_familie.controller;
 
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.GeofenceRepository;
 import com.familie.cheltuieli_familie.security.service.GeofencingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,13 +18,17 @@ import static org.mockito.Mockito.*;
 class GeofenceControllerTest {
 
     private GeofencingService mockGeofencingService;
+    private GeofenceRepository mockGeofenceRepository;
+    private FamilyMemberRepository mockFamilyMemberRepository;
     private GeofenceController geofenceController;
     private final GeometryFactory geometryFactory = new GeometryFactory();
 
     @BeforeEach
     void setUp() {
         mockGeofencingService = mock(GeofencingService.class);
-        geofenceController = new GeofenceController(mockGeofencingService);
+        mockGeofenceRepository = mock(GeofenceRepository.class);
+        mockFamilyMemberRepository = mock(FamilyMemberRepository.class);
+        geofenceController = new GeofenceController(mockGeofencingService, mockGeofenceRepository, mockFamilyMemberRepository);
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.GeofenceRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,9 @@ class LocationAdapterServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private GeofenceRepository geofenceRepository;
+
     @InjectMocks
     private LocationAdapterService locationAdapterService;
 
@@ -39,6 +43,7 @@ class LocationAdapterServiceTest {
         User mockUser = mock(User.class);
         when(mockUser.getName()).thenReturn("Copil Test");
         when(userRepository.findById(CHILD_ID)).thenReturn(Optional.of(mockUser));
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.empty());
     }
 
     // =====================================================================
@@ -106,7 +111,17 @@ class LocationAdapterServiceTest {
 
         locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
 
-        // Verificam ca adaptorul apeleaza serviciul de verificare
         verify(minorSafetyFilterService, times(1)).isLocationRestricted(placeTypes);
+    }
+
+    @Test
+    void adapt_isOutsideGeofence_esteFalse_cand_nuExistaZona() {
+        List<String> placeTypes = List.of("restaurant");
+        when(minorSafetyFilterService.isLocationRestricted(placeTypes)).thenReturn(false);
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.empty());
+
+        LocationMapDto dto = locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
+
+        assertFalse(dto.isOutsideGeofence());
     }
 }

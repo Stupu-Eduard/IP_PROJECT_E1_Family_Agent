@@ -1,0 +1,1 @@
+ALTER TABLE geofence_zones ADD COLUMN IF NOT EXISTS parent_id BIGINT;
