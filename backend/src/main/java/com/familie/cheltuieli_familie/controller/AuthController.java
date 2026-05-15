@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.dto.ForgotPasswordRequest;
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
 import com.familie.cheltuieli_familie.dto.ResetPasswordRequest;
+import com.familie.cheltuieli_familie.dto.SecurityQuestionsRequest;
 import com.familie.cheltuieli_familie.dto.SecurityQuestion;
 import com.familie.cheltuieli_familie.model.Answer;
 import com.familie.cheltuieli_familie.model.Family;
@@ -159,27 +160,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Object> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
-        }
-
-        if (request.getQuestion1() == request.getQuestion2()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(ERR_KEY, "Întrebările trebuie să fie diferite."));
-        }
-
-        User user = userOpt.get();
-        Optional<Answer> answerOpt = answerRepository.findByUserId(user.getId());
-        if (answerOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
-        }
-
-        Answer answers = answerOpt.get();
-        if (!matchesSecurityAnswer(answers, request.getQuestion1(), request.getAnswer1())
-                || !matchesSecurityAnswer(answers, request.getQuestion2(), request.getAnswer2())) {
+        if (loadVerifiedAnswers(request).isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
         }
@@ -189,31 +170,13 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<Object> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
-        if (userOpt.isEmpty()) {
+        Optional<Answer> verifiedAnswers = loadVerifiedAnswers(request);
+        if (verifiedAnswers.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
         }
 
-        if (request.getQuestion1() == request.getQuestion2()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(ERR_KEY, "Întrebările trebuie să fie diferite."));
-        }
-
-        User user = userOpt.get();
-        Optional<Answer> answerOpt = answerRepository.findByUserId(user.getId());
-        if (answerOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
-        }
-
-        Answer answers = answerOpt.get();
-        if (!matchesSecurityAnswer(answers, request.getQuestion1(), request.getAnswer1())
-            || !matchesSecurityAnswer(answers, request.getQuestion2(), request.getAnswer2())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
-        }
-
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         user.setPasswordH(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
@@ -273,5 +236,29 @@ public class AuthController {
             return false;
         }
         return passwordEncoder.matches(value, stored);
+    }
+
+    private Optional<Answer> loadVerifiedAnswers(SecurityQuestionsRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+        if (userOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (request.getQuestion1() == request.getQuestion2()) {
+            return Optional.empty();
+        }
+
+        Optional<Answer> answerOpt = answerRepository.findByUserId(userOpt.get().getId());
+        if (answerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Answer answers = answerOpt.get();
+        if (!matchesSecurityAnswer(answers, request.getQuestion1(), request.getAnswer1())
+                || !matchesSecurityAnswer(answers, request.getQuestion2(), request.getAnswer2())) {
+            return Optional.empty();
+        }
+
+        return answerOpt;
     }
 }
