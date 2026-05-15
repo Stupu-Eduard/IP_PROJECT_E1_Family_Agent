@@ -84,8 +84,8 @@ public class LocationStreamService {
         try {
             String payload = objectMapper.writeValueAsString(dto);
 
-            // 1. Trimitem prin THE PIPE (WebSockets) - noua implementare
-            thePipeHandler.broadcast(payload);
+            // 1. Trimitem prin THE PIPE (WebSockets) - targetat către parentId
+            thePipeHandler.sendToParent(parentId, payload);
 
             // 2. Trimitem prin SSE (vechea implementare, pentru compatibilitate)
             SseEmitter emitter = parentEmitters.get(parentId);

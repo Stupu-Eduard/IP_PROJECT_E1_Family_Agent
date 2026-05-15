@@ -36,7 +36,7 @@ class LocationStreamServiceTest {
 
         // Configuram mock-ul adaptorului sa returneze un DTO valid la orice apel
         when(locationAdapterService.adapt(anyLong(), anyLong(), anyDouble(), anyDouble(), anyList()))
-                .thenReturn(new LocationMapDto(2L, 1L, 47.1585, 27.6014, false, LocalDateTime.now()));
+                .thenReturn(new LocationMapDto(2L, "Copil Test", 1L, 47.1585, 27.6014, false, LocalDateTime.now()));
     }
 
     @Test
@@ -59,9 +59,9 @@ class LocationStreamServiceTest {
     void testSendLocationToParent_WhenNoParentConnected() {
         // Chiar daca parintele nu e conectat prin SSE, trebuie sa mearga prin WebSockets (The Pipe)
         locationStreamService.sendLocationToParent(2L, 999L, 45.0, 25.0, List.of());
-        
-        // Verificam ca s-a incercat broadcast prin The Pipe
-        verify(thePipeHandler, times(1)).broadcast(anyString());
+
+        // Verificam ca s-a incercat sendToParent prin The Pipe
+        verify(thePipeHandler, times(1)).sendToParent(anyLong(), anyString());
     }
 
     @Test
@@ -78,8 +78,8 @@ class LocationStreamServiceTest {
         // Verificam ca s-a apelat send() pentru SSE
         verify(mockEmitter, times(1)).send(any(SseEmitter.SseEventBuilder.class));
         
-        // Verificam ca s-a apelat broadcast() pentru THE PIPE
-        verify(thePipeHandler, times(1)).broadcast(anyString());
+        // Verificam ca s-a apelat sendToParent() pentru THE PIPE
+        verify(thePipeHandler, times(1)).sendToParent(anyLong(), anyString());
     }
 
     @Test
@@ -98,8 +98,8 @@ class LocationStreamServiceTest {
 
         // In caz de eroare SSE, parintele trebuie scos din map
         assertFalse(mockMap.containsKey(parentId), "Parintele ar trebui scos din map daca trimiterea SSE esueaza");
-        
-        // Dar broadcast-ul prin The Pipe ar trebui sa fi fost incercat oricum
-        verify(thePipeHandler, times(1)).broadcast(anyString());
+
+        // sendToParent prin The Pipe trebuie incercat oricum (inainte de exceptia SSE)
+        verify(thePipeHandler, times(1)).sendToParent(anyLong(), anyString());
     }
 }

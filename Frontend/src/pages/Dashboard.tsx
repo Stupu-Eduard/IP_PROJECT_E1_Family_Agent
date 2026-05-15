@@ -109,7 +109,8 @@ export default function Dashboard() {
     const [isLoading,      setIsLoading]      = useState(true)
     const expenseVersion = useExpenseStore((s) => s.version)
 
-    const [liveLocation, setLiveLocation] = useState<any>(null)
+    const [childLocations, setChildLocations] = useState<Record<number, any>>({})
+    const [selectedChildId, setSelectedChildId] = useState<number | null>(null)
     const [tick,         setTick]         = useState(0)
     useEffect(() => {
         const id = setInterval(() => setTick((t) => t + 1), 4500)
@@ -232,12 +233,13 @@ export default function Dashboard() {
             try {
                 const data = JSON.parse(event.data)
                 if (data.lat !== undefined && data.lng !== undefined && data.childId !== undefined) {
-                    setLiveLocation(data)
+                    setChildLocations(prev => ({ ...prev, [data.childId]: data }))
+                    setSelectedChildId(prev => prev ?? data.childId)
                 }
             } catch { /* ignoram */ }
         }
         return () => socket.close()
-    }, [userRole])
+    }, [userRole, token])
 
     const handleKpiMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const r = e.currentTarget.getBoundingClientRect()
@@ -360,32 +362,65 @@ export default function Dashboard() {
                         <div>
                             <div className="label" style={{ marginBottom: 6 }}>LOCAȚIE LIVE · FAMILIE</div>
                             <div style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.3px' }}>
-                                {liveLocation?.lat ? 'Locație detectată' : 'În așteptare...'}
+                                {selectedChildId ? childLocations[selectedChildId]?.childName ?? 'Copil' : 'În așteptare...'}
                             </div>
                         </div>
                         <span className="chip chip-live">LIVE</span>
                     </div>
 
+                    {/* Selector copii */}
+                    {Object.keys(childLocations).length > 1 && (
+                        <div style={{ padding: '0 24px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {Object.values(childLocations).map((loc: any) => (
+                                <button
+                                    key={loc.childId}
+                                    onClick={() => setSelectedChildId(loc.childId)}
+                                    style={{
+                                        padding: '5px 12px',
+                                        borderRadius: 20,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                        border: selectedChildId === loc.childId
+                                            ? '1.5px solid var(--color-primary)'
+                                            : '1.5px solid var(--color-border)',
+                                        background: selectedChildId === loc.childId
+                                            ? 'var(--color-primary)'
+                                            : 'transparent',
+                                        color: selectedChildId === loc.childId
+                                            ? '#fff'
+                                            : 'var(--color-muted)',
+                                    }}
+                                >
+                                    {loc.childName}
+                                    {loc.isRestricted && ' ⚠'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <div
                         style={{ position: 'relative', isolation: 'isolate' }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {liveLocation?.lat && liveLocation?.lng && isLoaded ? (
+                        {(() => {
+                            const loc = selectedChildId ? childLocations[selectedChildId] : null
+                            return loc?.lat && loc?.lng && isLoaded ? (
                             <div style={{ padding: '0 16px 16px' }}>
                                 <GoogleMap
                                     mapContainerStyle={containerStyle}
-                                    center={{ lat: liveLocation.lat, lng: liveLocation.lng }}
+                                    center={{ lat: loc.lat, lng: loc.lng }}
                                     zoom={15}
                                     options={{ disableDefaultUI: true, gestureHandling: 'cooperative' }}
                                 >
-                                    <Marker position={{ lat: liveLocation.lat, lng: liveLocation.lng }} />
+                                    <Marker position={{ lat: loc.lat, lng: loc.lng }} />
                                 </GoogleMap>
                                 <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-muted-2)', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>Lat: {liveLocation.lat.toFixed(4)}</span>
-                                    <span>Lng: {liveLocation.lng.toFixed(4)}</span>
-                                    <span style={{ color: liveLocation.isRestricted ? '#E24B4A' : 'var(--color-primary)', fontWeight: 500 }}>
-                        {liveLocation.isRestricted ? '⚠ ZONĂ RESTRICȚIONATĂ!' : '✓ Zonă Sigură'}
-                      </span>
+                                    <span>Lat: {loc.lat.toFixed(4)}</span>
+                                    <span>Lng: {loc.lng.toFixed(4)}</span>
+                                    <span style={{ color: loc.isRestricted ? '#E24B4A' : 'var(--color-primary)', fontWeight: 500 }}>
+                                        {loc.isRestricted ? '⚠ ZONĂ RESTRICȚIONATĂ!' : '✓ Zonă Sigură'}
+                                    </span>
                                 </div>
                             </div>
                         ) : (
@@ -421,7 +456,8 @@ export default function Dashboard() {
                       </span>
                                 </div>
                             </>
-                        )}
+                        )
+                        })()}
                     </div>
 
                     <div style={{ padding: '12px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>

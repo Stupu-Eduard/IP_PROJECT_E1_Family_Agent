@@ -138,6 +138,8 @@ export default function KidDashboard() {
         if (!token || !navigator.geolocation) return;
 
         let watchId: number;
+        let intervalId: ReturnType<typeof setInterval>;
+        let lastKnownPos: { lat: number; lng: number } | null = null;
 
         const sendLocation = (lat: number, lng: number, restricted = false) => {
             let childId = 2;
@@ -150,7 +152,8 @@ export default function KidDashboard() {
                 console.warn("Eroare la extragerea ID-ului din token, folosim ID-ul de test.");
             }
 
-            fetch("http://localhost:8080/api/v1/child/location/sync", {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+            fetch(`${apiBase}/api/v1/child/location/sync`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -169,17 +172,28 @@ export default function KidDashboard() {
         watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 setLocationStatus('active');
+                lastKnownPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 sendLocation(pos.coords.latitude, pos.coords.longitude);
             },
             (err) => {
                 console.error("🚫 Locație refuzată sau eroare:", err.message);
                 setLocationStatus('denied');
-                sendLocation(0, 0);
             },
             { enableHighAccuracy: true }
         );
 
-        return () => navigator.geolocation.clearWatch(watchId);
+        // Retrimitem periodic ultima locație cunoscută pentru a menține părintele sincronizat
+        // (watchPosition pe desktop nu mai trimite dacă locația nu se schimbă)
+        intervalId = setInterval(() => {
+            if (lastKnownPos) {
+                sendLocation(lastKnownPos.lat, lastKnownPos.lng);
+            }
+        }, 5000);
+
+        return () => {
+            navigator.geolocation.clearWatch(watchId);
+            clearInterval(intervalId);
+        };
     }, [token]);
 
     const totalBudget = budget?.totalBudget ?? 0;
