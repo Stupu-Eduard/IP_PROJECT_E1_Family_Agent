@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.security.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -25,6 +26,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    private final com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
 
@@ -37,6 +39,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(sessionCookieFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Rute publice
                         .requestMatchers("/api/v1/auth/**", "/actuator/**").permitAll()
@@ -59,7 +62,13 @@ public class SecurityConfig {
 
                         // Lookups pentru filtre
                         .requestMatchers("/api/v1/categories/**").permitAll()
-                        .requestMatchers("/api/v1/users/**").permitAll()
+                        .requestMatchers("/api/v1/locations/**").permitAll()
+
+                        // GET /api/v1/users — lista publică de nume (folosită intern pentru filtre)
+                        // PUT /api/v1/users/me și DELETE /api/v1/users/me — necesită autentificare
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users").permitAll()
+                        .requestMatchers("/api/v1/users/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
 
                         // Persistare coordonate geocodate in PostGIS
                         .requestMatchers("/api/v1/locations/**").permitAll()
@@ -99,7 +108,8 @@ public class SecurityConfig {
         ));
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // PATCH adaugat pentru suportul schimbarii rolului din FamilyController
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         // Permite orice headere trimise de frontend
         configuration.setAllowedHeaders(List.of("*"));

@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { decodeJwtPayload } from '../utils/jwt'
+import ProfileSettingsModal from './ProfileSettingsModal'
 
 // ── Nav items Părinte ──────────────────────────────────────────────────────
 const parentNavItems = [
@@ -33,9 +36,9 @@ const parentNavItems = [
 
 // ── Nav items Copil — acces limitat ───────────────────────────────────────
 const childNavItems = [
-    { id: 'dashboard',    label: 'Dashboard',   icon: parentNavItems[0].icon },
+    { id: 'dashboard',    label: 'Dashboard',        icon: parentNavItems[0].icon },
     { id: 'expenses',     label: 'Cheltuielile mele', icon: parentNavItems[1].icon },
-    { id: 'family',       label: 'Familie',     icon: parentNavItems[3].icon },
+    { id: 'family',       label: 'Familie',           icon: parentNavItems[3].icon },
 ]
 
 export default function Sidebar() {
@@ -44,25 +47,35 @@ export default function Sidebar() {
     const token     = useAuthStore((s) => s.token)
     const logout    = useAuthStore((s) => s.logout)
 
-    // ── Detectare rol din JWT (același mecanism ca în Dashboard) ──────────
-    let userRole = 'Parent'
-    let userName = 'Eduard P.'
+    const [profileOpen, setProfileOpen] = useState(false)
+
+    // ── Detectare date utilizator din JWT ─────────────────────────────────
+    let userRole      = 'Parent'
+    let userName      = ''
     let userRoleLabel = 'Părinte · Activ'
-    let userInitials = 'ED'
+    let userInitials  = 'FA'
 
     if (token) {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
-            userRole = payload.role || 'Parent'
-            if (payload.sub) {
-                const email = payload.sub as string
+            const payload = decodeJwtPayload(token) as any
+            userRole = payload?.role || 'Parent'
+            userName = payload?.name || ''
+
+            const email = (payload?.sub || '') as string
+            if (!userName) {
                 userInitials = email.slice(0, 2).toUpperCase()
-                if (userRole === 'Child') {
-                    userName = 'Andrei P.'
-                    userRoleLabel = 'Copil · Activ'
-                    userInitials = 'AN'
-                }
+            } else {
+                userInitials = userName
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((w: string) => w[0]?.toUpperCase() ?? '')
+                    .join('')
             }
+
+            userRoleLabel =
+                userRole === 'Child'     ? 'Copil · Activ'
+                    : userRole === 'Co-Parent' ? 'Co-Părinte · Activ'
+                        :                            'Părinte · Activ'
         } catch {}
     }
 
@@ -82,69 +95,83 @@ export default function Sidebar() {
     }
 
     return (
-        <aside className="fa-sidebar">
-            {/* Logo */}
-            <div className="fa-sidebar-logo">
-                <div className="fa-sidebar-logo-icon">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 7h15a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                        <circle cx="17" cy="14" r="1.4"/>
-                    </svg>
+        <>
+            <aside className="fa-sidebar">
+                {/* Logo */}
+                <div className="fa-sidebar-logo">
+                    <div className="fa-sidebar-logo-icon">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 7h15a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                            <circle cx="17" cy="14" r="1.4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div className="fa-sidebar-logo-name">Family Agent</div>
+                        <div className="fa-sidebar-logo-sub">Familia Popescu</div>
+                    </div>
                 </div>
-                <div>
-                    <div className="fa-sidebar-logo-name">Family Agent</div>
-                    <div className="fa-sidebar-logo-sub">Familia Popescu</div>
-                </div>
-            </div>
 
-            {/* Nav — filtrat după rol */}
-            <nav className="fa-sidebar-nav">
-                {navItems.map(({ id, label, icon }) => {
-                    const isActive = activeId === id
-                    return (
-                        <button
-                            key={id}
-                            onClick={() => navigate('/' + id)}
-                            className={`fa-sidebar-link ${isActive ? 'active' : ''}`}
+                {/* Nav — filtrat după rol */}
+                <nav className="fa-sidebar-nav">
+                    {navItems.map(({ id, label, icon }) => {
+                        const isActive = activeId === id
+                        return (
+                            <button
+                                key={id}
+                                onClick={() => navigate('/' + id)}
+                                className={`fa-sidebar-link ${isActive ? 'active' : ''}`}
+                            >
+                                <span className="fa-sidebar-icon-bg">
+                                    <span className="fa-sidebar-icon">{icon}</span>
+                                </span>
+                                {label}
+                                {isActive && <span className="fa-sidebar-active-dot" />}
+                            </button>
+                        )
+                    })}
+                </nav>
+
+                <div style={{ flex: 1 }} />
+
+                {/* User footer — click pe avatar/nume deschide setările */}
+                <div className="fa-sidebar-footer">
+                    <button
+                        onClick={() => setProfileOpen(true)}
+                        className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity text-left group"
+                        title="Setări cont"
+                    >
+                        <div
+                            className="fa-sidebar-avatar shrink-0 group-hover:ring-2 group-hover:ring-[#C97B4B]/40 transition-all"
+                            style={isChild
+                                ? { background: 'linear-gradient(135deg, #B5956A, #D4B896)' }
+                                : undefined
+                            }
                         >
-              <span className="fa-sidebar-icon-bg">
-                <span className="fa-sidebar-icon">{icon}</span>
-              </span>
-                            {label}
-                            {isActive && <span className="fa-sidebar-active-dot" />}
-                        </button>
-                    )
-                })}
-            </nav>
-
-            <div style={{ flex: 1 }} />
-
-            {/* User footer */}
-            <div className="fa-sidebar-footer">
-                <div
-                    className="fa-sidebar-avatar"
-                    style={isChild
-                        ? { background: 'linear-gradient(135deg, #B5956A, #D4B896)' }
-                        : undefined
-                    }
-                >
-                    {userInitials}
+                            {userInitials}
+                        </div>
+                        <div className="fa-sidebar-user-info">
+                            <div className="fa-sidebar-user-name">{userName || 'Utilizator'}</div>
+                            <div className="fa-sidebar-user-role">{userRoleLabel}</div>
+                        </div>
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="fa-sidebar-logout"
+                        title="Logout"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </button>
                 </div>
-                <div className="fa-sidebar-user-info">
-                    <div className="fa-sidebar-user-name">{userName}</div>
-                    <div className="fa-sidebar-user-role">{userRoleLabel}</div>
-                </div>
-                <button
-                    onClick={handleLogout}
-                    className="fa-sidebar-logout"
-                    title="Logout"
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                </button>
-            </div>
-        </aside>
+            </aside>
+
+            {/* Modal setări profil */}
+            <ProfileSettingsModal
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+            />
+        </>
     )
 }

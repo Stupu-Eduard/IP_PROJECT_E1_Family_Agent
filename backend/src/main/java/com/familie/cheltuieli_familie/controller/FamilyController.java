@@ -85,6 +85,65 @@ public class FamilyController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * DELETE /api/v1/families/{familyId}/members/{memberId}/account
+     *
+     * Permite unui adult (Parent / Co-Parent) să șteargă contul unui copil din familie.
+     * Elimină membrul din familie și șterge contul utilizatorului.
+     */
+    @DeleteMapping("/{familyId}/members/{memberId}/account")
+    public ResponseEntity<Void> deleteChildAccount(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            Authentication auth) {
+        familyService.deleteChildAccount(familyId, memberId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/v1/families/{familyId}/members/{memberId}/request-adult
+     *
+     * Un copil (Child) solicită tranziția la statut adult (Co-Parent).
+     * Creează o notificare/cerere care va fi vizibilă owner-ului familiei (Parent).
+     * memberId = family_members.id al copilului care face cererea (trebuie să fie propriul cont).
+     */
+    @PostMapping("/{familyId}/members/{memberId}/request-adult")
+    public ResponseEntity<Map<String, Object>> requestAdultTransition(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            Authentication auth) {
+        return ResponseEntity.ok(familyService.requestAdultTransition(familyId, memberId, requester(auth)));
+    }
+
+    /**
+     * POST /api/v1/families/{familyId}/members/{memberId}/approve-adult
+     *
+     * Owner-ul familiei (Parent) aprobă sau respinge o cerere de tranziție adult.
+     * Body: { "approve": true/false }
+     * Dacă aprobat, rolul copilului devine "Co-Parent" și se emite un token reîmprospătat.
+     */
+    @PostMapping("/{familyId}/members/{memberId}/approve-adult")
+    public ResponseEntity<Map<String, Object>> approveAdultTransition(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+        boolean approve = Boolean.TRUE.equals(body != null ? body.get("approve") : null);
+        return ResponseEntity.ok(familyService.approveAdultTransition(familyId, memberId, approve, requester(auth)));
+    }
+
+    /**
+     * GET /api/v1/families/{familyId}/adult-requests
+     *
+     * Returnează lista cererilor de tranziție adult în așteptare (pentru owner).
+     */
+    @GetMapping("/{familyId}/adult-requests")
+    public ResponseEntity<List<FamilyMemberDTO>> getPendingAdultRequests(
+            @PathVariable Long familyId,
+            Authentication auth) {
+        return ResponseEntity.ok(familyService.getPendingAdultRequests(familyId, requester(auth)));
+    }
+
     private User requester(Authentication auth) {
         return (User) auth.getPrincipal();
     }

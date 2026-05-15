@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, MapPin, MapPinOff } from 'lucide-react';
+import { Camera, MapPin, MapPinOff, UserCheck, Loader2, Check, AlertTriangle, Clock } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { fetchExpenses, type ApiExpenseListDto } from '../services/expenses';
-import { api } from '../services/api';
+import { api, familyApi } from '../services/api';
+import { decodeJwtPayload } from '../utils/jwt';
 
 interface BudgetSummary {
     totalBudget: number;
@@ -13,14 +14,12 @@ interface BudgetSummary {
 
 const categoryIcon = (cat: string | null) => {
     const c = (cat || '').toLowerCase();
-    // Mâncare & sub
     if (c === 'supermarket') return '🛒';
     if (c === 'restaurant') return '🍽️';
     if (c === 'cafenea') return '☕';
     if (c === 'lactate') return '🥛';
     if (c.includes('fructe') || c.includes('legume')) return '🥦';
     if (c.includes('mâncare') || c.includes('mancare') || c.includes('aliment') || c.includes('food')) return '🛒';
-    // Transport & sub
     if (c === 'taxi') return '🚕';
     if (c.includes('transport public')) return '🚌';
     if (c.includes('carburant') || c.includes('benzin') || c.includes('combustibil')) return '⛽';
@@ -28,44 +27,36 @@ const categoryIcon = (cat: string | null) => {
     if (c.includes('service auto')) return '🔧';
     if (c === 'rovinieta') return '🛣️';
     if (c.includes('transport')) return '🚗';
-    // Sănătate & sub
     if (c.includes('medicamente')) return '💊';
     if (c.includes('consultat')) return '🩺';
     if (c.includes('sanat') || c.includes('medic') || c.includes('health')) return '🏥';
-    // Educatie & sub
     if (c.includes('rechizite')) return '✏️';
     if (c.includes('cursuri') || c.includes('curs')) return '🎓';
     if (c.includes('gradinit')) return '🧒';
     if (c.includes('extrascolar')) return '⚽';
     if (c.includes('educa') || c.includes('carte') || c.includes('school') || c.includes('scoala')) return '📚';
-    // Divertisment & sub
     if (c.includes('streaming')) return '📺';
     if (c.includes('cinema') || c.includes('film')) return '🎬';
     if (c.includes('divertis') || c.includes('entertain') || c.includes('joc')) return '🎮';
-    // Servicii & sub
     if (c.includes('utilit')) return '💡';
     if (c.includes('telefonie') || c.includes('telefon')) return '📞';
     if (c === 'internet') return '🌐';
     if (c.includes('asigurar')) return '🛡️';
     if (c.includes('abonament') || c.includes('servicii') || c.includes('serviciu')) return '📋';
-    // Shopping & sub
     if (c.includes('haine') || c.includes('imbracaminte') || c.includes('cloth')) return '👗';
     if (c.includes('electronic')) return '💻';
     if (c.includes('ingrijire personala') || c.includes('cosmetice')) return '🧴';
     if (c.includes('jucarii') || c.includes('jucărie')) return '🧸';
     if (c.includes('carti') || c.includes('carte')) return '📖';
     if (c.includes('shopping') || c.includes('cumpar')) return '🛍️';
-    // Numerar & sub
     if (c.includes('bancomat')) return '🏧';
     if (c.includes('numerar') || c.includes('cash')) return '💵';
-    // Pentru casa & sub
     if (c.includes('chirie')) return '🏠';
     if (c.includes('curatenie') || c.includes('menaj')) return '🧹';
     if (c.includes('mobila') || c.includes('mobilă')) return '🛋️';
     if (c.includes('reparatii') || c.includes('reparații')) return '🔨';
     if (c.includes('decorat')) return '🎨';
     if (c.includes('pentru casa') || c.includes('locuint')) return '🏠';
-    // Fallback
     return '💳';
 };
 
@@ -99,10 +90,17 @@ export default function KidDashboard() {
     const [loadingExpenses, setLoadingExpenses] = useState(true);
     const [loadingBudget, setLoadingBudget] = useState(true);
 
+    // ── Adult transition state ─────────────────────────────────────────────
+    const [adultRequestStatus, setAdultRequestStatus] = useState<'idle' | 'pending' | 'sending' | 'sent' | 'error'>('idle');
+    const [adultRequestError, setAdultRequestError] = useState<string | null>(null);
+
+    const payload = token ? (decodeJwtPayload(token) as Record<string, unknown>) : null;
+    const familyId: number | null = (payload?.familyId as number) ?? null;
+    const myMemberId: number | null = (payload?.memberId as number) ?? null;
+
     const { firstName, lastInitial, avatarLetter } = (() => {
         try {
-            const payload = JSON.parse(atob(token!.split('.')[1]));
-            const parts = (payload.name as string || '').trim().split(' ');
+            const parts = ((payload?.name as string) || '').trim().split(' ');
             const first = parts[0] || 'Utilizator';
             const last  = parts.length > 1 ? parts[parts.length - 1] : '';
             return {
@@ -133,24 +131,24 @@ export default function KidDashboard() {
             .finally(() => setLoadingBudget(false));
     }, []);
 
-    // ── Logica Real-time Location Sync ──────────────────────────────────────
+    // ── Verificăm dacă există deja o cerere în așteptare ──────────────────
+    useEffect(() => {
+        if (!familyId) return;
+        api.get(`/api/v1/families/${familyId}/members`)
+            .then(() => {
+                const savedStatus = sessionStorage.getItem(`adult-req-${payload?.userId}`);
+                if (savedStatus === 'pending') setAdultRequestStatus('pending');
+            })
+            .catch(() => {});
+    }, [familyId]);
+
+    // ── Logica Real-time Location Sync ────────────────────────────────────
     useEffect(() => {
         if (!token || !navigator.geolocation) return;
 
-        let watchId: number;
-        let intervalId: ReturnType<typeof setInterval>;
-        let lastKnownPos: { lat: number; lng: number } | null = null;
-
         const sendLocation = (lat: number, lng: number, restricted = false) => {
-            let childId = 2;
-            let parentId = 1;
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                childId = payload.userId || payload.jti || 2;
-                parentId = payload.familyId || 1;
-            } catch (e) {
-                console.warn("Eroare la extragerea ID-ului din token, folosim ID-ul de test.");
-            }
+            const childId = (payload?.userId as number) || 2;
+            const parentId = (payload?.familyId as number) || 1;
 
             const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
             fetch(`${apiBase}/api/v1/child/location/sync`, {
@@ -169,7 +167,9 @@ export default function KidDashboard() {
             }).catch(err => console.error("❌ Eroare sync locație:", err));
         };
 
-        watchId = navigator.geolocation.watchPosition(
+        let lastKnownPos: { lat: number; lng: number } | null = null;
+
+        const watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 setLocationStatus('active');
                 lastKnownPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -182,9 +182,7 @@ export default function KidDashboard() {
             { enableHighAccuracy: true }
         );
 
-        // Retrimitem periodic ultima locație cunoscută pentru a menține părintele sincronizat
-        // (watchPosition pe desktop nu mai trimite dacă locația nu se schimbă)
-        intervalId = setInterval(() => {
+        const intervalId = setInterval(() => {
             if (lastKnownPos) {
                 sendLocation(lastKnownPos.lat, lastKnownPos.lng);
             }
@@ -196,6 +194,30 @@ export default function KidDashboard() {
         };
     }, [token]);
 
+    // ── Handler: solicitare tranziție adult ────────────────────────────────
+    const handleRequestAdult = async () => {
+        if (!familyId) return;
+        setAdultRequestStatus('sending');
+        setAdultRequestError(null);
+        try {
+            let memberId = myMemberId;
+            if (!memberId) {
+                const { data: members } = await api.get<{ id: number; userId: number }[]>(`/api/v1/families/${familyId}/members`);
+                const found = members.find(m => m.userId === (payload?.userId as number));
+                if (!found) throw new Error('Nu te-am găsit ca membru al familiei.');
+                memberId = found.id;
+            }
+            await familyApi.requestAdultTransition(familyId, memberId);
+            setAdultRequestStatus('pending');
+            sessionStorage.setItem(`adult-req-${payload?.userId}`, 'pending');
+        } catch (err: unknown) {
+            const error = err as { response?: { data?: { message?: string } }; message?: string };
+            const msg = error?.response?.data?.message ?? error?.message ?? 'Eroare la trimiterea cererii.';
+            setAdultRequestError(msg);
+            setAdultRequestStatus('error');
+        }
+    };
+
     const totalBudget = budget?.totalBudget ?? 0;
     const totalSpent  = budget?.totalSpent  ?? 0;
     const balance     = budget?.balance     ?? 0;
@@ -204,7 +226,7 @@ export default function KidDashboard() {
     return (
         <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
 
-            {/* ── Header ──────────────────────────────────────────────────────── */}
+            {/* ── Header ────────────────────────────────────────────────────── */}
             <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                     <div className="chip chip-live">SESIUNE COPIL</div>
@@ -235,11 +257,9 @@ export default function KidDashboard() {
                 Ce ai cumpărat astăzi? Scanează bonul și suma se scade din buget.
             </div>
 
-            {/* ── Card sold + avatar ──────────────────────────────────────────── */}
+            {/* ── Card sold + avatar ─────────────────────────────────────────── */}
             <div className="card fade-up" style={{ marginBottom: 16, padding: '22px 24px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
-
-                    {/* Stânga — sold */}
                     <div>
                         <div className="label" style={{ marginBottom: 10 }}>SOLD DISPONIBIL · {currentMonth}</div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
@@ -259,8 +279,6 @@ export default function KidDashboard() {
                                 ? `din ${Number(totalBudget).toFixed(2)} RON alocați de părinți · resetare în ${daysLeft} zile`
                                 : `Niciun buget setat · resetare în ${daysLeft} zile`}
                         </div>
-
-                        {/* Progress bar */}
                         <div style={{ height: 8, background: '#F4F0EB', borderRadius: 6, overflow: 'hidden', marginBottom: 8 }}>
                             <div style={{
                                 height: '100%',
@@ -278,8 +296,6 @@ export default function KidDashboard() {
                             <span>{spentPct}% din buget</span>
                         </div>
                     </div>
-
-                    {/* Dreapta — avatar */}
                     <div style={{ textAlign: 'center' }}>
                         <div style={{
                             width: 80, height: 80, borderRadius: 20,
@@ -303,7 +319,7 @@ export default function KidDashboard() {
                 </div>
             </div>
 
-            {/* ── Acțiuni rapide ──────────────────────────────────────────────── */}
+            {/* ── Acțiuni rapide ────────────────────────────────────────────── */}
             <div className="label fade-up" style={{ marginBottom: 12 }}>CE VREI SĂ FACI?</div>
             <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
                 {quickActions.map((a) => (
@@ -329,10 +345,85 @@ export default function KidDashboard() {
                 ))}
             </div>
 
-            {/* ── Bottom: cheltuieli + obiectiv ───────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
+            {/* ── Tranziție la statut adult ─────────────────────────────────── */}
+            {familyId && (
+                <div className="card fade-up" style={{ marginBottom: 16, padding: '20px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                        <div style={{
+                            width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                            background: adultRequestStatus === 'pending'
+                                ? 'linear-gradient(135deg, #D4A96A, #E8C68A)'
+                                : 'linear-gradient(135deg, #2D2926, #4A3F36)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            {adultRequestStatus === 'pending'
+                                ? <Clock size={20} color="white" />
+                                : adultRequestStatus === 'sent'
+                                    ? <Check size={20} color="white" />
+                                    : <UserCheck size={20} color="white" />
+                            }
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 4 }}>
+                                Solicită statut adult
+                            </div>
+                            <div style={{ fontSize: 12.5, color: 'var(--color-muted)', lineHeight: 1.55, marginBottom: 12 }}>
+                                {adultRequestStatus === 'pending'
+                                    ? 'Cererea ta este în așteptare. Proprietarul familiei va decide dacă aprobă tranziția la Co-Părinte.'
+                                    : adultRequestStatus === 'sent'
+                                        ? 'Cererea a fost trimisă! Proprietarul familiei o va revizui în curând.'
+                                        : 'Dacă ești adult și dorești acces complet, poți solicita promovarea la Co-Părinte. Proprietarul familiei trebuie să aprobe cererea.'}
+                            </div>
 
-                {/* Cumpărăturile mele */}
+                            {adultRequestError && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    background: '#FEF2F2', border: '1px solid #FECACA',
+                                    borderRadius: 10, padding: '8px 12px',
+                                    fontSize: 12.5, color: '#DC2626', marginBottom: 10,
+                                }}>
+                                    <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                                    {adultRequestError}
+                                </div>
+                            )}
+
+                            {adultRequestStatus === 'pending' ? (
+                                <div style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: '#FFF8F0', border: '1px solid #F0DFD0',
+                                    borderRadius: 8, padding: '6px 12px',
+                                    fontSize: 12, color: '#C97B4B', fontWeight: 500,
+                                }}>
+                                    <Clock size={12} /> În așteptare · cererea a fost trimisă
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleRequestAdult}
+                                    disabled={adultRequestStatus === 'sending' || adultRequestStatus === 'sent'}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                                        background: 'var(--color-ink)', color: 'white',
+                                        border: 'none', borderRadius: 10,
+                                        padding: '9px 18px', fontSize: 13, fontWeight: 500,
+                                        cursor: adultRequestStatus === 'sending' ? 'wait' : 'pointer',
+                                        opacity: adultRequestStatus === 'sending' ? 0.7 : 1,
+                                        transition: 'opacity 0.15s',
+                                    }}
+                                >
+                                    {adultRequestStatus === 'sending' ? (
+                                        <><Loader2 size={14} className="animate-spin" /> Se trimite...</>
+                                    ) : (
+                                        <><UserCheck size={14} /> Solicită tranziția</>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Bottom: cheltuieli + obiectiv ─────────────────────────────── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
                 <div className="card fade-up" style={{ padding: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
                         <div className="label">CUMPĂRĂTURILE MELE</div>
@@ -343,7 +434,6 @@ export default function KidDashboard() {
                             Vezi tot →
                         </button>
                     </div>
-
                     {loadingExpenses ? (
                         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {[1, 2, 3].map(i => (
@@ -395,7 +485,6 @@ export default function KidDashboard() {
                     )}
                 </div>
 
-                {/* Obiectivul meu — coming soon */}
                 <div className="card fade-up" style={{ background: 'var(--color-ink)', border: 'none', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
                         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', marginBottom: 12 }}>

@@ -6,7 +6,8 @@ import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 import { familyApi, invitationApi, authApi, type InvitationDTO, api } from '../services/api';
 import {
     Mail, UserPlus, Trash2, Shield,
-    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX
+    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX,
+    UserCheck, AlertTriangle, X
 } from 'lucide-react';
 
 interface ChildBudgetState {
@@ -17,15 +18,26 @@ interface ChildBudgetState {
     success: boolean;
 }
 
+/** Cereri tranziție adult — vizibil doar owner-ului */
+interface AdultRequest {
+    memberId: number;     // family_members.id
+    userId: number;
+    name: string;
+    email: string;
+    approving: boolean;
+    error: string | null;
+}
+
 export default function FamilySettings() {
     const token = useAuthStore((state) => state.token);
     const navigate = useNavigate();
 
     const payload = token ? decodeJwtPayload(token) : null;
-    const currentUserRole = (payload as any)?.role ?? 'Child';
-    const currentUserId: number = (payload as any)?.userId;
-    const familyId: number | null = (payload as any)?.familyId ?? null;
+    const currentUserRole = (payload as Record<string, unknown>)?.role ?? 'Child';
+    const currentUserId: number = (payload as Record<string, unknown>)?.userId as number;
+    const familyId: number | null = (payload as Record<string, unknown>)?.familyId as number | null ?? null;
     const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
+    const isOwner = currentUserRole === 'Parent';
     const isChild = currentUserRole === 'Child';
 
     const [members, setMembers] = useState<GroupMemberDTO[]>([]);
@@ -51,14 +63,22 @@ export default function FamilySettings() {
     const [childBudgets, setChildBudgets] = useState<Record<number, ChildBudgetState>>({});
     const [roleChanging, setRoleChanging] = useState<number | null>(null);
 
+    // ── FEATURE NOU: Cereri tranziție adult ───────────────────────────────
+    const [adultRequests, setAdultRequests] = useState<AdultRequest[]>([]);
+    const [loadingAdultReqs, setLoadingAdultReqs] = useState(false);
+
+    // ── FEATURE NOU: Ștergere cont copil ─────────────────────────────────
+    const [deletingChildId, setDeletingChildId] = useState<number | null>(null);
+    const [deleteConfirmMemberId, setDeleteConfirmMemberId] = useState<number | null>(null);
+
     const loadMembers = useCallback(async () => {
         if (!familyId) return;
         try {
             setError(null);
             const { data } = await familyApi.getMembers(familyId);
             setMembers(data);
-        } catch (err: any) {
-            if (err?.response?.status === 403) {
+        } catch (err: unknown) {
+            if ((err as any)?.response?.status === 403) {
                 try {
                     const { data } = await authApi.refresh();
                     useAuthStore.getState().setToken(data.token);
@@ -75,12 +95,39 @@ export default function FamilySettings() {
         }
     }, [familyId]);
 
+    const loadAdultRequests = useCallback(async () => {
+        if (!familyId || !isOwner) return;
+        setLoadingAdultReqs(true);
+        try {
+            const { data } = await familyApi.getPendingAdultRequests(familyId);
+            setAdultRequests(data.map(m => ({
+                memberId: m.id,
+                userId:   m.userId,
+                name:     m.name,
+                email:    m.email,
+                approving: false,
+                error:    null,
+            })));
+        } catch (err: unknown) {
+            // Non-fatal
+        } finally {
+            setLoadingAdultReqs(false);
+        }
+    }, [familyId, isOwner]);
+
     useEffect(() => {
         loadMembers();
         if (!familyId) return;
         const id = setInterval(loadMembers, 20000);
         return () => clearInterval(id);
     }, [loadMembers, familyId]);
+
+    useEffect(() => {
+        loadAdultRequests();
+        if (!familyId || !isOwner) return;
+        const id = setInterval(loadAdultRequests, 20000);
+        return () => clearInterval(id);
+    }, [loadAdultRequests, familyId, isOwner]);
 
     useEffect(() => {
         const load = () => invitationApi.getPending().then(r => setPendingInvitations(r.data)).catch(() => {});
@@ -90,7 +137,6 @@ export default function FamilySettings() {
         return () => clearInterval(id);
     }, [familyId]);
 
-    // Încarcă bugetele copiilor după ce s-au încărcat membrii
     useEffect(() => {
         if (!isAdult || members.length === 0) return;
         const children = members.filter(m => m.role === 'Child');
@@ -124,8 +170,8 @@ export default function FamilySettings() {
             setInviteEmail('');
             setAddSuccess(true);
             setTimeout(() => setAddSuccess(false), 3000);
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la trimiterea invitației.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? (err as any)?.response?.data ?? 'Eroare la trimiterea invitației.';
             setAddError(typeof msg === 'string' ? msg : 'Eroare la trimiterea invitației.');
         } finally {
             setIsAdding(false);
@@ -140,8 +186,8 @@ export default function FamilySettings() {
             const { data } = await familyApi.createFamily(familyName.trim());
             useAuthStore.getState().setToken(data.token);
             window.location.reload();
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la crearea familiei.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? (err as any)?.response?.data ?? 'Eroare la crearea familiei.';
             setCreateError(typeof msg === 'string' ? msg : 'Eroare la crearea familiei.');
         } finally {
             setIsCreating(false);
@@ -155,8 +201,8 @@ export default function FamilySettings() {
             useAuthStore.getState().setToken(data.token);
             setPendingInvitations([]);
             window.location.reload();
-        } catch (err: any) {
-            alert(err?.response?.data?.message ?? 'Eroare la acceptarea invitației.');
+        } catch (err: unknown) {
+            alert((err as any)?.response?.data?.message ?? 'Eroare la acceptarea invitației.');
         } finally {
             setInvActionId(null);
         }
@@ -167,8 +213,8 @@ export default function FamilySettings() {
         try {
             await invitationApi.decline(inv.id);
             setPendingInvitations(prev => prev.filter(i => i.id !== inv.id));
-        } catch (err: any) {
-            alert(err?.response?.data?.message ?? 'Eroare la refuzarea invitației.');
+        } catch (err: unknown) {
+            alert((err as any)?.response?.data?.message ?? 'Eroare la refuzarea invitației.');
         } finally {
             setInvActionId(null);
         }
@@ -183,8 +229,8 @@ export default function FamilySettings() {
             const { data } = await authApi.refresh();
             useAuthStore.getState().setToken(data.token);
             window.location.reload();
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? 'Eroare la ieșirea din familie.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la ieșirea din familie.';
             alert(typeof msg === 'string' ? msg : 'Eroare la ieșirea din familie.');
         } finally {
             setIsLeaving(false);
@@ -200,8 +246,8 @@ export default function FamilySettings() {
             const { data } = await authApi.refresh();
             useAuthStore.getState().setToken(data.token);
             window.location.reload();
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? 'Eroare la ștergerea familiei.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la ștergerea familiei.';
             alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea familiei.');
         } finally {
             setIsDeleting(false);
@@ -214,8 +260,8 @@ export default function FamilySettings() {
         try {
             const { data } = await familyApi.updateMemberRole(familyId, member.id, newRole);
             setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: data.role } : m));
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? 'Eroare la schimbarea rolului.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la schimbarea rolului.';
             alert(typeof msg === 'string' ? msg : 'Eroare la schimbarea rolului.');
         } finally {
             setRoleChanging(null);
@@ -229,9 +275,44 @@ export default function FamilySettings() {
         try {
             await familyApi.removeMember(familyId, member.id);
             setMembers(prev => prev.filter(m => m.id !== member.id));
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? err?.response?.data ?? 'Eroare la ștergerea membrului.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? (err as any)?.response?.data ?? 'Eroare la ștergerea membrului.';
             alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea membrului.');
+        }
+    };
+
+    // ── FEATURE NOU: Ștergere cont copil ─────────────────────────────────
+    const handleDeleteChildAccount = async (member: GroupMemberDTO) => {
+        if (!familyId) return;
+        setDeleteConfirmMemberId(null);
+        setDeletingChildId(member.id);
+        try {
+            await familyApi.deleteChildAccount(familyId, member.id);
+            setMembers(prev => prev.filter(m => m.id !== member.id));
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la ștergerea contului.';
+            alert(typeof msg === 'string' ? msg : 'Eroare la ștergerea contului.');
+        } finally {
+            setDeletingChildId(null);
+        }
+    };
+
+    // ── FEATURE NOU: Aprobare / respingere cerere adult ───────────────────
+    const handleApproveAdult = async (req: AdultRequest, approve: boolean) => {
+        if (!familyId) return;
+        setAdultRequests(prev => prev.map(r =>
+            r.memberId === req.memberId ? { ...r, approving: true, error: null } : r
+        ));
+        try {
+            await familyApi.approveAdultTransition(familyId, req.memberId, approve);            // Scoatem cererea din listă indiferent de decizie
+            setAdultRequests(prev => prev.filter(r => r.memberId !== req.memberId));
+            // Reîncărcăm membrii ca să reflectăm noul rol
+            await loadMembers();
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la procesarea cererii.';
+            setAdultRequests(prev => prev.map(r =>
+                r.memberId === req.memberId ? { ...r, approving: false, error: typeof msg === 'string' ? msg : 'Eroare.' } : r
+            ));
         }
     };
 
@@ -251,8 +332,8 @@ export default function FamilySettings() {
                 [childUserId]: { amount: Number(data), input: String(data), saving: false, error: null, success: true },
             }));
             setTimeout(() => setChildBudgets(prev => ({ ...prev, [childUserId]: { ...prev[childUserId], success: false } })), 3000);
-        } catch (err: any) {
-            const msg = err?.response?.data?.message ?? 'Eroare la salvare.';
+        } catch (err: unknown) {
+            const msg = (err as any)?.response?.data?.message ?? 'Eroare la salvare.';
             setChildBudgets(prev => ({
                 ...prev,
                 [childUserId]: { ...prev[childUserId], saving: false, error: typeof msg === 'string' ? msg : 'Eroare la salvare.' },
@@ -277,31 +358,31 @@ export default function FamilySettings() {
                 </div>
 
                 {!isChild && (
-                <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-6">
-                    <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
-                        <UserPlus size={18} className="text-[#C97B4B]" />
-                        Creează o familie nouă
-                    </h3>
-                    <form onSubmit={handleCreateFamily} className="flex gap-3">
-                        <input
-                            type="text"
-                            value={familyName}
-                            onChange={(e) => setFamilyName(e.target.value)}
-                            placeholder="Numele familiei (ex: Familia Popescu)"
-                            className="flex-1 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] focus:outline-none focus:border-[#C4B9AC]"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            disabled={isCreating}
-                            className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2 shrink-0"
-                        >
-                            {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                            {isCreating ? 'Se creează...' : 'Creează'}
-                        </button>
-                    </form>
-                    {createError && <p className="mt-3 text-[12px] text-red-500">{createError}</p>}
-                </div>
+                    <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-6">
+                        <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
+                            <UserPlus size={18} className="text-[#C97B4B]" />
+                            Creează o familie nouă
+                        </h3>
+                        <form onSubmit={handleCreateFamily} className="flex gap-3">
+                            <input
+                                type="text"
+                                value={familyName}
+                                onChange={(e) => setFamilyName(e.target.value)}
+                                placeholder="Numele familiei (ex: Familia Popescu)"
+                                className="flex-1 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] focus:outline-none focus:border-[#C4B9AC]"
+                                required
+                            />
+                            <button
+                                type="submit"
+                                disabled={isCreating}
+                                className="bg-[#2D2926] text-white px-5 py-2.5 rounded-[10px] text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2 shrink-0"
+                            >
+                                {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                {isCreating ? 'Se creează...' : 'Creează'}
+                            </button>
+                        </form>
+                        {createError && <p className="mt-3 text-[12px] text-red-500">{createError}</p>}
+                    </div>
                 )}
 
                 {isChild && pendingInvitations.length === 0 && (
@@ -387,6 +468,63 @@ export default function FamilySettings() {
                 </div>
             </div>
 
+            {/* ── FEATURE NOU: Cereri tranziție adult (vizibil doar pentru owner) ── */}
+            {isOwner && (adultRequests.length > 0 || loadingAdultReqs) && (
+                <div className="bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden mb-6 stagger-2">
+                    <div className="px-6 py-4 border-b border-[#EDE9E3] flex items-center gap-2">
+                        <UserCheck size={16} className="text-[#C97B4B]" />
+                        <span className="text-[14px] font-medium text-[#2D2926]">
+                            Cereri tranziție adult
+                        </span>
+                        {adultRequests.length > 0 && (
+                            <span className="ml-auto px-2 py-0.5 bg-[#FFF8F2] text-[#C97B4B] border border-[#F0DFD0] rounded-full text-[11px] font-semibold">
+                                {adultRequests.length}
+                            </span>
+                        )}
+                    </div>
+
+                    {loadingAdultReqs && adultRequests.length === 0 ? (
+                        <div className="px-6 py-4 flex items-center gap-2 text-[13px] text-[#9A8A7C]">
+                            <Loader2 size={14} className="animate-spin" /> Se încarcă...
+                        </div>
+                    ) : adultRequests.map(req => (
+                        <div key={req.memberId} className="px-6 py-5 border-b border-[#EDE9E3] last:border-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="text-[14px] font-medium text-[#2D2926]">{req.name}</div>
+                                    <div className="text-[12px] text-[#9A8A7C] mt-0.5">
+                                        {req.email} · solicită promovare la <span className="font-medium text-[#C97B4B]">Co-Părinte</span>
+                                    </div>
+                                    {req.error && (
+                                        <div className="flex items-center gap-1.5 mt-2 text-[12px] text-red-500">
+                                            <AlertTriangle size={12} /> {req.error}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        disabled={req.approving}
+                                        onClick={() => handleApproveAdult(req, true)}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-emerald-600 text-white text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                                    >
+                                        {req.approving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                        Aprobă
+                                    </button>
+                                    <button
+                                        disabled={req.approving}
+                                        onClick={() => handleApproveAdult(req, false)}
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] border border-[#EDE9E3] text-[#2D2926] text-[13px] font-medium hover:border-red-300 hover:text-red-600 disabled:opacity-50 transition-all"
+                                    >
+                                        <X size={13} />
+                                        Respinge
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {isAdult && (
                 <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-8 stagger-2">
                     <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
@@ -408,7 +546,7 @@ export default function FamilySettings() {
                         <div className="md:col-span-4">
                             <select
                                 value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value as any)}
+                                onChange={(e) => setInviteRole(e.target.value as 'Co-Parent' | 'Child')}
                                 className="w-full bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none"
                             >
                                 <option value="Child">Rol: Copil</option>
@@ -444,8 +582,10 @@ export default function FamilySettings() {
                     <div className="divide-y divide-[#EDE9E3]">
                         {members.map((member) => {
                             const isMe = member.userId === currentUserId;
-                            const isChild = member.role === 'Child';
+                            const memberIsChild = member.role === 'Child';
                             const bs = childBudgets[member.userId];
+                            const isConfirmingDelete = deleteConfirmMemberId === member.id;
+                            const isDeletingThis = deletingChildId === member.id;
 
                             return (
                                 <div key={member.id} className="p-6 hover:bg-[#FAF8F5]/40 transition-colors">
@@ -466,7 +606,7 @@ export default function FamilySettings() {
                                                     <span>{member.email}</span>
                                                     <span className="text-[#D4C9BC]">•</span>
                                                     <span className="font-medium uppercase tracking-wider text-[10px]">{member.role}</span>
-                                                    {isChild && bs && bs.amount > 0 && (
+                                                    {memberIsChild && bs && bs.amount > 0 && (
                                                         <>
                                                             <span className="text-[#D4C9BC]">•</span>
                                                             <span className="text-[#C97B4B] font-medium">{Number(bs.amount).toFixed(0)} RON/lună</span>
@@ -497,17 +637,50 @@ export default function FamilySettings() {
                                                 )}
                                                 <button
                                                     onClick={() => handleRemoveMember(member)}
-                                                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-[13px] font-medium"
-                                                    title="Elimină membru"
+                                                    className="text-[#9A8A7C] hover:bg-[#F5F1EC] p-2 rounded-lg transition-colors flex items-center gap-1.5 text-[13px] font-medium"
+                                                    title="Elimină din familie"
                                                 >
-                                                    <Trash2 size={16} /> <span className="sm:hidden">Elimină</span>
+                                                    <LogOut size={15} /> <span className="sm:hidden">Elimină</span>
                                                 </button>
+
+                                                {/* FEATURE NOU: Ștergere cont copil */}
+                                                {isAdult && memberIsChild && (
+                                                    isConfirmingDelete ? (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[12px] text-red-600 font-medium">Sigur?</span>
+                                                            <button
+                                                                onClick={() => handleDeleteChildAccount(member)}
+                                                                disabled={isDeletingThis}
+                                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-50 transition-all"
+                                                            >
+                                                                {isDeletingThis ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                                                Da
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setDeleteConfirmMemberId(null)}
+                                                                className="px-2.5 py-1.5 rounded-[8px] border border-[#EDE9E3] text-[#9A8A7C] text-[12px] font-medium hover:border-[#C4B9AC] transition-all"
+                                                            >
+                                                                Nu
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setDeleteConfirmMemberId(member.id)}
+                                                            disabled={isDeletingThis}
+                                                            className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors flex items-center gap-1.5 text-[13px] font-medium"
+                                                            title="Șterge contul copilului"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                            <span className="sm:hidden">Șterge cont</span>
+                                                        </button>
+                                                    )
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Buget per copil — vizibil doar părinților */}
-                                    {isAdult && isChild && (
+                                    {/* Buget per copil */}
+                                    {isAdult && memberIsChild && (
                                         <form
                                             onSubmit={(e) => handleSetChildBudget(e, member.userId)}
                                             className="mt-4 ml-14 flex items-center gap-3"
@@ -539,6 +712,16 @@ export default function FamilySettings() {
                                             </button>
                                             {bs?.error && <span className="text-[11px] text-red-500">{bs.error}</span>}
                                         </form>
+                                    )}
+
+                                    {/* Mesaj confirmare ștergere (inline sub row) */}
+                                    {isConfirmingDelete && memberIsChild && (
+                                        <div className="mt-3 ml-14 flex items-center gap-2 bg-red-50 border border-red-200 rounded-[10px] px-4 py-2.5">
+                                            <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                                            <span className="text-[12px] text-red-700 flex-1">
+                                                Atenție! Ștergerea contului lui <strong>{member.name}</strong> este ireversibilă. Toate datele sale vor fi eliminate.
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             );
