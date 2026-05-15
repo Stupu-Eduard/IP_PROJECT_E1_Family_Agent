@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 import java.util.Date;
@@ -47,6 +48,9 @@ class AuthControllerTest {
     @Mock
     private TokenBlacklistService blacklistService;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private AuthController authController;
 
@@ -69,6 +73,7 @@ class AuthControllerTest {
         user.setPasswordH("parolaBuna");
 
         when(userRepository.findByEmail("test@familie.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parolaBuna", "parolaBuna")).thenReturn(true);
         when(familyMemberRepository.findByUserId(1L)).thenReturn(Collections.emptyList());
         when(jwtUtil.generateToken(eq("test@familie.com"), any())).thenReturn("mock-token");
 
@@ -104,6 +109,7 @@ class AuthControllerTest {
         member.setFamily(family);
 
         when(userRepository.findByEmail("copil@familie.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parola", "parola")).thenReturn(true);
         when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of(member));
         when(jwtUtil.generateToken(any(), any())).thenReturn("tk");
 
@@ -138,6 +144,7 @@ class AuthControllerTest {
         user.setPasswordH("parolaBuna");
 
         when(userRepository.findByEmail("test@familie.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parolaGresita", "parolaBuna")).thenReturn(false);
 
         // WHEN
         ResponseEntity<Object> result = authController.login(request);
@@ -158,6 +165,7 @@ class AuthControllerTest {
         savedFamily.setId(1L);
 
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password123")).thenReturn("encoded-pass");
         when(familyRepository.save(any(Family.class))).thenReturn(savedFamily);
         when(jwtUtil.generateToken(eq("new@example.com"), any())).thenReturn("new-jwt-token");
 
@@ -223,6 +231,7 @@ class AuthControllerTest {
         request.setRole("Child");
 
         when(userRepository.findByEmail("copil@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("pass123")).thenReturn("encoded-child-pass");
         when(jwtUtil.generateToken(eq("copil@example.com"), any())).thenReturn("child-token");
 
         ResponseEntity<Object> result = authController.register(request);
