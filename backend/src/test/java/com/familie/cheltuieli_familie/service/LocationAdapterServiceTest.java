@@ -1,12 +1,18 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
+import com.familie.cheltuieli_familie.model.GeofenceZone;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.GeofenceRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +32,9 @@ class LocationAdapterServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private GeofenceRepository geofenceRepository;
+
     @InjectMocks
     private LocationAdapterService locationAdapterService;
 
@@ -39,6 +48,7 @@ class LocationAdapterServiceTest {
         User mockUser = mock(User.class);
         when(mockUser.getName()).thenReturn("Copil Test");
         when(userRepository.findById(CHILD_ID)).thenReturn(Optional.of(mockUser));
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.empty());
     }
 
     // =====================================================================
@@ -106,7 +116,65 @@ class LocationAdapterServiceTest {
 
         locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
 
-        // Verificam ca adaptorul apeleaza serviciul de verificare
         verify(minorSafetyFilterService, times(1)).isLocationRestricted(placeTypes);
+    }
+
+    @Test
+    void adapt_isOutsideGeofence_esteFalse_cand_nuExistaZona() {
+        List<String> placeTypes = List.of("restaurant");
+        when(minorSafetyFilterService.isLocationRestricted(placeTypes)).thenReturn(false);
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.empty());
+
+        LocationMapDto dto = locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
+
+        assertFalse(dto.isOutsideGeofence());
+    }
+
+    @Test
+    void adapt_isOutsideGeofence_esteFalse_cand_punctulEsteInInteriorul_zonei() {
+        // Polygon in jurul coordonatelor de test (Iași): lat=47.1585, lng=27.6014
+        GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 4326);
+        Coordinate[] ring = {
+                new Coordinate(27.5, 47.1),
+                new Coordinate(27.7, 47.1),
+                new Coordinate(27.7, 47.2),
+                new Coordinate(27.5, 47.2),
+                new Coordinate(27.5, 47.1)
+        };
+        Polygon iasiZone = gf.createPolygon(ring);
+        GeofenceZone zone = GeofenceZone.builder()
+                .id(1L).parentId(PARENT_ID).area(iasiZone).isActive(true).build();
+
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.of(zone));
+        List<String> placeTypes = List.of("restaurant");
+        when(minorSafetyFilterService.isLocationRestricted(placeTypes)).thenReturn(false);
+
+        LocationMapDto dto = locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
+
+        assertFalse(dto.isOutsideGeofence());
+    }
+
+    @Test
+    void adapt_isOutsideGeofence_esteTrue_cand_punctulEsteAfaraZonei() {
+        // Polygon in jurul Bucurestiului — punctul de test (Iași) e în afara
+        GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 4326);
+        Coordinate[] ring = {
+                new Coordinate(25.9, 44.3),
+                new Coordinate(26.2, 44.3),
+                new Coordinate(26.2, 44.5),
+                new Coordinate(25.9, 44.5),
+                new Coordinate(25.9, 44.3)
+        };
+        Polygon bucharestZone = gf.createPolygon(ring);
+        GeofenceZone zone = GeofenceZone.builder()
+                .id(2L).parentId(PARENT_ID).area(bucharestZone).isActive(true).build();
+
+        when(geofenceRepository.findByParentIdAndIsActiveTrue(PARENT_ID)).thenReturn(Optional.of(zone));
+        List<String> placeTypes = List.of("restaurant");
+        when(minorSafetyFilterService.isLocationRestricted(placeTypes)).thenReturn(false);
+
+        LocationMapDto dto = locationAdapterService.adapt(CHILD_ID, PARENT_ID, LATITUDE, LONGITUDE, placeTypes);
+
+        assertTrue(dto.isOutsideGeofence());
     }
 }

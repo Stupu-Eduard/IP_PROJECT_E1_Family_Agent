@@ -68,6 +68,7 @@ public class SecurityConfig {
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
                         .requestMatchers("/api/v1/parent/**").hasRole(ROLE_PARENT)
                         .requestMatchers("/api/v1/alerts/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/api/geofencing/**").hasRole(ROLE_PARENT)
 
                         // Copilul si Parintele pot trimite date de locatie
                         .requestMatchers("/api/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)

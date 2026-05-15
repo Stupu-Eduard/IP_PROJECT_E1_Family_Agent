@@ -8,10 +8,8 @@ import java.time.LocalDateTime;
  * Diferenta fata de LocationDto (care e pentru cheltuieli):
  * - Contine ID-ul copilului si al parintelui
  * - Contine flag-ul isRestricted (zona periculoasa sau nu)
+ * - Contine flag-ul isOutsideGeofence (copilul a iesit din zona de siguranta setata de parinte)
  * - Contine timestamp-ul sincronizarii
- *
- * Frontend-ul lui Dimir foloseste lat si lng direct cu Google Maps SDK:
- * new google.maps.Marker({ position: { lat: dto.lat, lng: dto.lng } })
  */
 public record LocationMapDto(
         Long childId,
@@ -20,5 +18,6 @@ public record LocationMapDto(
         double lat,
         double lng,
         boolean isRestricted,
+        boolean isOutsideGeofence,
         LocalDateTime timestamp
 ) {}
