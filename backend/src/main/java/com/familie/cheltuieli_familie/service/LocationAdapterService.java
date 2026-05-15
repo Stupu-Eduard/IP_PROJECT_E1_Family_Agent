@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.LocationMapDto;
+import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class LocationAdapterService {
         boolean isRestricted = minorSafetyFilterService.isLocationRestricted(placeTypes);
 
         String childName = userRepository.findById(childId)
-                .map(u -> u.getName())
+                .map(User::getName)
                 .orElse("Copil #" + childId);
 
         return new LocationMapDto(
