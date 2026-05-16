@@ -18,6 +18,7 @@ import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -128,6 +129,42 @@ class AuthControllerTest {
         // THEN
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertEquals("Child", body.get("role")); // Capitalized
+    }
+
+    @Test
+    void login_CandMembruAreFamilieDarFaraFamilyId_NuAdaugaFamilyIdInTokenClaims() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("parent@familie.com");
+        request.setPassword("parola");
+
+        User user = new User();
+        user.setId(11L);
+        user.setName("Parent User");
+        user.setEmail("parent@familie.com");
+        user.setPasswordH("parola");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("Parent");
+        member.setFamily(null);
+
+        when(userRepository.findByEmail("parent@familie.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parola", "parola")).thenReturn(true);
+        when(familyMemberRepository.findByUserId(11L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("parent@familie.com"), any())).thenReturn("parent-token");
+
+        ResponseEntity<Object> result = authController.login(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Parent", body.get("role"));
+
+        ArgumentCaptor<Map<String, Object>> claimsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("parent@familie.com"), claimsCaptor.capture());
+        Map<String, Object> claims = claimsCaptor.getValue();
+        assertEquals(11L, claims.get("userId"));
+        assertEquals("Parent", claims.get("role"));
+        assertEquals("Parent User", claims.get("name"));
+        assertFalse(claims.containsKey("familyId"));
     }
 
     @Test
@@ -366,6 +403,72 @@ class AuthControllerTest {
     }
 
     @Test
+    void resetPassword_CandNuExistaRaspunsuri_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(6L);
+        user.setEmail("missing-answers@example.com");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("missing-answers@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("missing-answers@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(6L)).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void forgotPassword_CandUtilizatorulNuExista_ReturneazaBadRequest() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("unknown@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void forgotPassword_CandUnRaspunsEsteNull_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(7L);
+        user.setEmail("null-answer@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("null-answer@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1(null);
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("null-answer@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(7L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("blue", "encoded-blue")).thenReturn(true);
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
     void refresh_CandUserAreFamilie_ReturneazaTokenNou() {
         User user = new User();
         user.setId(1L);
@@ -410,6 +513,60 @@ class AuthControllerTest {
         assertEquals(HttpStatus.OK, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertEquals("Parent", body.get("role"));
+    }
+
+    @Test
+    void refresh_CandRolEsteCopil_SiNuExistaFamilyId_NormalizeazaRolul() {
+        User user = new User();
+        user.setId(3L);
+        user.setName("Copil Refresh");
+        user.setEmail("copil-refresh@example.com");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("child");
+        member.setFamily(null);
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(3L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("copil-refresh@example.com"), any())).thenReturn("child-refresh-token");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Child", body.get("role"));
+
+        ArgumentCaptor<Map<String, Object>> claimsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("copil-refresh@example.com"), claimsCaptor.capture());
+        Map<String, Object> claims = claimsCaptor.getValue();
+        assertEquals("Child", claims.get("role"));
+        assertFalse(claims.containsKey("familyId"));
+    }
+
+    @Test
+    void logout_CandHeaderNuEsteBearer_ReturneazaBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Basic abc123");
+
+        ResponseEntity<Object> result = authController.logout(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verifyNoInteractions(blacklistService);
+    }
+
+    @Test
+    void logout_CandJtiLipseste_ReturneazaBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer token-fara-jti");
+        when(jwtUtil.extractJti("token-fara-jti")).thenReturn(null);
+        when(jwtUtil.extractExpiration("token-fara-jti")).thenReturn(new Date(System.currentTimeMillis() + 10000));
+
+        ResponseEntity<Object> result = authController.logout(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(blacklistService, never()).revokeToken(any(), any());
     }
 
     @Test
