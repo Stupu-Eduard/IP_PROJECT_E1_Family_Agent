@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 @Configuration
 public class EmbeddingConfig {
 
@@ -21,6 +23,9 @@ public class EmbeddingConfig {
     @Value("${langchain4j.open-router.embedding-model.dimensions:2048}")
     private int dimensions;
 
+    @Value("${langchain4j.open-router.embedding-model.timeout:30}")
+    private long timeoutSeconds;
+
     @Bean
     public EmbeddingModel embeddingModel() {
         String openRouterKey = KeyResolver.resolve(openRouterApiKey, "OPENROUTER_API_KEY");
@@ -33,6 +38,7 @@ public class EmbeddingConfig {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .dimensions(dimensions)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .build();
     }
 }

@@ -3,8 +3,10 @@ package com.familie.cheltuieli_familie.controller;
 import com.familie.cheltuieli_familie.dto.CreateExpenseRequest;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
 import com.familie.cheltuieli_familie.dto.LocationDto;
+import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
 import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
@@ -12,12 +14,14 @@ import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.LocationRepository;
 import jakarta.validation.Valid;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -33,15 +37,18 @@ public class ExpenseController {
     private final CategoryRepository categoryRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final LocationRepository locationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ExpenseController(ExpenseRepository expenseRepository,
                              CategoryRepository categoryRepository,
                              FamilyMemberRepository familyMemberRepository,
-                             LocationRepository locationRepository) {
+                             LocationRepository locationRepository,
+                             ApplicationEventPublisher eventPublisher) {
         this.expenseRepository = expenseRepository;
         this.categoryRepository = categoryRepository;
         this.familyMemberRepository = familyMemberRepository;
         this.locationRepository = locationRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @GetMapping
@@ -109,6 +116,11 @@ public class ExpenseController {
                 .ifPresent(fm -> expense.setFamily(fm.getFamily()));
 
         Expense saved = expenseRepository.save(expense);
+
+        // Sync to Qdrant vector store for semantic / RAG search
+        ExpenseEntity entity = toExpenseEntity(saved);
+        eventPublisher.publishEvent(new ExpenseSyncEvent(this, entity));
+
         return toDto(expenseRepository.findOneWithLocation(saved.getId()));
     }
 
@@ -203,6 +215,27 @@ public class ExpenseController {
         if (!ownExpense && !sameFamily) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ai acces la această cheltuială.");
         }
+    }
+
+    private ExpenseEntity toExpenseEntity(Expense expense) {
+        ExpenseEntity entity = new ExpenseEntity();
+        entity.setId(expense.getId());
+        entity.setAmount(expense.getAmount());
+        entity.setCategory(expense.getCategory() != null ? expense.getCategory().getName() : null);
+        entity.setLocation(expense.getLocation() != null ? expense.getLocation().getStore() : null);
+        entity.setPerson(expense.getUser() != null ? expense.getUser().getName() : null);
+        entity.setDate(expense.getExpenseDate() != null ? expense.getExpenseDate().toLocalDate() : null);
+        String rawInput = expense.getRawInput();
+        if (rawInput == null || rawInput.isBlank()) {
+            rawInput = String.format("Cheltuială manuală: %s, Sumă: %s RON, Categorie: %s, Magazin: %s, Persoană: %s",
+                    expense.getDescription(), expense.getAmount(),
+                    expense.getCategory() != null ? expense.getCategory().getName() : null,
+                    expense.getLocation() != null ? expense.getLocation().getStore() : null,
+                    expense.getUser() != null ? expense.getUser().getName() : null);
+        }
+        entity.setRawInput(rawInput);
+        entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
+        return entity;
     }
 
     private ExpenseListDto toDto(ExpenseRepository.ExpenseWithLocationProjection row) {

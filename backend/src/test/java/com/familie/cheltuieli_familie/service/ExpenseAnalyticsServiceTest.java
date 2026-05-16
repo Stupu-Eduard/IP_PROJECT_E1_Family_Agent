@@ -99,7 +99,7 @@ class ExpenseAnalyticsServiceTest {
     void testFindByPerson() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(jdbcTemplate.queryForList(anyString(), anyString(), anyString(), any(), any()))
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("100.00"), "category", "Food", "person", "Alice"),
                         Map.of("amount", new BigDecimal("150.00"), "category", "Food", "person", "Alice")
@@ -114,7 +114,7 @@ class ExpenseAnalyticsServiceTest {
     void testFindByPersonNoMatch() {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now();
-        when(jdbcTemplate.queryForList(anyString(), anyString(), anyString(), any(), any()))
+        when(jdbcTemplate.queryForList(anyString(), anyString(), any(), any()))
                 .thenReturn(List.of());
 
         List<Map<String, Object>> result = analyticsService.findByPerson("Charlie", from, to);
@@ -250,5 +250,20 @@ class ExpenseAnalyticsServiceTest {
         assertTrue(trend.contains("decreased"));
         assertTrue(trend.contains("0 RON"));
         assertTrue(trend.contains("100.00 RON"));
+    }
+
+    @Test
+    void testFindByAmount() {
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(BigDecimal.class)))
+                .thenReturn(List.of(
+                        Map.of("id", 1L, "amount", new BigDecimal("99.99"), "description", "Test", "date", LocalDate.now(),
+                                "category", "Food", "location", "Kaufland", "person", "Alice", "currency", "RON", "source_type", "MANUAL")
+                ));
+
+        List<Map<String, Object>> result = analyticsService.findByAmount(new BigDecimal("99.99"));
+
+        assertEquals(1, result.size());
+        assertEquals(new BigDecimal("99.99"), result.get(0).get("amount"));
+        assertEquals("Food", result.get(0).get("category"));
     }
 }

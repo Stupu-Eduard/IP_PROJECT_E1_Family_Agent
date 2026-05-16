@@ -86,8 +86,18 @@ class LlmConfigTest {
 
     @Test
     void ragAssistant_shouldCreateBean() {
-        LlmConfig.RagAssistant assistant = llmConfig.ragAssistant(chatLanguageModel, llmConfig.retrievalAugmentor(qdrantContentRetriever));
+        LlmConfig.RagAssistant assistant = llmConfig.ragAssistant(
+                chatLanguageModel,
+                llmConfig.retrievalAugmentor(qdrantContentRetriever),
+                expenseTools,
+                llmConfig.chatMemory());
         assertNotNull(assistant);
+    }
+
+    @Test
+    void chatMemory_shouldCreateBean() {
+        dev.langchain4j.memory.ChatMemory memory = llmConfig.chatMemory();
+        assertNotNull(memory);
     }
 
     @Test

@@ -19,17 +19,21 @@ public class QdrantContentRetriever implements ContentRetriever {
 
     private final QdrantVectorService qdrantVectorService;
 
+    private static final double MIN_SCORE_THRESHOLD = 0.5;
+
     @Override
     public List<Content> retrieve(Query query) {
-        log.info("RAG retrieving content for query: {}", query.text());
+        String cleanQuery = cleanQueryText(query.text());
+        log.info("RAG retrieving content for query: {}", cleanQuery);
         
-        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(query.text(), 20);
+        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(cleanQuery, 20);
         
         if (results.isEmpty()) {
             return List.of();
         }
 
         return results.stream()
+                .filter(r -> r.getScore() >= MIN_SCORE_THRESHOLD)
                 .sorted(Comparator.comparingDouble(EmbeddedExpense::getScore).reversed())
                 .limit(5)
                 .map(r -> {
@@ -39,5 +43,22 @@ public class QdrantContentRetriever implements ContentRetriever {
                     return Content.from(TextSegment.from(text));
                 })
                 .toList();
+    }
+
+    /**
+     * Cleans query text by removing stop words and extra whitespace before embedding.
+     */
+    private String cleanQueryText(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String cleaned = text.trim();
+        // Remove leading/trailing quotes that may come from JSON parsing
+        cleaned = cleaned.replaceAll("^['\"]+", "").replaceAll("['\"]+$", "");
+        // Remove common Romanian stop words for better semantic search
+        cleaned = cleaned.replaceAll("(?i)\\b(salut|buna|te rog|poti sa|mi spui|ceva despre|am adaugat|o cheltuiala)\\b", "");
+        // Collapse multiple spaces
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        return cleaned;
     }
 }

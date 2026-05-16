@@ -38,11 +38,11 @@ class SemanticExpansionServiceTest {
     void expandCategories_shouldReturnExpandedCategories() {
         String fuzzy = "mall shopping";
         List<EmbeddedExpense> mockResults = List.of(
-                EmbeddedExpense.builder().category("shopping").build(),
-                EmbeddedExpense.builder().category("haine").build(),
-                EmbeddedExpense.builder().category("shopping").build(),
-                EmbeddedExpense.builder().category(null).build(),
-                EmbeddedExpense.builder().category("").build()
+                EmbeddedExpense.builder().category("shopping").score(0.85).build(),
+                EmbeddedExpense.builder().category("haine").score(0.72).build(),
+                EmbeddedExpense.builder().category("shopping").score(0.65).build(),
+                EmbeddedExpense.builder().category(null).score(0.60).build(),
+                EmbeddedExpense.builder().category("").score(0.55).build()
         );
 
         when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenReturn(mockResults);
@@ -79,10 +79,10 @@ class SemanticExpansionServiceTest {
     void expandLocations_shouldReturnExpandedLocations() {
         String fuzzy = "mall";
         List<EmbeddedExpense> mockResults = List.of(
-                EmbeddedExpense.builder().location("Afi Cotroceni").build(),
-                EmbeddedExpense.builder().location("Baneasa Shopping City").build(),
-                EmbeddedExpense.builder().location("Afi Cotroceni").build(),
-                EmbeddedExpense.builder().location(null).build()
+                EmbeddedExpense.builder().location("Afi Cotroceni").score(0.88).build(),
+                EmbeddedExpense.builder().location("Baneasa Shopping City").score(0.75).build(),
+                EmbeddedExpense.builder().location("Afi Cotroceni").score(0.70).build(),
+                EmbeddedExpense.builder().location(null).score(0.65).build()
         );
 
         when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenReturn(mockResults);

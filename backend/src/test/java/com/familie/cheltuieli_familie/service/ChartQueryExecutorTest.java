@@ -88,7 +88,7 @@ class ChartQueryExecutorTest {
         ChartQueryResult result = chartQueryExecutor.execute(intent, List.of("food", "mancare"), null);
 
         assertNotNull(result);
-        verify(jdbcTemplate).query(contains("category IN"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("c.name IN"), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
@@ -107,7 +107,7 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, null, List.of("Bucuresti", "Cluj"));
 
-        verify(jdbcTemplate).query(contains("location IN"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("l.store IN"), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
@@ -126,7 +126,7 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("person = ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("u.name = ?"), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
@@ -191,7 +191,7 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("EXTRACT(YEAR FROM date)"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("EXTRACT(YEAR FROM e.expense_date)"), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
@@ -207,7 +207,7 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("EXTRACT(YEAR FROM date)"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("EXTRACT(YEAR FROM e.expense_date)"), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
@@ -226,6 +226,6 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, List.of("food", "mancare"), null);
 
-        verify(jdbcTemplate).query(contains("category IN"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("c.name IN"), any(RowMapper.class), any(Object[].class));
     }
 }

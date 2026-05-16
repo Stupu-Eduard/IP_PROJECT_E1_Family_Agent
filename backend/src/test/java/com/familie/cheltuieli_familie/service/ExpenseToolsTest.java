@@ -420,4 +420,61 @@ class ExpenseToolsTest {
 
         assertEquals("Trendul arată o creștere de 0% pentru Food", result);
     }
+
+    @Test
+    void testSearchByAmount() {
+        Map<String, Object> expense = Map.of(
+                "amount", new BigDecimal("150.00"),
+                "category", "Food",
+                "location", "Kaufland",
+                "date", LocalDate.of(2024, 1, 10),
+                "description", "Groceries"
+        );
+
+        when(analyticsService.findByAmount(new BigDecimal("150.00"))).thenReturn(List.of(expense));
+
+        String result = expenseTools.searchByAmount("150.00");
+
+        assertTrue(result.contains("150.00 RON"));
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("Kaufland"));
+    }
+
+    @Test
+    void testSearchByAmountEmpty() {
+        when(analyticsService.findByAmount(new BigDecimal("999.99"))).thenReturn(List.of());
+
+        String result = expenseTools.searchByAmount("999.99");
+
+        assertEquals("Nu am găsit cheltuieli cu suma de 999.99 RON.", result);
+    }
+
+    @Test
+    void testSearchByAmountWithRawInput() {
+        Map<String, Object> expense = new java.util.HashMap<>();
+        expense.put("amount", new BigDecimal("200.00"));
+        expense.put("category", "Transport");
+        expense.put("location", "OMV");
+        expense.put("date", LocalDate.of(2024, 1, 15));
+        expense.put("description", "Fuel");
+        expense.put("raw_input", "BON FISCAL OMV\nMotorina 50L x 4.00 = 200.00");
+
+        when(analyticsService.findByAmount(new BigDecimal("200.00"))).thenReturn(List.of(expense));
+
+        String result = expenseTools.searchByAmount("200.00");
+
+        assertTrue(result.contains("200.00 RON"));
+        assertTrue(result.contains("OMV"));
+        assertTrue(result.contains("Receipt details"));
+    }
+
+    @Test
+    void testSearchByAmountError() {
+        when(analyticsService.findByAmount(new BigDecimal("100.00")))
+                .thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.searchByAmount("100.00");
+
+        assertEquals("Error searching by amount: fail", result);
+    }
 }

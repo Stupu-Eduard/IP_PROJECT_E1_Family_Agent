@@ -95,6 +95,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
+                "http://127.0.0.1:5173", // 127.0.0.1 variant
+                "http://127.0.0.1:3000",
+                "http://172.27.84.187:5173", // Server network IP
+                "http://172.27.84.187:8080", // WSL2 backend direct
                 "https://family-agent.me",
                 "https://api.family-agent.me",
                 "http://localhost:4173" // vite preview

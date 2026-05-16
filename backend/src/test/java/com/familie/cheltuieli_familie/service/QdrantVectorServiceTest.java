@@ -72,7 +72,7 @@ class QdrantVectorServiceTest {
         Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
                 "score", 0.95,
                 "payload", Map.of(
-                        "id", "1",
+                        "expense_id", "1",
                         "amount", "100.0",
                         "category", "Food",
                         "person", "Familie",
@@ -138,7 +138,7 @@ class QdrantVectorServiceTest {
         Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
                 "score", 0.95,
                 "payload", Map.of(
-                        "id", 1,
+                        "expense_id", 1,
                         "amount", 100.0,
                         "category", "Food"
                 )
@@ -167,7 +167,7 @@ class QdrantVectorServiceTest {
         Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
                 "score", 0.95,
                 "payload", Map.of(
-                        "id", 1,
+                        "expense_id", 1,
                         "amount", 100.0,
                         "category", "Food"
                 )
@@ -210,7 +210,7 @@ class QdrantVectorServiceTest {
         Map<String, Object> mockResponse = Map.of("result", List.of(Map.of(
                 "score", 0.85,
                 "payload", Map.of(
-                        "id", "42",
+                        "expense_id", "42",
                         "amount", "99.50",
                         "category", "Food",
                         "person", "Familie",

@@ -1,5 +1,9 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.model.ExpenseItem;
+import com.familie.cheltuieli_familie.repository.CategoryRepository;
+import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +29,36 @@ public class ExpenseTools {
     private static final String KEY_PERSON = "person";
     private static final String KEY_LOCATION = "location";
     private static final String KEY_DESCRIPTION = "description";
+    private static final String KEY_RAW_INPUT = "raw_input";
 
     private final ExpenseAnalyticsService analyticsService;
+    private final CategoryRepository categoryRepository;
+    private final FamilyMemberRepository familyMemberRepository;
+    private final ExpenseItemRepository expenseItemRepository;
+
+    @Tool("Get the current date in ISO format YYYY-MM-DD. Use this to calculate relative date ranges like 'last month' or 'this week'.")
+    public String getCurrentDate() {
+        return LocalDate.now().toString();
+    }
+
+    @Tool("List all available expense category names in the system. Use this before querying by category to ensure you use the correct name.")
+    public String listCategories() {
+        var categories = categoryRepository.findAll();
+        if (categories.isEmpty()) return "No categories found.";
+        return "Available categories: " + categories.stream()
+                .map(c -> c.getName())
+                .collect(Collectors.joining(", "));
+    }
+
+    @Tool("List all family members (users) in the system. Use this before querying by person to ensure you use the correct name.")
+    public String listFamilyMembers() {
+        var members = familyMemberRepository.findAll();
+        if (members.isEmpty()) return "No family members found.";
+        return "Family members: " + members.stream()
+                .map(fm -> fm.getUser() != null ? fm.getUser().getName() : "Unknown")
+                .distinct()
+                .collect(Collectors.joining(", "));
+    }
 
     @Tool("Calculate total expenses for a date range. Dates must be in ISO format YYYY-MM-DD.")
     public String calculateTotal(String from, String to) {
@@ -180,7 +212,19 @@ public class ExpenseTools {
             var expenses = analyticsService.findByCategory(category, LocalDate.parse(from), LocalDate.parse(to));
             if (expenses.isEmpty()) return "No expenses found for category '" + category + "' in the specified period.";
             return "Expenses for '" + category + "': " + expenses.stream()
-                    .map(e -> e.get(KEY_AMOUNT) + " RON at " + e.get(KEY_LOCATION) + " on " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")")
+                    .map(e -> {
+                        String base = e.get(KEY_AMOUNT) + " RON at " + e.get(KEY_LOCATION) + " on " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")";
+                        Object raw = e.get(KEY_RAW_INPUT);
+                        if (raw != null && !raw.toString().isBlank()) {
+                            String rawText = raw.toString();
+                            // Truncate very long OCR text to avoid overwhelming the LLM context
+                            if (rawText.length() > 800) {
+                                rawText = rawText.substring(0, 800) + "... [truncated]";
+                            }
+                            base += " [Receipt details: " + rawText + "]";
+                        }
+                        return base;
+                    })
                     .collect(Collectors.joining("; "));
         } catch (Exception e) {
             log.error("Error in byCategoryDetailed: {}", e.getMessage());
@@ -201,6 +245,110 @@ public class ExpenseTools {
             log.error("Error in byLocation: {}", e.getMessage());
             return "Error finding location expenses: " + e.getMessage();
         }
+    }
+
+    @Tool("Search for expenses by exact or approximate amount in RON. Use this when the user mentions a specific amount like '280 RON' or 'about 150 lei'.")
+    public String searchByAmount(String amountStr) {
+        try {
+            log.info("Tool called: searchByAmount for {}", amountStr);
+            BigDecimal amount = new BigDecimal(amountStr);
+            var expenses = analyticsService.findByAmount(amount);
+            if (expenses.isEmpty()) {
+                return "Nu am găsit cheltuieli cu suma de " + amount + " RON.";
+            }
+            return "Cheltuieli găsite pentru " + amount + " RON: " + expenses.stream()
+                    .map(e -> {
+                        String base = e.get(KEY_CATEGORY) + " - " + e.get(KEY_AMOUNT) + " RON la " + e.get(KEY_LOCATION) + " pe " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")";
+                        Object raw = e.get(KEY_RAW_INPUT);
+                        if (raw != null && !raw.toString().isBlank()) {
+                            String rawText = raw.toString();
+                            if (rawText.length() > 800) {
+                                rawText = rawText.substring(0, 800) + "... [truncated]";
+                            }
+                            base += " [Receipt details: " + rawText + "]";
+                        }
+                        return base;
+                    })
+                    .collect(Collectors.joining("; "));
+        } catch (Exception e) {
+            log.error("Error in searchByAmount: {}", e.getMessage());
+            return "Error searching by amount: " + e.getMessage();
+        }
+    }
+
+    @Tool("Get the items (products) on a receipt for a specific expense ID. Use this when the user asks what products they bought on a specific receipt.")
+    public String getExpenseItems(String expenseIdStr) {
+        try {
+            Long expenseId = Long.parseLong(expenseIdStr);
+            var items = expenseItemRepository.findByExpenseId(expenseId);
+            if (items.isEmpty()) {
+                return "Nu am găsit articole pentru cheltuiala cu ID " + expenseId + ". Poate fi o cheltuială manuală sau bonul nu a fost scanat încă.";
+            }
+            return "Articole pe bon: " + items.stream()
+                    .map(i -> i.getItemName() + " (cantitate: " + i.getQuantity() + ", preț: " + i.getAmount() + " RON)")
+                    .collect(Collectors.joining("; "));
+        } catch (Exception e) {
+            log.error("Error getting expense items: {}", e.getMessage());
+            return "Error getting expense items: " + e.getMessage();
+        }
+    }
+
+    @Tool("Get the complete database schema including all tables and columns. Use this as a fallback if SQL queries fail to understand the actual structure.")
+    public String getDatabaseSchema() {
+        return """
+            SCHEMA COMPLETĂ BAZĂ DE DATE:
+
+            Tabela: expenses
+            - id (BIGINT, PK)
+            - amount (NUMERIC) - suma cheltuită
+            - description (TEXT) - descrierea
+            - expense_date (TIMESTAMP) - data
+            - category_id (BIGINT, FK→categories.id)
+            - location_id (BIGINT, FK→locations.id)
+            - user_id (BIGINT, FK→users.id)
+            - family_id (BIGINT, FK→families.id)
+            - currency (VARCHAR(10)) - moneda, default 'RON'
+            - source_type (VARCHAR(20)) - 'MANUAL', 'OCR'
+            - receipt_url (TEXT) - URL imagine bon scanat
+            - raw_input (TEXT) - text brut extras din bon (OCR)
+            - created_at (TIMESTAMP)
+
+            Tabela: categories
+            - id (BIGINT, PK)
+            - name (VARCHAR) - nume categorie
+
+            Tabela: locations
+            - id (BIGINT, PK)
+            - store (VARCHAR) - nume magazin/locație
+            - city (VARCHAR) - oraș
+            - address (VARCHAR) - adresă
+            - country (VARCHAR) - țară
+            - lat (DOUBLE) - latitudine
+            - lng (DOUBLE) - longitudine
+
+            Tabela: users
+            - id (BIGINT, PK)
+            - name (VARCHAR) - nume
+            - email (VARCHAR) - email
+            - role (VARCHAR) - rol
+
+            Tabela: families
+            - id (BIGINT, PK)
+            - name (VARCHAR) - nume familie
+
+            Tabela: family_members
+            - id (BIGINT, PK)
+            - family_id (BIGINT, FK)
+            - user_id (BIGINT, FK)
+            - role (VARCHAR) - 'Parent', 'Co-Parent', 'Child'
+
+            Tabela: expense_items
+            - id (BIGINT, PK)
+            - expense_id (BIGINT, FK)
+            - name (VARCHAR) - nume articol
+            - quantity (NUMERIC)
+            - unit_price (NUMERIC)
+            """;
     }
 
     private String extractPercentage(String trend) {

@@ -24,17 +24,14 @@ public class ExpenseAnalyticsService {
     private static final String KEY_PERSON = "person";
 
     // Actual DB schema uses foreign keys with JOINs for names
-    private static final String BASE_SQL = """
-        SELECT e.id, e.amount, e.description, e.expense_date as date,
-               COALESCE(e.category, c.name) as category,
-               COALESCE(e.location, l.store) as location,
-               COALESCE(e.person, u.name) as person,
-               e.currency, e.source_type, e.transaction_type
-        FROM expenses e
-        LEFT JOIN categories c ON e.category_id = c.id
-        LEFT JOIN locations l ON e.location_id = l.id
-        LEFT JOIN users u ON e.user_id = u.id
-        """;
+    private static final String BASE_SQL =
+        "SELECT e.id, e.amount, e.description, e.expense_date as date, " +
+        "c.name as category, l.store as location, u.name as person, " +
+        "e.currency, e.source_type, e.raw_input " +
+        "FROM expenses e " +
+        "LEFT JOIN categories c ON e.category_id = c.id " +
+        "LEFT JOIN locations l ON e.location_id = l.id " +
+        "LEFT JOIN users u ON e.user_id = u.id ";
 
     public List<Map<String, Object>> findExpenses(LocalDate from, LocalDate to) {
         log.info("Finding expenses from {} to {}", from, to);
@@ -51,11 +48,11 @@ public class ExpenseAnalyticsService {
     public Map<String, BigDecimal> byCategory(LocalDate from, LocalDate to) {
         log.info("Calculating expenses by category from {} to {}", from, to);
         String sql = """
-            SELECT COALESCE(e.category, c.name) as category_name, SUM(e.amount) as total
+            SELECT c.name as category_name, SUM(e.amount) as total
             FROM expenses e
             LEFT JOIN categories c ON e.category_id = c.id
             WHERE e.expense_date >= ? AND e.expense_date <= ?
-            GROUP BY COALESCE(e.category, c.name)
+            GROUP BY c.name
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 KEY_CATEGORY, rs.getString("category_name"),
@@ -73,11 +70,11 @@ public class ExpenseAnalyticsService {
     public Map<String, BigDecimal> compareMembers(LocalDate from, LocalDate to) {
         log.info("Comparing expenses between members from {} to {}", from, to);
         String sql = """
-            SELECT COALESCE(e.person, u.name) as person_name, SUM(e.amount) as total
+            SELECT u.name as person_name, SUM(e.amount) as total
             FROM expenses e
             LEFT JOIN users u ON e.user_id = u.id
             WHERE e.expense_date >= ? AND e.expense_date <= ?
-            GROUP BY COALESCE(e.person, u.name)
+            GROUP BY u.name
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 KEY_PERSON, rs.getString("person_name"),
@@ -101,11 +98,11 @@ public class ExpenseAnalyticsService {
     public List<Map<String, Object>> findByPerson(String person, LocalDate from, LocalDate to) {
         log.info("Fetching expenses for person: {} from {} to {}", person, from, to);
         String sql = BASE_SQL + """
-            WHERE (COALESCE(e.person, u.name) ILIKE ? OR u.name ILIKE ?)
+            WHERE u.name ILIKE ?
             AND e.expense_date >= ? AND e.expense_date <= ?
             ORDER BY e.expense_date DESC
             """;
-        return jdbcTemplate.queryForList(sql, "%" + person + "%", "%" + person + "%",
+        return jdbcTemplate.queryForList(sql, "%" + person + "%",
                 from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 
@@ -133,7 +130,7 @@ public class ExpenseAnalyticsService {
             SELECT SUM(e.amount) as total
             FROM expenses e
             LEFT JOIN categories c ON e.category_id = c.id
-            WHERE (COALESCE(e.category, c.name) ILIKE ?)
+            WHERE c.name ILIKE ?
             AND e.expense_date >= ? AND e.expense_date <= ?
             """;
 
@@ -164,7 +161,7 @@ public class ExpenseAnalyticsService {
     public List<Map<String, Object>> findByCategory(String category, LocalDate from, LocalDate to) {
         log.info("Finding expenses for category: {} from {} to {}", category, from, to);
         String sql = BASE_SQL + """
-            WHERE (COALESCE(e.category, c.name) ILIKE ?)
+            WHERE c.name ILIKE ?
             AND e.expense_date >= ? AND e.expense_date <= ?
             ORDER BY e.expense_date DESC
             """;
@@ -175,11 +172,29 @@ public class ExpenseAnalyticsService {
     public List<Map<String, Object>> findByLocation(String location, LocalDate from, LocalDate to) {
         log.info("Finding expenses for location: {} from {} to {}", location, from, to);
         String sql = BASE_SQL + """
-            WHERE (COALESCE(e.location, l.store) ILIKE ?)
+            WHERE l.store ILIKE ?
             AND e.expense_date >= ? AND e.expense_date <= ?
             ORDER BY e.expense_date DESC
             """;
         return jdbcTemplate.queryForList(sql, "%" + location + "%",
                 from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+    }
+
+    public List<Map<String, Object>> findByAmount(BigDecimal amount) {
+        log.info("Finding expenses with amount: {}", amount);
+        String sql = BASE_SQL + " WHERE e.amount = ? ORDER BY e.expense_date DESC";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Map<String, Object> row = new java.util.HashMap<>();
+            row.put("id", rs.getLong("id"));
+            row.put("amount", rs.getBigDecimal("amount"));
+            row.put("description", rs.getString("description"));
+            row.put("date", rs.getTimestamp("date"));
+            row.put("category", rs.getString("category"));
+            row.put("location", rs.getString("location"));
+            row.put("person", rs.getString("person"));
+            row.put("currency", rs.getString("currency"));
+            row.put("source_type", rs.getString("source_type"));
+            return row;
+        }, amount);
     }
 }

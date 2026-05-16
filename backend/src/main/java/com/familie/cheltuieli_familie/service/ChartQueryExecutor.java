@@ -38,23 +38,25 @@ public class ChartQueryExecutor {
         String aggregation = intent.getAggregation().toUpperCase();
 
         String labelExpression = buildLabelColumn(groupByColumn);
+        String seriesExpression = seriesColumn != null ? buildLabelColumn(seriesColumn) : null;
 
         StringBuilder sql = new StringBuilder("SELECT ");
         sql.append(labelExpression).append(" AS label");
 
-        if (seriesColumn != null) {
-            sql.append(", ").append(seriesColumn).append(" AS series");
+        if (seriesExpression != null) {
+            sql.append(", ").append(seriesExpression).append(" AS series");
         }
 
-        sql.append(", ").append(aggregation).append("(amount) AS total ");
-        sql.append("FROM expenses WHERE 1=1 ");
+        sql.append(", ").append(aggregation).append("(e.amount) AS total ");
+        sql.append(buildFromClause(groupByColumn, seriesColumn));
+        sql.append("WHERE 1=1 ");
 
         List<Object> params = new ArrayList<>();
         applyFilters(sql, params, intent, expandedCategories, expandedLocations);
 
         sql.append("GROUP BY ").append(labelExpression);
-        if (seriesColumn != null) {
-            sql.append(", ").append(seriesColumn);
+        if (seriesExpression != null) {
+            sql.append(", ").append(seriesExpression);
         }
         sql.append(" ORDER BY ").append(labelExpression);
 
@@ -85,10 +87,32 @@ public class ChartQueryExecutor {
     private String buildLabelColumn(String groupBy) {
         return switch (groupBy) {
             case "month" ->
-                    "CONCAT(CAST(EXTRACT(YEAR FROM date) AS VARCHAR), '-', LPAD(CAST(EXTRACT(MONTH FROM date) AS VARCHAR), 2, '0'))";
-            case "year" -> "CAST(EXTRACT(YEAR FROM date) AS VARCHAR)";
+                    "CONCAT(CAST(EXTRACT(YEAR FROM e.expense_date) AS VARCHAR), '-', LPAD(CAST(EXTRACT(MONTH FROM e.expense_date) AS VARCHAR), 2, '0'))";
+            case "year" -> "CAST(EXTRACT(YEAR FROM e.expense_date) AS VARCHAR)";
+            case "category" -> "c.name";
+            case "location" -> "l.store";
+            case "person" -> "u.name";
             default -> groupBy;
         };
+    }
+
+    private String buildFromClause(String groupBy, String seriesBy) {
+        StringBuilder from = new StringBuilder("FROM expenses e ");
+
+        // Always join categories if category is used anywhere
+        if ("category".equals(groupBy) || "category".equals(seriesBy)) {
+            from.append("LEFT JOIN categories c ON e.category_id = c.id ");
+        }
+        // Always join locations if location is used anywhere
+        if ("location".equals(groupBy) || "location".equals(seriesBy)) {
+            from.append("LEFT JOIN locations l ON e.location_id = l.id ");
+        }
+        // Always join users if person is used anywhere
+        if ("person".equals(groupBy) || "person".equals(seriesBy)) {
+            from.append("LEFT JOIN users u ON e.user_id = u.id ");
+        }
+
+        return from.toString();
     }
 
     private void applyFilters(StringBuilder sql, List<Object> params, ChartQueryIntent intent,
@@ -100,7 +124,7 @@ public class ChartQueryExecutor {
         List<String> categories = resolveFilterList(expandedCategories, filters.getCategory());
 
         if (categories != null && !categories.isEmpty()) {
-            sql.append(" AND category IN (");
+            sql.append(" AND c.name IN (");
             sql.append(String.join(",", Collections.nCopies(categories.size(), "?")));
             sql.append(")");
             params.addAll(categories);
@@ -110,7 +134,7 @@ public class ChartQueryExecutor {
         List<String> locations = resolveFilterList(expandedLocations, filters.getLocation());
 
         if (locations != null && !locations.isEmpty()) {
-            sql.append(" AND location IN (");
+            sql.append(" AND l.store IN (");
             sql.append(String.join(",", Collections.nCopies(locations.size(), "?")));
             sql.append(")");
             params.addAll(locations);
@@ -118,19 +142,19 @@ public class ChartQueryExecutor {
 
         // Person filter
         if (filters.getPerson() != null && !filters.getPerson().isBlank()) {
-            sql.append(" AND person = ?");
+            sql.append(" AND u.name = ?");
             params.add(filters.getPerson());
         }
 
         // Date range filter
         LocalDate[] range = DateRangeUtil.parseDateRange(filters.getDateRange());
         if (range[0] != null) {
-            sql.append(" AND date >= ?");
-            params.add(range[0]);
+            sql.append(" AND e.expense_date >= ?");
+            params.add(range[0].atStartOfDay());
         }
         if (range[1] != null) {
-            sql.append(" AND date <= ?");
-            params.add(range[1]);
+            sql.append(" AND e.expense_date <= ?");
+            params.add(range[1].plusDays(1).atStartOfDay());
         }
     }
 

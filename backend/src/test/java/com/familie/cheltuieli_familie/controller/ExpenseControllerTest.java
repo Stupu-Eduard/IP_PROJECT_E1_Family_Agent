@@ -138,7 +138,7 @@ class ExpenseControllerTest {
     void list_blankFilters_becomeNull_andMapsLocation() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         FamilyMember membership10 = mockMembership(10L);
@@ -178,7 +178,7 @@ class ExpenseControllerTest {
     void list_withoutLocation_returnsNullLocation() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(2L);
         FamilyMember membership5 = mockMembership(5L);
@@ -202,7 +202,7 @@ class ExpenseControllerTest {
     @Test
     void getById_whenNotFound_throwsNotFound() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         when(expenseRepository.findOneWithLocation(99L)).thenReturn(null);
 
@@ -215,7 +215,7 @@ class ExpenseControllerTest {
     @Test
     void getById_whenFound_mapsToDto() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         Projection row = new Projection(
                 2L,
@@ -251,7 +251,7 @@ class ExpenseControllerTest {
     void list_childAuth_usesUserFilteredQuery() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(3L);
         Authentication auth = mock(Authentication.class);
@@ -272,7 +272,7 @@ class ExpenseControllerTest {
     void list_parentWithoutFamily_fallsBackToUserFiltered() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
@@ -292,7 +292,7 @@ class ExpenseControllerTest {
 
     @Test
     void list_nullAuth_returnsEmptyList() {
-        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         List<ExpenseListDto> result = controller.list(null, null, null, null);
 
@@ -307,7 +307,7 @@ class ExpenseControllerTest {
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -350,7 +350,7 @@ class ExpenseControllerTest {
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(2L);
         Authentication auth = mock(Authentication.class);
@@ -385,7 +385,7 @@ class ExpenseControllerTest {
     void create_categoryNotFound_throwsBadRequest() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(3L);
         Authentication auth = mock(Authentication.class);
@@ -407,7 +407,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
@@ -446,7 +446,7 @@ class ExpenseControllerTest {
     @Test
     void update_whenNotFound_throwsNotFound() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -467,7 +467,7 @@ class ExpenseControllerTest {
     void update_child_nonManualExpense_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -495,7 +495,7 @@ class ExpenseControllerTest {
     void update_child_anotherPersonExpense_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -525,7 +525,7 @@ class ExpenseControllerTest {
     void update_child_nullOwner_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -555,7 +555,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -594,7 +594,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(5L);
         Authentication auth = mock(Authentication.class);
@@ -629,7 +629,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(6L);
         Authentication auth = mock(Authentication.class);
@@ -669,7 +669,7 @@ class ExpenseControllerTest {
     void update_parent_noAccess_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(7L);
         Authentication auth = mock(Authentication.class);
@@ -700,7 +700,7 @@ class ExpenseControllerTest {
     void update_parent_noFamilyOnExpense_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(8L);
         Authentication auth = mock(Authentication.class);
@@ -728,7 +728,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(9L);
         Authentication auth = mock(Authentication.class);
@@ -756,7 +756,7 @@ class ExpenseControllerTest {
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(10L);
         Authentication auth = mock(Authentication.class);
@@ -797,7 +797,7 @@ class ExpenseControllerTest {
     @Test
     void delete_child_throwsForbidden() {
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -816,7 +816,7 @@ class ExpenseControllerTest {
     void delete_whenNotFound_throwsNotFound() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(2L);
         Authentication auth = mock(Authentication.class);
@@ -833,7 +833,7 @@ class ExpenseControllerTest {
     void delete_parent_ownExpense_succeeds() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(3L);
         Authentication auth = mock(Authentication.class);
@@ -852,7 +852,7 @@ class ExpenseControllerTest {
     void delete_parent_familyExpense_succeeds() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
@@ -877,7 +877,7 @@ class ExpenseControllerTest {
     void delete_parent_noAccess_throwsForbidden() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(5L);
         Authentication auth = mock(Authentication.class);
@@ -903,7 +903,7 @@ class ExpenseControllerTest {
     void list_withCoParentRole_worksLikeParent() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -921,7 +921,7 @@ class ExpenseControllerTest {
 
     @Test
     void list_principalNotUser_returnsEmpty() {
-        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn("NotAUser");
 
@@ -933,7 +933,7 @@ class ExpenseControllerTest {
     void list_withNonBlankFilters_passesFiltersToRepository() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         FamilyMember membership = mockMembership(10L);
@@ -952,7 +952,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -981,7 +981,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -1013,7 +1013,7 @@ class ExpenseControllerTest {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         CategoryRepository categoryRepository = mock(CategoryRepository.class);
         LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, mock(FamilyMemberRepository.class), locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -1047,7 +1047,7 @@ class ExpenseControllerTest {
     void delete_coParent_succeeds() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
@@ -1066,7 +1066,7 @@ class ExpenseControllerTest {
     @Test
     void toDto_mapsAllFieldsCorrectly() {
         ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class));
+        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class));
 
         LocalDateTime now = LocalDateTime.now();
         Projection row = new Projection(
