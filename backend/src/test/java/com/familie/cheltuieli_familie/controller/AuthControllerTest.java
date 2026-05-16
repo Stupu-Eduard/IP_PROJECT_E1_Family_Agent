@@ -132,6 +132,37 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_CandRoleEsteChild_CaptureazaClaimRoleCaChild() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("child-claim@example.com");
+        request.setPassword("pw");
+
+        User user = new User();
+        user.setId(20L);
+        user.setName("Child Claim");
+        user.setEmail("child-claim@example.com");
+        user.setPasswordH("pw");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("child");
+        member.setFamily(null);
+
+        when(userRepository.findByEmail("child-claim@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("pw", "pw")).thenReturn(true);
+        when(familyMemberRepository.findByUserId(20L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("child-claim@example.com"), any())).thenReturn("tok-child");
+
+        ResponseEntity<Object> result = authController.login(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("child-claim@example.com"), captor.capture());
+        Map<String, Object> claims = captor.getValue();
+        assertEquals("Child", claims.get("role"));
+    }
+
+    @Test
     void login_CandMembruAreFamilieDarFaraFamilyId_NuAdaugaFamilyIdInTokenClaims() {
         LoginRequest request = new LoginRequest();
         request.setEmail("parent@familie.com");
