@@ -18,6 +18,9 @@ public class GeofenceZone {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "parent_id")
+    private Long parentId;
+
     private String name;
     private String description;
 
