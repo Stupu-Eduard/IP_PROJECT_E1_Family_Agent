@@ -12,8 +12,7 @@ public class LlmRouterService {
 
     private final LlmConfig.RagAssistant ragAssistant;
 
-    public LlmRouterService(LlmConfig.RouterAssistant routerAssistant,
-                            LlmConfig.RagAssistant ragAssistant) {
+    public LlmRouterService(LlmConfig.RagAssistant ragAssistant) {
         this.ragAssistant = ragAssistant;
     }
 

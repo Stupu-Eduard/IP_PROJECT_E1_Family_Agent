@@ -190,9 +190,9 @@ public class ExpenseAnalyticsService {
             row.put("amount", rs.getBigDecimal("amount"));
             row.put("description", rs.getString("description"));
             row.put("date", rs.getTimestamp("date"));
-            row.put(COL_CATEGORY, rs.getString("category"));
-            row.put(COL_LOCATION, rs.getString("location"));
-            row.put(COL_PERSON, rs.getString("person"));
+            row.put(COL_CATEGORY, rs.getString(COL_CATEGORY));
+            row.put(COL_LOCATION, rs.getString(COL_LOCATION));
+            row.put(COL_PERSON, rs.getString(COL_PERSON));
             row.put("currency", rs.getString("currency"));
             row.put("source_type", rs.getString("source_type"));
             return row;

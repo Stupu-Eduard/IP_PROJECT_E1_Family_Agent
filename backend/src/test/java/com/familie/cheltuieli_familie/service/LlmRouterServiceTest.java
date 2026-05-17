@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.config.LlmConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,8 +17,12 @@ class LlmRouterServiceTest {
     @Mock
     private LlmConfig.RagAssistant ragAssistant;
 
-    @InjectMocks
     private LlmRouterService llmRouterService;
+
+    @BeforeEach
+    void setUp() {
+        llmRouterService = new LlmRouterService(ragAssistant);
+    }
 
     @Test
     void routeAndChat_shouldReturnResponse_whenAllValid() {

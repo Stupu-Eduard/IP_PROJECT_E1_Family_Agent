@@ -228,12 +228,8 @@ public class AgentChatService {
         int i = 0;
         while (i < text.length()) {
             int s = text.indexOf(start, i);
-            if (s < 0) {
-                sb.append(text, i, text.length());
-                break;
-            }
-            int e = text.indexOf(end, s + 1);
-            if (e < 0) {
+            int e = (s >= 0) ? text.indexOf(end, s + 1) : -1;
+            if (s < 0 || e < 0) {
                 sb.append(text, i, text.length());
                 break;
             }

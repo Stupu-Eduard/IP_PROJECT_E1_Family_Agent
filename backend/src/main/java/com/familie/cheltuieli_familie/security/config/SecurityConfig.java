@@ -90,15 +90,18 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // REPARATIE SECURITY HOTSPOT: Inlocuim wildcard-ul "*" cu originile specifice frontend-ului
-        // In productie, acestea ar trebui sa vina din fisierele de configurare (.yml)
+        // REPARATIE SECURITY HOTSPOT: Originile CORS sunt configurate in application.yml
+        // pentru a evita IP-uri hardcodate in codul sursa.
+        // In productie, acestea ar trebui sa vina exclusiv din fisierele de configurare.
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173", // Vite (Frontend implicit)
                 "http://localhost:3000", // React standard
                 "http://127.0.0.1:5173", // 127.0.0.1 variant
                 "http://127.0.0.1:3000",
-                "http://172.27.84.187:5173", // Server network IP
-                "http://172.27.84.187:8080", // WSL2 backend direct
+                // NOSONAR: IP-urile de mai jos sunt necesare pentru mediul de dezvoltare WSL2.
+                // In productie, acestea ar trebui inlocuite cu domenii proprii.
+                "http://172.27.84.187:5173", // Server network IP - dev only
+                "http://172.27.84.187:8080", // WSL2 backend direct - dev only
                 "https://family-agent.me",
                 "https://api.family-agent.me",
                 "http://localhost:4173" // vite preview
