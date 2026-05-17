@@ -28,29 +28,18 @@ class RagRetrievalServiceTest {
     private RagRetrievalService ragRetrievalService;
 
     @Test
-    void askWithContext_shouldRetrieveContextAndDelegateToLlmRouterService() {
+    void askWithContext_shouldDelegateRawQueryToLlmRouterService() {
         String query = "How much did I spend?";
         String expectedAnswer = "You spent 500 RON.";
 
-        List<EmbeddedExpense> results = List.of(
-                EmbeddedExpense.builder()
-                        .category("food")
-                        .amount(new BigDecimal("100.50"))
-                        .location("Lidl")
-                        .date(LocalDate.of(2024, 1, 15))
-                        .person("Teodor")
-                        .score(0.95)
-                        .build()
-        );
-
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
-        when(llmRouterService.routeAndChat(anyString())).thenReturn(expectedAnswer);
+        when(llmRouterService.routeAndChat(query)).thenReturn(expectedAnswer);
 
         String result = ragRetrievalService.askWithContext(query);
 
         assertEquals(expectedAnswer, result);
-        verify(llmRouterService).routeAndChat(anyString());
-        verify(qdrantVectorService).searchSimilar(query, 10);
+        verify(llmRouterService).routeAndChat(query);
+        // Qdrant search is now handled internally by the RagAssistant's RetrievalAugmentor
+        verifyNoInteractions(qdrantVectorService);
     }
 
     @Test

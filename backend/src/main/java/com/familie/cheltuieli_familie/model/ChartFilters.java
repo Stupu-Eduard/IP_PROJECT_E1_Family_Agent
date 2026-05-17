@@ -15,4 +15,6 @@ public class ChartFilters {
     private String person;
     private String dateRange;
     private String location;
+    private String amount;
+    private String description;
 }

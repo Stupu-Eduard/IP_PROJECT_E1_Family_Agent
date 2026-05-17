@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# GitHub Actions / CI
+.github
+
+# Qoder CLI / Local dev tools
+.qoder
+
+# Node.js / Frontend (built separately)
+Frontend/node_modules
+Frontend/dist
+Frontend/.env*
+Frontend/coverage
+
+# Backend build artifacts
+backend/target
+backend/.mvn
+backend/mvnw
+backend/mvnw.cmd
+
+# Local environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea
+.vscode
+*.iml
+
+# Logs
+*.log
+logs/
+
+# Test files
+test-pipe-final.js
+start-local.sh
+
+# Misc
+README.md
+package.json
+package-lock.json
+node_modules

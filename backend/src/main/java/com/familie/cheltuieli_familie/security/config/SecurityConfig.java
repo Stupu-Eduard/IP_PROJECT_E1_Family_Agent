@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.security.config;
 
 import com.familie.cheltuieli_familie.security.filter.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -29,6 +30,9 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -90,15 +94,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // REPARATIE SECURITY HOTSPOT: Inlocuim wildcard-ul "*" cu originile specifice frontend-ului
-        // In productie, acestea ar trebui sa vina din fisierele de configurare (.yml)
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173", // Vite (Frontend implicit)
-                "http://localhost:3000", // React standard
-                "https://family-agent.me",
-                "https://api.family-agent.me",
-                "http://localhost:4173" // vite preview
-        ));
+        // Originile sunt configurate in application.yml pentru a evita IP-uri hardcodate.
+        configuration.setAllowedOrigins(allowedOrigins);
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

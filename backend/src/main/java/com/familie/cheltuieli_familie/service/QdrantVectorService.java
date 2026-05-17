@@ -33,7 +33,7 @@ public class QdrantVectorService {
     private static final String KEY_LOCATION = "location";
     private static final String KEY_DATE = "date";
     private static final String KEY_AMOUNT = "amount";
-    private static final String KEY_ID = "id";
+    private static final String KEY_ID = "expense_id";
     private static final String KEY_RAW_INPUT = "raw_input";
     private static final String QDRANT_RESULT = "result";
     private static final String MATCH = "match";
@@ -75,15 +75,19 @@ public class QdrantVectorService {
         if (expense.getLocation() != null) metadata.put(KEY_LOCATION, expense.getLocation());
         if (expense.getDate() != null) metadata.put(KEY_DATE, expense.getDate().toString());
 
-        Document document = Document.from(textToEmbed, metadata);
-        // Use recursive splitter to handle potentially long receipts/OCR text
-        List<TextSegment> segments = DocumentSplitters.recursive(1000, 100).split(document);
-        
-        for (TextSegment segment : segments) {
-            Embedding embedding = embeddingModel.embed(segment).content();
-            embeddingStore.add(embedding, segment);
+        try {
+            Document document = Document.from(textToEmbed, metadata);
+            List<TextSegment> segments = DocumentSplitters.recursive(1000, 100).split(document);
+
+            for (TextSegment segment : segments) {
+                Embedding embedding = embeddingModel.embed(segment).content();
+                embeddingStore.add(embedding, segment);
+            }
+            log.info("Stored {} segments for expense ID {}", segments.size(), expense.getId());
+        } catch (Exception e) {
+            log.error("Failed to embed/store expense ID {}: {}", expense.getId(), e.getMessage());
+            throw new VectorStoreException("Embedding failed for expense " + expense.getId(), e);
         }
-        log.info("Stored {} segments for expense ID {}", segments.size(), expense.getId());
     }
 
     public List<EmbeddedExpense> searchSimilar(String query, int topK) {
