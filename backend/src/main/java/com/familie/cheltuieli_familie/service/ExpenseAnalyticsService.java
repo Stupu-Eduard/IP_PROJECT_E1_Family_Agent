@@ -24,7 +24,6 @@ public class ExpenseAnalyticsService {
     private static final String COL_LOCATION = "location";
     private static final String COL_TOTAL = "total";
 
-    // Actual DB schema uses foreign keys with JOINs for names
     private static final String BASE_SQL =
         "SELECT e.id, e.amount, e.description, e.expense_date as date, " +
         "c.name as category, l.store as location, u.name as person, " +
@@ -34,31 +33,38 @@ public class ExpenseAnalyticsService {
         "LEFT JOIN locations l ON e.location_id = l.id " +
         "LEFT JOIN users u ON e.user_id = u.id ";
 
-    public List<Map<String, Object>> findExpenses(LocalDate from, LocalDate to) {
+    private String scopeClause(Long familyId) {
+        return familyId != null ? " AND e.family_id = ?" : " AND e.user_id = ?";
+    }
+
+    private Object scopeParam(Long familyId, Long userId) {
+        return familyId != null ? familyId : userId;
+    }
+
+    public List<Map<String, Object>> findExpenses(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses from {} to {}", from, to);
-        String sql = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ? ORDER BY e.expense_date DESC";
-        return jdbcTemplate.queryForList(sql, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+        String sql = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        return jdbcTemplate.queryForList(sql, from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
-    public BigDecimal calculateTotal(LocalDate from, LocalDate to) {
+    public BigDecimal calculateTotal(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating total expenses from {} to {}", from, to);
-        String sql = "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date >= ? AND expense_date <= ?";
-        return jdbcTemplate.queryForObject(sql, BigDecimal.class, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+        String sql = "SELECT COALESCE(SUM(amount), 0) FROM expenses e WHERE e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId);
+        return jdbcTemplate.queryForObject(sql, BigDecimal.class, from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
-    public Map<String, BigDecimal> byCategory(LocalDate from, LocalDate to) {
+    public Map<String, BigDecimal> byCategory(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating expenses by category from {} to {}", from, to);
         String sql = """
             SELECT c.name as category_name, SUM(e.amount) as total
             FROM expenses e
             LEFT JOIN categories c ON e.category_id = c.id
             WHERE e.expense_date >= ? AND e.expense_date <= ?
-            GROUP BY c.name
-            """;
+            """ + scopeClause(familyId) + " GROUP BY c.name";
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 COL_CATEGORY, rs.getString("category_name"),
                 COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
-        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId))
         .stream()
         .filter(m -> m.get(COL_CATEGORY) != null)
         .collect(Collectors.toMap(
@@ -68,19 +74,18 @@ public class ExpenseAnalyticsService {
         ));
     }
 
-    public Map<String, BigDecimal> compareMembers(LocalDate from, LocalDate to) {
+    public Map<String, BigDecimal> compareMembers(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Comparing expenses between members from {} to {}", from, to);
         String sql = """
             SELECT u.name as person_name, SUM(e.amount) as total
             FROM expenses e
             LEFT JOIN users u ON e.user_id = u.id
             WHERE e.expense_date >= ? AND e.expense_date <= ?
-            GROUP BY u.name
-            """;
+            """ + scopeClause(familyId) + " GROUP BY u.name";
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 COL_PERSON, rs.getString("person_name"),
                 COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
-        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        ), from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId))
         .stream()
         .filter(m -> m.get(COL_PERSON) != null)
         .collect(Collectors.toMap(
@@ -90,53 +95,43 @@ public class ExpenseAnalyticsService {
         ));
     }
 
-    public List<Map<String, Object>> detectAnomalies(BigDecimal threshold) {
+    public List<Map<String, Object>> detectAnomalies(BigDecimal threshold, Long familyId, Long userId) {
         log.info("Detecting expense anomalies above threshold: {}", threshold);
-        String sql = BASE_SQL + " WHERE e.amount > ? ORDER BY e.amount DESC";
-        return jdbcTemplate.queryForList(sql, threshold);
+        String sql = BASE_SQL + " WHERE e.amount > ?" + scopeClause(familyId) + " ORDER BY e.amount DESC";
+        return jdbcTemplate.queryForList(sql, threshold, scopeParam(familyId, userId));
     }
 
-    public List<Map<String, Object>> findByPerson(String person, LocalDate from, LocalDate to) {
+    public List<Map<String, Object>> findByPerson(String person, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Fetching expenses for person: {} from {} to {}", person, from, to);
-        String sql = BASE_SQL + """
-            WHERE u.name ILIKE ?
-            AND e.expense_date >= ? AND e.expense_date <= ?
-            ORDER BY e.expense_date DESC
-            """;
+        String sql = BASE_SQL +
+            "WHERE u.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
+            scopeClause(familyId) + " ORDER BY e.expense_date DESC";
         return jdbcTemplate.queryForList(sql, "%" + person + "%",
-                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
-    public List<Map<String, Object>> getTopExpenses(int limit) {
+    public List<Map<String, Object>> getTopExpenses(int limit, Long familyId, Long userId) {
         log.info("Fetching top {} expenses", limit);
-        String sql = BASE_SQL + " ORDER BY e.amount DESC LIMIT ?";
-        return jdbcTemplate.queryForList(sql, limit);
+        String sql = BASE_SQL + " WHERE 1=1" + scopeClause(familyId) + " ORDER BY e.amount DESC LIMIT ?";
+        return jdbcTemplate.queryForList(sql, scopeParam(familyId, userId), limit);
     }
 
-    public BigDecimal calculateMonthlyAverage(int months) {
+    public BigDecimal calculateMonthlyAverage(int months, Long familyId, Long userId) {
         log.info("Calculating monthly average for last {} months", months);
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusMonths(months).withDayOfMonth(1);
-
-        BigDecimal total = calculateTotal(from, to);
+        BigDecimal total = calculateTotal(from, to, familyId, userId);
         if (months <= 0) return BigDecimal.ZERO;
-
         return total.divide(new BigDecimal(months), 2, RoundingMode.HALF_UP);
     }
 
-    public String calculateTrend(String category, LocalDate from, LocalDate to) {
+    public String calculateTrend(String category, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating trend for category: {} from {} to {}", category, from, to);
-
-        String sql = """
-            SELECT SUM(e.amount) as total
-            FROM expenses e
-            LEFT JOIN categories c ON e.category_id = c.id
-            WHERE c.name ILIKE ?
-            AND e.expense_date >= ? AND e.expense_date <= ?
-            """;
+        String sql = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
+                " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId);
 
         BigDecimal currentTotal = jdbcTemplate.queryForObject(sql, BigDecimal.class,
-                "%" + category + "%", from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+                "%" + category + "%", from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
         if (currentTotal == null) currentTotal = BigDecimal.ZERO;
 
         long days = java.time.temporal.ChronoUnit.DAYS.between(from, to) + 1;
@@ -144,7 +139,7 @@ public class ExpenseAnalyticsService {
         LocalDate prevFrom = prevTo.minusDays(days - 1);
 
         BigDecimal prevTotal = jdbcTemplate.queryForObject(sql, BigDecimal.class,
-                "%" + category + "%", prevFrom.atStartOfDay(), prevTo.plusDays(1).atStartOfDay());
+                "%" + category + "%", prevFrom.atStartOfDay(), prevTo.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
         if (prevTotal == null) prevTotal = BigDecimal.ZERO;
 
         if (prevTotal.compareTo(BigDecimal.ZERO) == 0) {
@@ -153,37 +148,32 @@ public class ExpenseAnalyticsService {
 
         BigDecimal difference = currentTotal.subtract(prevTotal);
         BigDecimal percentage = difference.multiply(new BigDecimal("100")).divide(prevTotal, 2, RoundingMode.HALF_UP);
-
         String direction = difference.compareTo(BigDecimal.ZERO) >= 0 ? "increased" : "decreased";
         return String.format("Spending on %s has %s by %s%% (%s RON) compared to the previous period (Current: %s RON, Previous: %s RON).",
                 category, direction, percentage.abs(), difference.abs(), currentTotal, prevTotal);
     }
 
-    public List<Map<String, Object>> findByCategory(String category, LocalDate from, LocalDate to) {
+    public List<Map<String, Object>> findByCategory(String category, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses for category: {} from {} to {}", category, from, to);
-        String sql = BASE_SQL + """
-            WHERE c.name ILIKE ?
-            AND e.expense_date >= ? AND e.expense_date <= ?
-            ORDER BY e.expense_date DESC
-            """;
+        String sql = BASE_SQL +
+                "WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
+                scopeClause(familyId) + " ORDER BY e.expense_date DESC";
         return jdbcTemplate.queryForList(sql, "%" + category + "%",
-                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
-    public List<Map<String, Object>> findByLocation(String location, LocalDate from, LocalDate to) {
+    public List<Map<String, Object>> findByLocation(String location, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses for location: {} from {} to {}", location, from, to);
-        String sql = BASE_SQL + """
-            WHERE l.store ILIKE ?
-            AND e.expense_date >= ? AND e.expense_date <= ?
-            ORDER BY e.expense_date DESC
-            """;
+        String sql = BASE_SQL +
+                "WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
+                scopeClause(familyId) + " ORDER BY e.expense_date DESC";
         return jdbcTemplate.queryForList(sql, "%" + location + "%",
-                from.atStartOfDay(), to.plusDays(1).atStartOfDay());
+                from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
-    public List<Map<String, Object>> findByAmount(BigDecimal amount) {
+    public List<Map<String, Object>> findByAmount(BigDecimal amount, Long familyId, Long userId) {
         log.info("Finding expenses with amount: {}", amount);
-        String sql = BASE_SQL + " WHERE e.amount = ? ORDER BY e.expense_date DESC";
+        String sql = BASE_SQL + " WHERE e.amount = ?" + scopeClause(familyId) + " ORDER BY e.expense_date DESC";
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Map<String, Object> row = new java.util.HashMap<>();
             row.put("id", rs.getLong("id"));
@@ -196,6 +186,6 @@ public class ExpenseAnalyticsService {
             row.put("currency", rs.getString("currency"));
             row.put("source_type", rs.getString("source_type"));
             return row;
-        }, amount);
+        }, amount, scopeParam(familyId, userId));
     }
 }

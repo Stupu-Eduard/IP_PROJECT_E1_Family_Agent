@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -37,7 +38,7 @@ class AnalyticsIntegrationTest {
     @Test
     void testLauraAnalyticsFlow_HallucinationGuardCorrection() {
         // GIVEN
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 1)))
+        when(analyticsService.calculateTotal(any(), any(), any(), any()))
                 .thenReturn(new BigDecimal("100.50"));
 
         // WHEN - Tool-ul scoate 100.50 RON

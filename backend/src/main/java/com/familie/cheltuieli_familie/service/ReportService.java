@@ -1,8 +1,12 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.config.LlmConfig;
+import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,14 +22,29 @@ public class ReportService {
 
     private final ExpenseAnalyticsService analyticsService;
     private final LlmConfig.ReportAssistant reportAssistant;
+    private final FamilyMemberRepository familyMemberRepository;
+
+    private Long[] resolveScope() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
+            return new Long[]{null, null};
+        }
+        Long userId = user.getId();
+        Long familyId = familyMemberRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(fm -> fm.getFamily() != null ? fm.getFamily().getId() : null)
+                .orElse(null);
+        return new Long[]{familyId, userId};
+    }
 
     public String generateMonthlySummary(int year, int month) {
         log.info("Generating monthly summary for {}/{}", month, year);
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.plusMonths(1).minusDays(1);
 
-        BigDecimal total = analyticsService.calculateTotal(from, to);
-        Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to);
+        Long[] scope = resolveScope();
+        BigDecimal total = analyticsService.calculateTotal(from, to, scope[0], scope[1]);
+        Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to, scope[0], scope[1]);
 
         StringBuilder summary = new StringBuilder();
         summary.append(String.format("Monthly Report for %s %d:%n", from.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH), year));
@@ -41,7 +60,7 @@ public class ReportService {
                     .max(Map.Entry.comparingByValue())
                     .get().getKey();
             summary.append(String.format("- Top Category: %s%n", topCategory));
-            summary.append("- Trend: ").append(analyticsService.calculateTrend(topCategory, from, to));
+            summary.append("- Trend: ").append(analyticsService.calculateTrend(topCategory, from, to, scope[0], scope[1]));
         }
 
         return summary.toString();

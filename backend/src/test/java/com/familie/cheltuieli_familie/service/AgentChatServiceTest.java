@@ -4,11 +4,13 @@ import com.familie.cheltuieli_familie.dto.response.ChartPayload;
 import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,8 +27,16 @@ class AgentChatServiceTest {
     @Mock
     private RagRetrievalService ragRetrievalService;
 
+    @Mock
+    private com.familie.cheltuieli_familie.repository.FamilyMemberRepository familyMemberRepository;
+
     @InjectMocks
     private AgentChatService agentChatService;
+
+    @BeforeEach
+    void setUp() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void processQuery_shouldReturnChartResponse_whenIntentIsChart() {

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,7 +41,7 @@ class ExpenseToolsTest {
 
     @Test
     void testCalculateTotal() {
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTotal(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(new BigDecimal("500.00"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -50,7 +51,7 @@ class ExpenseToolsTest {
 
     @Test
     void testCalculateTotalError() {
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTotal(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -60,7 +61,7 @@ class ExpenseToolsTest {
 
     @Test
     void testCompareMembers() {
-        when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.compareMembers(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Map.of("Teodor", new BigDecimal("300.00"), "Maria", new BigDecimal("200.00")));
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -71,7 +72,7 @@ class ExpenseToolsTest {
 
     @Test
     void testCompareMembersEmpty() {
-        when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.compareMembers(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Collections.emptyMap());
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -81,7 +82,7 @@ class ExpenseToolsTest {
 
     @Test
     void testCompareMembersError() {
-        when(analyticsService.compareMembers(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.compareMembers(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -97,7 +98,7 @@ class ExpenseToolsTest {
                 "date", LocalDate.of(2024, 1, 15)
         );
 
-        when(analyticsService.detectAnomalies(new BigDecimal("200"))).thenReturn(List.of(expense));
+        when(analyticsService.detectAnomalies(eq(new BigDecimal("200")), any(), any())).thenReturn(List.of(expense));
 
         String result = expenseTools.detectAnomalies("200");
 
@@ -107,7 +108,7 @@ class ExpenseToolsTest {
 
     @Test
     void testDetectAnomaliesEmpty() {
-        when(analyticsService.detectAnomalies(new BigDecimal("200")))
+        when(analyticsService.detectAnomalies(eq(new BigDecimal("200")), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.detectAnomalies("200");
@@ -117,7 +118,7 @@ class ExpenseToolsTest {
 
     @Test
     void testDetectAnomaliesError() {
-        when(analyticsService.detectAnomalies(new BigDecimal("200")))
+        when(analyticsService.detectAnomalies(eq(new BigDecimal("200")), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.detectAnomalies("200");
@@ -127,7 +128,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByCategory() {
-        when(analyticsService.byCategory(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.byCategory(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Map.of("Food", new BigDecimal("300.00"), "Transport", new BigDecimal("100.00")));
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
@@ -138,7 +139,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByCategoryEmpty() {
-        when(analyticsService.byCategory(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.byCategory(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Collections.emptyMap());
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
@@ -148,7 +149,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByCategoryError() {
-        when(analyticsService.byCategory(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.byCategory(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
@@ -164,7 +165,7 @@ class ExpenseToolsTest {
                 "date", LocalDate.of(2024, 1, 10)
         );
 
-        when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByPerson(eq("Teodor"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(List.of(expense));
 
         String result = expenseTools.byPerson("Teodor", "2024-01-01", "2024-01-31");
@@ -175,7 +176,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByPersonEmpty() {
-        when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByPerson(eq("Teodor"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.byPerson("Teodor", "2024-01-01", "2024-01-31");
@@ -185,7 +186,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByPersonError() {
-        when(analyticsService.findByPerson("Teodor", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByPerson(eq("Teodor"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.byPerson("Teodor", "2024-01-01", "2024-01-31");
@@ -195,9 +196,9 @@ class ExpenseToolsTest {
 
     @Test
     void testComparePeriods() {
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTotal(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(new BigDecimal("500.00"));
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 2, 1), LocalDate.of(2024, 2, 29)))
+        when(analyticsService.calculateTotal(eq(LocalDate.of(2024, 2, 1)), eq(LocalDate.of(2024, 2, 29)), any(), any()))
                 .thenReturn(new BigDecimal("600.00"));
 
         String result = expenseTools.comparePeriods("2024-01-01", "2024-01-31", "2024-02-01", "2024-02-29");
@@ -208,7 +209,7 @@ class ExpenseToolsTest {
 
     @Test
     void testComparePeriodsError() {
-        when(analyticsService.calculateTotal(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTotal(eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.comparePeriods("2024-01-01", "2024-01-31", "2024-02-01", "2024-02-29");
@@ -225,7 +226,7 @@ class ExpenseToolsTest {
                 "date", LocalDate.of(2024, 1, 5)
         );
 
-        when(analyticsService.getTopExpenses(3)).thenReturn(List.of(expense));
+        when(analyticsService.getTopExpenses(eq(3), any(), any())).thenReturn(List.of(expense));
 
         String result = expenseTools.topExpenses("3");
 
@@ -235,7 +236,7 @@ class ExpenseToolsTest {
 
     @Test
     void testTopExpensesEmpty() {
-        when(analyticsService.getTopExpenses(3))
+        when(analyticsService.getTopExpenses(eq(3), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.topExpenses("3");
@@ -245,7 +246,7 @@ class ExpenseToolsTest {
 
     @Test
     void testTopExpensesError() {
-        when(analyticsService.getTopExpenses(3))
+        when(analyticsService.getTopExpenses(eq(3), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.topExpenses("3");
@@ -255,7 +256,7 @@ class ExpenseToolsTest {
 
     @Test
     void testMonthlyAverage() {
-        when(analyticsService.calculateMonthlyAverage(3)).thenReturn(new BigDecimal("450.00"));
+        when(analyticsService.calculateMonthlyAverage(eq(3), any(), any())).thenReturn(new BigDecimal("450.00"));
 
         String result = expenseTools.monthlyAverage("3");
 
@@ -264,7 +265,7 @@ class ExpenseToolsTest {
 
     @Test
     void testMonthlyAverageError() {
-        when(analyticsService.calculateMonthlyAverage(3))
+        when(analyticsService.calculateMonthlyAverage(eq(3), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.monthlyAverage("3");
@@ -274,7 +275,7 @@ class ExpenseToolsTest {
 
     @Test
     void testDescribeTrend() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn("Spending on Food increased by 10%");
 
         String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
@@ -284,7 +285,7 @@ class ExpenseToolsTest {
 
     @Test
     void testDescribeTrendError() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
@@ -303,7 +304,7 @@ class ExpenseToolsTest {
     @ParameterizedTest
     @MethodSource("visualDescriptionSource")
     void testGetVisualDescription(String trend, String expected) {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(trend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -313,7 +314,7 @@ class ExpenseToolsTest {
 
     @Test
     void testGetVisualDescriptionError() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -330,7 +331,7 @@ class ExpenseToolsTest {
                 "description", "Groceries"
         );
 
-        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByCategory(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(List.of(expense));
 
         String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
@@ -342,7 +343,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByCategoryDetailedEmpty() {
-        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByCategory(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
@@ -352,7 +353,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByCategoryDetailedError() {
-        when(analyticsService.findByCategory("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByCategory(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
@@ -369,7 +370,7 @@ class ExpenseToolsTest {
                 "description", "Bus ticket"
         );
 
-        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByLocation(eq("Kaufland"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(List.of(expense));
 
         String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
@@ -380,7 +381,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByLocationEmpty() {
-        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByLocation(eq("Kaufland"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
@@ -390,7 +391,7 @@ class ExpenseToolsTest {
 
     @Test
     void testByLocationError() {
-        when(analyticsService.findByLocation("Kaufland", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.findByLocation(eq("Kaufland"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
@@ -424,8 +425,6 @@ class ExpenseToolsTest {
 
     @Test
     void testListFamilyMembersEmpty() {
-        when(familyMemberRepository.findAll()).thenReturn(Collections.emptyList());
-
         String result = expenseTools.listFamilyMembers();
 
         assertEquals("No family members found.", result);
@@ -478,7 +477,7 @@ class ExpenseToolsTest {
         }
         String longTrend = sb.toString();
 
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn(longTrend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -488,7 +487,7 @@ class ExpenseToolsTest {
 
     @Test
     void testExtractPercentageNoMatch() {
-        when(analyticsService.calculateTrend("Food", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31)))
+        when(analyticsService.calculateTrend(eq("Food"), eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 1, 31)), any(), any()))
                 .thenReturn("Spending increased but no percent here");
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -506,7 +505,7 @@ class ExpenseToolsTest {
                 "description", "Groceries"
         );
 
-        when(analyticsService.findByAmount(new BigDecimal("150.00"))).thenReturn(List.of(expense));
+        when(analyticsService.findByAmount(eq(new BigDecimal("150.00")), any(), any())).thenReturn(List.of(expense));
 
         String result = expenseTools.searchByAmount("150.00");
 
@@ -517,7 +516,7 @@ class ExpenseToolsTest {
 
     @Test
     void testSearchByAmountEmpty() {
-        when(analyticsService.findByAmount(new BigDecimal("999.99"))).thenReturn(List.of());
+        when(analyticsService.findByAmount(eq(new BigDecimal("999.99")), any(), any())).thenReturn(List.of());
 
         String result = expenseTools.searchByAmount("999.99");
 
@@ -534,7 +533,7 @@ class ExpenseToolsTest {
         expense.put("description", "Fuel");
         expense.put("raw_input", "BON FISCAL OMV\nMotorina 50L x 4.00 = 200.00");
 
-        when(analyticsService.findByAmount(new BigDecimal("200.00"))).thenReturn(List.of(expense));
+        when(analyticsService.findByAmount(eq(new BigDecimal("200.00")), any(), any())).thenReturn(List.of(expense));
 
         String result = expenseTools.searchByAmount("200.00");
 
@@ -545,7 +544,7 @@ class ExpenseToolsTest {
 
     @Test
     void testSearchByAmountError() {
-        when(analyticsService.findByAmount(new BigDecimal("100.00")))
+        when(analyticsService.findByAmount(eq(new BigDecimal("100.00")), any(), any()))
                 .thenThrow(new RuntimeException("fail"));
 
         String result = expenseTools.searchByAmount("100.00");

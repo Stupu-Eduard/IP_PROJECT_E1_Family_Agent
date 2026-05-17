@@ -1,12 +1,14 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.ExpenseItem;
+import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -30,13 +32,28 @@ public class ExpenseTools {
     private static final String KEY_LOCATION = "location";
     private static final String KEY_DESCRIPTION = "description";
     private static final String KEY_RAW_INPUT = "raw_input";
-
     private static final String SUFFIX_RON = " RON";
 
     private final ExpenseAnalyticsService analyticsService;
     private final CategoryRepository categoryRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final ExpenseItemRepository expenseItemRepository;
+
+    private long[] resolveScope() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
+            return new long[]{-1L, -1L};
+        }
+        long userId = user.getId();
+        Long familyId = familyMemberRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(fm -> fm.getFamily() != null ? fm.getFamily().getId() : null)
+                .orElse(null);
+        return new long[]{familyId != null ? familyId : -1L, userId};
+    }
+
+    private Long scopeFamilyId(long[] scope) { return scope[0] == -1L ? null : scope[0]; }
+    private Long scopeUserId(long[] scope)   { return scope[1]; }
 
     @Tool("Get the current date in ISO format YYYY-MM-DD. Use this to calculate relative date ranges like 'last month' or 'this week'.")
     public String getCurrentDate() {
@@ -52,21 +69,31 @@ public class ExpenseTools {
                 .collect(Collectors.joining(", "));
     }
 
-    @Tool("List all family members (users) in the system. Use this before querying by person to ensure you use the correct name.")
+    @Tool("List the family members of the authenticated user. Use this before querying by person to ensure you use the correct name.")
     public String listFamilyMembers() {
-        var members = familyMemberRepository.findAll();
-        if (members.isEmpty()) return "No family members found.";
-        return "Family members: " + members.stream()
-                .map(fm -> fm.getUser() != null ? fm.getUser().getName() : "Unknown")
-                .distinct()
-                .collect(Collectors.joining(", "));
+        long[] scope = resolveScope();
+        Long familyId = scopeFamilyId(scope);
+        if (familyId != null) {
+            var members = familyMemberRepository.findByFamilyId(familyId);
+            if (members.isEmpty()) return "No family members found.";
+            return "Family members: " + members.stream()
+                    .map(fm -> fm.getUser() != null ? fm.getUser().getName() : "Unknown")
+                    .distinct()
+                    .collect(Collectors.joining(", "));
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User user) {
+            return "Family members: " + user.getName();
+        }
+        return "No family members found.";
     }
 
     @Tool("Calculate total expenses for a date range. Dates must be in ISO format YYYY-MM-DD.")
     public String calculateTotal(String from, String to) {
         try {
             log.info("Tool called: calculateTotal from {} to {}", from, to);
-            BigDecimal total = analyticsService.calculateTotal(LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            BigDecimal total = analyticsService.calculateTotal(LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             return "Total expenses: " + total + SUFFIX_RON;
         } catch (Exception e) {
             log.error("Error in calculateTotal: {}", e.getMessage());
@@ -78,7 +105,8 @@ public class ExpenseTools {
     public String compareMembers(String from, String to) {
         try {
             log.info("Tool called: compareMembers from {} to {}", from, to);
-            Map<String, BigDecimal> result = analyticsService.compareMembers(LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            Map<String, BigDecimal> result = analyticsService.compareMembers(LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             if (result.isEmpty()) return "No spending data found for the specified period.";
             return "Spending by member: " + result.entrySet().stream()
                     .map(e -> e.getKey() + ": " + e.getValue() + SUFFIX_RON)
@@ -93,8 +121,9 @@ public class ExpenseTools {
     public String detectAnomalies(String thresholdStr) {
         try {
             log.info("Tool called: detectAnomalies with threshold {}", thresholdStr);
+            long[] scope = resolveScope();
             BigDecimal threshold = new BigDecimal(thresholdStr);
-            var anomalies = analyticsService.detectAnomalies(threshold);
+            var anomalies = analyticsService.detectAnomalies(threshold, scopeFamilyId(scope), scopeUserId(scope));
             if (anomalies.isEmpty()) return "No anomalies found above " + threshold + SUFFIX_RON + ".";
             return "Anomalies found: " + anomalies.stream()
                     .map(e -> e.get(KEY_CATEGORY) + " (" + e.get(KEY_AMOUNT) + SUFFIX_RON + " on " + e.get(KEY_DATE) + ")")
@@ -109,7 +138,8 @@ public class ExpenseTools {
     public String byCategory(String from, String to) {
         try {
             log.info("Tool called: byCategory from {} to {}", from, to);
-            Map<String, BigDecimal> result = analyticsService.byCategory(LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            Map<String, BigDecimal> result = analyticsService.byCategory(LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             if (result.isEmpty()) return "No expenses found for the specified period.";
             return "Breakdown by category: " + result.entrySet().stream()
                     .map(e -> e.getKey() + ": " + e.getValue() + SUFFIX_RON)
@@ -124,7 +154,8 @@ public class ExpenseTools {
     public String byPerson(String person, String from, String to) {
         try {
             log.info("Tool called: byPerson for {} from {} to {}", person, from, to);
-            var expenses = analyticsService.findByPerson(person, LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            var expenses = analyticsService.findByPerson(person, LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             if (expenses.isEmpty()) return "No expenses found for " + person + " in the specified period.";
             return "Expenses for " + person + ": " + expenses.stream()
                     .map(e -> e.get(KEY_AMOUNT) + SUFFIX_RON + " for " + e.get(KEY_CATEGORY) + " on " + e.get(KEY_DATE))
@@ -139,8 +170,9 @@ public class ExpenseTools {
     public String comparePeriods(String from1, String to1, String from2, String to2) {
         try {
             log.info("Tool called: comparePeriods");
-            BigDecimal total1 = analyticsService.calculateTotal(LocalDate.parse(from1), LocalDate.parse(to1));
-            BigDecimal total2 = analyticsService.calculateTotal(LocalDate.parse(from2), LocalDate.parse(to2));
+            long[] scope = resolveScope();
+            BigDecimal total1 = analyticsService.calculateTotal(LocalDate.parse(from1), LocalDate.parse(to1), scopeFamilyId(scope), scopeUserId(scope));
+            BigDecimal total2 = analyticsService.calculateTotal(LocalDate.parse(from2), LocalDate.parse(to2), scopeFamilyId(scope), scopeUserId(scope));
             return "Period 1 (" + from1 + " to " + to1 + "): " + total1 + SUFFIX_RON + ". " +
                    "Period 2 (" + from2 + " to " + to2 + "): " + total2 + SUFFIX_RON + ".";
         } catch (Exception e) {
@@ -153,7 +185,8 @@ public class ExpenseTools {
     public String topExpenses(String limit) {
         try {
             log.info("Tool called: topExpenses with limit {}", limit);
-            var expenses = analyticsService.getTopExpenses(Integer.parseInt(limit));
+            long[] scope = resolveScope();
+            var expenses = analyticsService.getTopExpenses(Integer.parseInt(limit), scopeFamilyId(scope), scopeUserId(scope));
             if (expenses.isEmpty()) return "No expenses found.";
             return "Top expenses: " + expenses.stream()
                     .map(e -> e.get(KEY_AMOUNT) + SUFFIX_RON + " (" + e.get(KEY_CATEGORY) + ") by " + e.get(KEY_PERSON) + " on " + e.get(KEY_DATE))
@@ -168,7 +201,8 @@ public class ExpenseTools {
     public String monthlyAverage(String months) {
         try {
             log.info("Tool called: monthlyAverage for last {} months", months);
-            BigDecimal avg = analyticsService.calculateMonthlyAverage(Integer.parseInt(months));
+            long[] scope = resolveScope();
+            BigDecimal avg = analyticsService.calculateMonthlyAverage(Integer.parseInt(months), scopeFamilyId(scope), scopeUserId(scope));
             return "Monthly average for the last " + months + " months: " + avg + SUFFIX_RON;
         } catch (Exception e) {
             log.error("Error in monthlyAverage: {}", e.getMessage());
@@ -180,7 +214,8 @@ public class ExpenseTools {
     public String describeTrend(String category, String from, String to) {
         try {
             log.info("Tool called: describeTrend for {} from {} to {}", category, from, to);
-            return analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            return analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
         } catch (Exception e) {
             log.error("Error in describeTrend: {}", e.getMessage());
             return "Error calculating trend: " + e.getMessage();
@@ -191,15 +226,10 @@ public class ExpenseTools {
     public String getVisualDescription(String category, String from, String to) {
         try {
             log.info("Tool called: getVisualDescription for {} from {} to {}", category, from, to);
-            String trend = analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to));
-
-            if (trend.contains("increased")) {
-                String percent = extractPercentage(trend);
-                return "Trendul arată o creștere de " + percent + "% pentru " + category;
-            } else if (trend.contains("decreased")) {
-                String percent = extractPercentage(trend);
-                return "Trendul arată o scădere de " + percent + "% pentru " + category;
-            }
+            long[] scope = resolveScope();
+            String trend = analyticsService.calculateTrend(category, LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
+            if (trend.contains("increased")) return "Trendul arată o creștere de " + extractPercentage(trend) + "% pentru " + category;
+            if (trend.contains("decreased")) return "Trendul arată o scădere de " + extractPercentage(trend) + "% pentru " + category;
             return "Trend stabil pentru " + category;
         } catch (Exception e) {
             log.error("Error in getVisualDescription: {}", e.getMessage());
@@ -211,7 +241,8 @@ public class ExpenseTools {
     public String byCategoryDetailed(String category, String from, String to) {
         try {
             log.info("Tool called: byCategoryDetailed for {} from {} to {}", category, from, to);
-            var expenses = analyticsService.findByCategory(category, LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            var expenses = analyticsService.findByCategory(category, LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             if (expenses.isEmpty()) return "No expenses found for category '" + category + "' in the specified period.";
             return "Expenses for '" + category + "': " + expenses.stream()
                     .map(e -> {
@@ -219,10 +250,7 @@ public class ExpenseTools {
                         Object raw = e.get(KEY_RAW_INPUT);
                         if (raw != null && !raw.toString().isBlank()) {
                             String rawText = raw.toString();
-                            // Truncate very long OCR text to avoid overwhelming the LLM context
-                            if (rawText.length() > 800) {
-                                rawText = rawText.substring(0, 800) + "... [truncated]";
-                            }
+                            if (rawText.length() > 800) rawText = rawText.substring(0, 800) + "... [truncated]";
                             base += " [Receipt details: " + rawText + "]";
                         }
                         return base;
@@ -238,7 +266,8 @@ public class ExpenseTools {
     public String byLocation(String location, String from, String to) {
         try {
             log.info("Tool called: byLocation for {} from {} to {}", location, from, to);
-            var expenses = analyticsService.findByLocation(location, LocalDate.parse(from), LocalDate.parse(to));
+            long[] scope = resolveScope();
+            var expenses = analyticsService.findByLocation(location, LocalDate.parse(from), LocalDate.parse(to), scopeFamilyId(scope), scopeUserId(scope));
             if (expenses.isEmpty()) return "No expenses found for location '" + location + "' in the specified period.";
             return "Expenses at '" + location + "': " + expenses.stream()
                     .map(e -> e.get(KEY_AMOUNT) + SUFFIX_RON + " for " + e.get(KEY_CATEGORY) + " on " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")")
@@ -253,20 +282,17 @@ public class ExpenseTools {
     public String searchByAmount(String amountStr) {
         try {
             log.info("Tool called: searchByAmount for {}", amountStr);
+            long[] scope = resolveScope();
             BigDecimal amount = new BigDecimal(amountStr);
-            var expenses = analyticsService.findByAmount(amount);
-            if (expenses.isEmpty()) {
-                return "Nu am găsit cheltuieli cu suma de " + amount + SUFFIX_RON + ".";
-            }
+            var expenses = analyticsService.findByAmount(amount, scopeFamilyId(scope), scopeUserId(scope));
+            if (expenses.isEmpty()) return "Nu am găsit cheltuieli cu suma de " + amount + SUFFIX_RON + ".";
             return "Cheltuieli găsite pentru " + amount + SUFFIX_RON + ": " + expenses.stream()
                     .map(e -> {
                         String base = e.get(KEY_CATEGORY) + " - " + e.get(KEY_AMOUNT) + SUFFIX_RON + " la " + e.get(KEY_LOCATION) + " pe " + e.get(KEY_DATE) + " (" + e.get(KEY_DESCRIPTION) + ")";
                         Object raw = e.get(KEY_RAW_INPUT);
                         if (raw != null && !raw.toString().isBlank()) {
                             String rawText = raw.toString();
-                            if (rawText.length() > 800) {
-                                rawText = rawText.substring(0, 800) + "... [truncated]";
-                            }
+                            if (rawText.length() > 800) rawText = rawText.substring(0, 800) + "... [truncated]";
                             base += " [Receipt details: " + rawText + "]";
                         }
                         return base;
@@ -325,14 +351,11 @@ public class ExpenseTools {
             - city (VARCHAR) - oraș
             - address (VARCHAR) - adresă
             - country (VARCHAR) - țară
-            - lat (DOUBLE) - latitudine
-            - lng (DOUBLE) - longitudine
 
             Tabela: users
             - id (BIGINT, PK)
             - name (VARCHAR) - nume
             - email (VARCHAR) - email
-            - role (VARCHAR) - rol
 
             Tabela: families
             - id (BIGINT, PK)
@@ -354,9 +377,7 @@ public class ExpenseTools {
     }
 
     private String extractPercentage(String trend) {
-        if (trend == null || trend.length() > MAX_TREND_LENGTH) {
-            return "0";
-        }
+        if (trend == null || trend.length() > MAX_TREND_LENGTH) return "0";
         Matcher m = PERCENTAGE_PATTERN.matcher(trend);
         return m.find() ? m.group(1) : "0";
     }
