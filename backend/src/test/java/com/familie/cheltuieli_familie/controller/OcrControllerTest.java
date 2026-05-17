@@ -89,11 +89,11 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn("OCR text");
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Kaufland";
-        receipt.totalAmount = new BigDecimal("150.50");
-        receipt.date = "15/03/2024";
-        receipt.category = "Mâncare";
-        receipt.items = List.of();
+        receipt.setStoreName("Kaufland");
+        receipt.setTotalAmount(new BigDecimal("150.50"));
+        receipt.setDate("15/03/2024");
+        receipt.setCategory("Mâncare");
+        receipt.setItems(List.of());
 
         when(receiptParser.parseReceipt("OCR text")).thenReturn(receipt);
 
@@ -135,11 +135,11 @@ class OcrControllerTest {
         when(ocrService.extractTextFromPdf(any())).thenReturn("PDF OCR text");
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "OMV";
-        receipt.totalAmount = new BigDecimal("200.00");
-        receipt.date = "20.04.2024";
-        receipt.category = "Transport";
-        receipt.items = List.of();
+        receipt.setStoreName("OMV");
+        receipt.setTotalAmount(new BigDecimal("200.00"));
+        receipt.setDate("20.04.2024");
+        receipt.setCategory("Transport");
+        receipt.setItems(List.of());
 
         when(receiptParser.parseReceipt("PDF OCR text")).thenReturn(receipt);
 
@@ -200,16 +200,16 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn("OCR text");
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Lidl";
-        receipt.totalAmount = new BigDecimal("50.00");
-        receipt.date = "01.05.2024";
-        receipt.category = "Mâncare";
+        receipt.setStoreName("Lidl");
+        receipt.setTotalAmount(new BigDecimal("50.00"));
+        receipt.setDate("01.05.2024");
+        receipt.setCategory("Mâncare");
 
         ReceiptParser.ReceiptItem item = new ReceiptParser.ReceiptItem();
-        item.name = "Pâine";
-        item.quantity = new BigDecimal("2");
-        item.unitPrice = new BigDecimal("5.00");
-        receipt.items = List.of(item);
+        item.setName("Pâine");
+        item.setQuantity(new BigDecimal("2"));
+        item.setUnitPrice(new BigDecimal("5.00"));
+        receipt.setItems(List.of(item));
 
         when(receiptParser.parseReceipt("OCR text")).thenReturn(receipt);
 
@@ -251,11 +251,11 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn("OCR text");
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Test";
-        receipt.totalAmount = new BigDecimal("10.00");
-        receipt.date = null;
-        receipt.category = "Diverse";
-        receipt.items = List.of();
+        receipt.setStoreName("Test");
+        receipt.setTotalAmount(new BigDecimal("10.00"));
+        receipt.setDate(null);
+        receipt.setCategory("Diverse");
+        receipt.setItems(List.of());
 
         when(receiptParser.parseReceipt("OCR text")).thenReturn(receipt);
 
@@ -293,11 +293,11 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn("OCR text");
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Kaufland";
-        receipt.totalAmount = new BigDecimal("75.00");
-        receipt.date = "10/06/2024";
-        receipt.category = "Mâncare";
-        receipt.items = List.of();
+        receipt.setStoreName("Kaufland");
+        receipt.setTotalAmount(new BigDecimal("75.00"));
+        receipt.setDate("10/06/2024");
+        receipt.setCategory("Mâncare");
+        receipt.setItems(List.of());
 
         when(receiptParser.parseReceipt("OCR text")).thenReturn(receipt);
 

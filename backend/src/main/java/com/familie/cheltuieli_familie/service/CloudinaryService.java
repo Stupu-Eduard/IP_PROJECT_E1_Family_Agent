@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.familie.cheltuieli_familie.exception.ExternalServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ public class CloudinaryService {
 
         } catch (IOException e) {
             log.error("Cloudinary upload failed for file: {}", fileName, e);
-            throw new RuntimeException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
+            throw new ExternalServiceException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
         }
     }
 

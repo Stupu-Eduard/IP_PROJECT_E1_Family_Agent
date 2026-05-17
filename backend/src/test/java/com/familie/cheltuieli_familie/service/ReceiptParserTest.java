@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,35 +89,50 @@ class ReceiptParserTest {
     @Test
     void testParsedReceiptFields() {
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Test Store";
-        receipt.totalAmount = new BigDecimal("100.00");
-        receipt.date = "2024-01-01";
-        receipt.category = "Food";
+        receipt.setStoreName("Test Store");
+        receipt.setTotalAmount(new BigDecimal("100.00"));
+        receipt.setDate("2024-01-01");
+        receipt.setCategory("Food");
 
         ReceiptParser.ReceiptItem item = new ReceiptParser.ReceiptItem();
-        item.name = "Milk";
-        item.quantity = new BigDecimal("2");
-        item.unitPrice = new BigDecimal("5.50");
-        receipt.items = java.util.List.of(item);
+        item.setName("Milk");
+        item.setQuantity(new BigDecimal("2"));
+        item.setUnitPrice(new BigDecimal("5.50"));
+        receipt.setItems(java.util.List.of(item));
 
-        assertEquals("Test Store", receipt.storeName);
-        assertEquals(new BigDecimal("100.00"), receipt.totalAmount);
-        assertEquals("2024-01-01", receipt.date);
-        assertEquals("Food", receipt.category);
-        assertNotNull(receipt.items);
-        assertEquals(1, receipt.items.size());
-        assertEquals("Milk", receipt.items.get(0).name);
-        assertEquals(new BigDecimal("2"), receipt.items.get(0).quantity);
-        assertEquals(new BigDecimal("5.50"), receipt.items.get(0).unitPrice);
+        assertEquals("Test Store", receipt.getStoreName());
+        assertEquals(new BigDecimal("100.00"), receipt.getTotalAmount());
+        assertEquals("2024-01-01", receipt.getDate());
+        assertEquals("Food", receipt.getCategory());
+        assertNotNull(receipt.getItems());
+        assertEquals(1, receipt.getItems().size());
+        assertEquals("Milk", receipt.getItems().get(0).getName());
+        assertEquals(new BigDecimal("2"), receipt.getItems().get(0).getQuantity());
+        assertEquals(new BigDecimal("5.50"), receipt.getItems().get(0).getUnitPrice());
     }
 
     @Test
     void testParsedReceiptNullItems() {
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.storeName = "Store";
-        receipt.totalAmount = new BigDecimal("50.00");
-        receipt.items = null;
+        receipt.setStoreName("Store");
+        receipt.setTotalAmount(new BigDecimal("50.00"));
+        receipt.setItems(null);
 
-        assertNull(receipt.items);
+        assertNull(receipt.getItems());
+    }
+
+    @Test
+    void testJsonDeserialization() throws Exception {
+        String json = "{\"storeName\":\"Lidl\",\"totalAmount\":45.30,\"date\":\"15/03/2024\",\"category\":\"Mancare\",\"items\":[{\"name\":\"Lapte\",\"quantity\":2,\"unitPrice\":5.50}]}";
+        ObjectMapper mapper = new ObjectMapper();
+        ReceiptParser.ParsedReceipt receipt = mapper.readValue(json, ReceiptParser.ParsedReceipt.class);
+
+        assertEquals("Lidl", receipt.getStoreName());
+        assertEquals(new BigDecimal("45.30"), receipt.getTotalAmount());
+        assertEquals("15/03/2024", receipt.getDate());
+        assertEquals("Mancare", receipt.getCategory());
+        assertNotNull(receipt.getItems());
+        assertEquals(1, receipt.getItems().size());
+        assertEquals("Lapte", receipt.getItems().get(0).getName());
     }
 }

@@ -266,4 +266,34 @@ class ExpenseAnalyticsServiceTest {
         assertEquals(new BigDecimal("99.99"), result.get(0).get("amount"));
         assertEquals("Food", result.get(0).get("category"));
     }
+
+    @Test
+    void testFindByAmountUsesKeyConstants() {
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(BigDecimal.class)))
+                .thenAnswer(invocation -> {
+                    org.springframework.jdbc.core.RowMapper<Map<String, Object>> rowMapper = invocation.getArgument(1);
+                    java.sql.ResultSet rs = org.mockito.Mockito.mock(java.sql.ResultSet.class);
+                    when(rs.getLong("id")).thenReturn(1L);
+                    when(rs.getBigDecimal("amount")).thenReturn(new BigDecimal("99.99"));
+                    when(rs.getString("description")).thenReturn("Test");
+                    when(rs.getTimestamp("date")).thenReturn(new java.sql.Timestamp(System.currentTimeMillis()));
+                    when(rs.getString("category")).thenReturn("Food");
+                    when(rs.getString("location")).thenReturn("Kaufland");
+                    when(rs.getString("person")).thenReturn("Alice");
+                    when(rs.getString("currency")).thenReturn("RON");
+                    when(rs.getString("source_type")).thenReturn("MANUAL");
+                    try {
+                        return List.of(rowMapper.mapRow(rs, 0));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+        List<Map<String, Object>> result = analyticsService.findByAmount(new BigDecimal("99.99"));
+
+        assertEquals(1, result.size());
+        Map<String, Object> row = result.get(0);
+        assertEquals("Food", row.get("category"));
+        assertEquals("Alice", row.get("person"));
+    }
 }

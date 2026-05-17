@@ -39,6 +39,6 @@ public class ExpenseSyncListener {
         ExpenseEntity expense = event.getExpense();
         log.error("CRITICAL: All retries exhausted for expense ID: {}. Embedding permanently lost. Error: {}",
                 expense.getId(), e.getMessage(), e);
-        // TODO: Send to dead-letter queue or alert monitoring
+        // Dead-letter queue or monitoring alert should be triggered here; currently no DLQ available
     }
 }

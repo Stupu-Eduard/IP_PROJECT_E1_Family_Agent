@@ -16,6 +16,7 @@ import com.familie.cheltuieli_familie.repository.LocationRepository;
 import com.familie.cheltuieli_familie.service.CloudinaryService;
 import com.familie.cheltuieli_familie.service.OcrService;
 import com.familie.cheltuieli_familie.service.ReceiptParser;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
@@ -34,10 +35,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/ocr")
 @Slf4j
+@RequiredArgsConstructor
 public class OcrController {
 
     private static final Path OCR_UPLOAD_DIRECTORY =
@@ -53,35 +56,12 @@ public class OcrController {
     private final FamilyMemberRepository familyMemberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public OcrController(OcrService ocrService,
-                         ReceiptParser receiptParser,
-                         CloudinaryService cloudinaryService,
-                         ExpenseRepository expenseRepository,
-                         ExpenseItemRepository expenseItemRepository,
-                         CategoryRepository categoryRepository,
-                         LocationRepository locationRepository,
-                         FamilyMemberRepository familyMemberRepository,
-                         ApplicationEventPublisher eventPublisher) {
-        this.ocrService = ocrService;
-        this.receiptParser = receiptParser;
-        this.cloudinaryService = cloudinaryService;
-        this.expenseRepository = expenseRepository;
-        this.expenseItemRepository = expenseItemRepository;
-        this.categoryRepository = categoryRepository;
-        this.locationRepository = locationRepository;
-        this.familyMemberRepository = familyMemberRepository;
-        this.eventPublisher = eventPublisher;
-    }
-
     @PostMapping("/process")
     public ResponseEntity<OcrResponseDTO> processReceipt(
             @RequestParam("file") MultipartFile multipartFile,
             Authentication authentication
     ) throws IOException {
-        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
-            throw new ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Autentificare necesară.");
-        }
-
+        User user = extractUser(authentication);
         String originalName = multipartFile.getOriginalFilename();
         String extension = getExtension(originalName);
 
@@ -94,20 +74,7 @@ public class OcrController {
 
         try {
             File file = tempFilePath.toFile();
-            String ocrText;
-
-            if (isImageFile(extension)) {
-                log.info("Processing image file: {} ({} bytes)", originalName, file.length());
-                ocrText = ocrService.extractTextFromImage(file);
-            } else {
-                log.info("Processing PDF file: {} ({} bytes)", originalName, file.length());
-                ocrText = ocrService.extractTextFromPdf(file);
-            }
-
-            log.debug("OCR text extracted ({} chars): {}", ocrText.length(),
-                    ocrText.substring(0, Math.min(200, ocrText.length())));
-
-            // Use LLM-based receipt parser
+            String ocrText = extractOcrText(file, extension, originalName);
             ReceiptParser.ParsedReceipt receipt = receiptParser.parseReceipt(ocrText);
 
             if (receipt == null) {
@@ -115,107 +82,138 @@ public class OcrController {
                 return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, 0.0));
             }
 
-            // Lookup or create category
-            Category category = categoryRepository.findByName(receipt.category)
-                    .orElseGet(() -> {
-                        log.warn("Category '{}' not found, defaulting to first available", receipt.category);
-                        return categoryRepository.findAll().stream().findFirst().orElse(null);
-                    });
+            Category category = resolveCategory(receipt.getCategory());
+            Location location = resolveLocation(receipt.getStoreName());
+            String cloudinaryUrl = uploadReceipt(file, user);
+            Expense saved = saveExpense(receipt, category, location, user, cloudinaryUrl, ocrText);
+            saveExpenseItems(saved, receipt.getItems(), category);
+            publishSyncEvent(saved, ocrText);
 
-            // Lookup or create location
-            Location location = null;
-            if (receipt.storeName != null && !receipt.storeName.isBlank()) {
-                location = locationRepository.findAll().stream()
-                        .filter(l -> l.getStore() != null &&
-                                l.getStore().equalsIgnoreCase(receipt.storeName))
-                        .findFirst()
-                        .orElseGet(() -> {
-                            Location newLoc = new Location();
-                            newLoc.setStore(receipt.storeName.trim());
-                            return locationRepository.save(newLoc);
-                        });
-            }
-
-            // Upload receipt to Cloudinary
-            String cloudinaryUrl = null;
-            try {
-                String folder = "receipts/" + LocalDate.now().toString().substring(0, 7);
-                String publicId = "receipt_" + user.getId() + "_" + System.currentTimeMillis();
-                cloudinaryUrl = cloudinaryService.uploadFile(file, folder, publicId);
-            } catch (Exception e) {
-                log.warn("Cloudinary upload failed, continuing without receipt URL: {}", e.getMessage());
-            }
-
-            // Build and save expense
-            Expense expense = new Expense();
-            expense.setAmount(receipt.totalAmount);
-            expense.setDescription(receipt.storeName != null ? "Cheltuială OCR: " + receipt.storeName : "Cheltuială OCR");
-            LocalDateTime expenseDate;
-            if (receipt.date != null && !receipt.date.isBlank()) {
-                try {
-                    expenseDate = LocalDate.parse(receipt.date).atStartOfDay();
-                } catch (Exception e) {
-                    log.warn("Failed to parse receipt date '{}', using current date", receipt.date);
-                    expenseDate = LocalDateTime.now();
-                }
-            } else {
-                expenseDate = LocalDateTime.now();
-            }
-            expense.setExpenseDate(expenseDate);
-            expense.setCategory(category);
-            expense.setLocation(location);
-            expense.setUser(user);
-            expense.setCurrency("RON");
-            expense.setSourceType("OCR");
-            expense.setReceiptUrl(cloudinaryUrl);
-
-            familyMemberRepository.findByUserId(user.getId()).stream()
-                    .findFirst()
-                    .ifPresent(fm -> expense.setFamily(fm.getFamily()));
-
-            // Store the full OCR text for RAG searchability
-            expense.setRawInput(ocrText);
-
-            Expense saved = expenseRepository.save(expense);
-            log.info("Saved OCR expense id={} amount={} category={} user={}",
-                    saved.getId(), saved.getAmount(),
-                    category != null ? category.getName() : null,
-                    user.getName());
-
-            // Save parsed receipt items for detailed product queries
-            if (receipt.items != null && !receipt.items.isEmpty()) {
-                for (ReceiptParser.ReceiptItem item : receipt.items) {
-                    if (item.name != null && !item.name.isBlank()) {
-                        ExpenseItem expenseItem = new ExpenseItem();
-                        expenseItem.setExpense(saved);
-                        expenseItem.setItemName(item.name.trim());
-                        expenseItem.setDescription(item.name.trim());
-                        expenseItem.setQuantity(item.quantity != null ? item.quantity : BigDecimal.ONE);
-                        expenseItem.setAmount(item.unitPrice != null ? item.unitPrice : BigDecimal.ZERO);
-                        expenseItem.setCategory(category);
-                        expenseItemRepository.save(expenseItem);
-                    }
-                }
-                log.info("Saved {} items for expense id={}", receipt.items.size(), saved.getId());
-            }
-
-            // Sync to Qdrant vector store for semantic / RAG search
-            ExpenseEntity entity = toExpenseEntity(saved, ocrText);
-            eventPublisher.publishEvent(new ExpenseSyncEvent(this, entity));
-
-            OcrResponseDTO response = new OcrResponseDTO(
-                    saved.getAmount(),
-                    category != null ? category.getName() : null,
-                    receipt.date,
-                    receipt.storeName,
-                    0.90
-            );
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(buildResponse(saved, receipt, category));
 
         } finally {
             Files.deleteIfExists(tempFilePath);
         }
+    }
+
+    private User extractUser(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Autentificare necesară.");
+        }
+        return user;
+    }
+
+    private String extractOcrText(File file, String extension, String originalName) {
+        if (isImageFile(extension)) {
+            log.info("Processing image file: {} ({} bytes)", originalName, file.length());
+            return ocrService.extractTextFromImage(file);
+        }
+        log.info("Processing PDF file: {} ({} bytes)", originalName, file.length());
+        return ocrService.extractTextFromPdf(file);
+    }
+
+    private Category resolveCategory(String categoryName) {
+        return categoryRepository.findByName(categoryName)
+                .orElseGet(() -> {
+                    log.warn("Category '{}' not found, defaulting to first available", categoryName);
+                    return categoryRepository.findAll().stream().findFirst().orElse(null);
+                });
+    }
+
+    private Location resolveLocation(String storeName) {
+        if (storeName == null || storeName.isBlank()) {
+            return null;
+        }
+        return locationRepository.findAll().stream()
+                .filter(l -> l.getStore() != null && l.getStore().equalsIgnoreCase(storeName))
+                .findFirst()
+                .orElseGet(() -> {
+                    Location newLoc = new Location();
+                    newLoc.setStore(storeName.trim());
+                    return locationRepository.save(newLoc);
+                });
+    }
+
+    private String uploadReceipt(File file, User user) {
+        try {
+            String folder = "receipts/" + LocalDate.now().toString().substring(0, 7);
+            String publicId = "receipt_" + user.getId() + "_" + System.currentTimeMillis();
+            return cloudinaryService.uploadFile(file, folder, publicId);
+        } catch (Exception e) {
+            log.warn("Cloudinary upload failed, continuing without receipt URL: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Expense saveExpense(ReceiptParser.ParsedReceipt receipt, Category category,
+                                Location location, User user, String cloudinaryUrl, String ocrText) {
+        Expense expense = new Expense();
+        expense.setAmount(receipt.getTotalAmount());
+        expense.setDescription(receipt.getStoreName() != null ? "Cheltuială OCR: " + receipt.getStoreName() : "Cheltuială OCR");
+        expense.setExpenseDate(parseExpenseDate(receipt.getDate()));
+        expense.setCategory(category);
+        expense.setLocation(location);
+        expense.setUser(user);
+        expense.setCurrency("RON");
+        expense.setSourceType("OCR");
+        expense.setReceiptUrl(cloudinaryUrl);
+        expense.setRawInput(ocrText);
+
+        familyMemberRepository.findByUserId(user.getId()).stream()
+                .findFirst()
+                .ifPresent(fm -> expense.setFamily(fm.getFamily()));
+
+        Expense saved = expenseRepository.save(expense);
+        log.info("Saved OCR expense id={} amount={} category={} user={}",
+                saved.getId(), saved.getAmount(),
+                category != null ? category.getName() : null,
+                user.getName());
+        return saved;
+    }
+
+    private LocalDateTime parseExpenseDate(String dateStr) {
+        if (dateStr != null && !dateStr.isBlank()) {
+            try {
+                return LocalDate.parse(dateStr).atStartOfDay();
+            } catch (Exception e) {
+                log.warn("Failed to parse receipt date '{}', using current date", dateStr);
+            }
+        }
+        return LocalDateTime.now();
+    }
+
+    private void saveExpenseItems(Expense expense, List<ReceiptParser.ReceiptItem> items, Category category) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (ReceiptParser.ReceiptItem item : items) {
+            if (item.getName() != null && !item.getName().isBlank()) {
+                ExpenseItem expenseItem = new ExpenseItem();
+                expenseItem.setExpense(expense);
+                expenseItem.setItemName(item.getName().trim());
+                expenseItem.setDescription(item.getName().trim());
+                expenseItem.setQuantity(item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE);
+                expenseItem.setAmount(item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO);
+                expenseItem.setCategory(category);
+                expenseItemRepository.save(expenseItem);
+            }
+        }
+        log.info("Saved {} items for expense id={}", items.size(), expense.getId());
+    }
+
+    private void publishSyncEvent(Expense expense, String ocrText) {
+        ExpenseEntity entity = toExpenseEntity(expense, ocrText);
+        eventPublisher.publishEvent(new ExpenseSyncEvent(this, entity));
+    }
+
+    private OcrResponseDTO buildResponse(Expense saved, ReceiptParser.ParsedReceipt receipt, Category category) {
+        return new OcrResponseDTO(
+                saved.getAmount(),
+                category != null ? category.getName() : null,
+                receipt.getDate(),
+                receipt.getStoreName(),
+                0.90
+        );
     }
 
     private boolean isImageFile(String extension) {
@@ -242,7 +240,6 @@ public class OcrController {
         entity.setLocation(expense.getLocation() != null ? expense.getLocation().getStore() : null);
         entity.setPerson(expense.getUser() != null ? expense.getUser().getName() : null);
         entity.setDate(expense.getExpenseDate() != null ? expense.getExpenseDate().toLocalDate() : null);
-        // Include full OCR text for semantic search, plus structured summary
         String structured = String.format("Cheltuială OCR: %s, Sumă: %s, Categorie: %s, Magazin: %s",
                 expense.getDescription(), expense.getAmount(),
                 expense.getCategory() != null ? expense.getCategory().getName() : null,

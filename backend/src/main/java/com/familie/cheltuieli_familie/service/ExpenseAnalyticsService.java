@@ -189,9 +189,9 @@ public class ExpenseAnalyticsService {
             row.put("amount", rs.getBigDecimal("amount"));
             row.put("description", rs.getString("description"));
             row.put("date", rs.getTimestamp("date"));
-            row.put("category", rs.getString("category"));
+            row.put(KEY_CATEGORY, rs.getString("category"));
             row.put("location", rs.getString("location"));
-            row.put("person", rs.getString("person"));
+            row.put(KEY_PERSON, rs.getString("person"));
             row.put("currency", rs.getString("currency"));
             row.put("source_type", rs.getString("source_type"));
             return row;

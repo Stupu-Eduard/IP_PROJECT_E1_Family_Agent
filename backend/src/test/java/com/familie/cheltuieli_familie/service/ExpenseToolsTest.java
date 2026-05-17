@@ -26,6 +26,15 @@ class ExpenseToolsTest {
     @Mock
     private ExpenseAnalyticsService analyticsService;
 
+    @Mock
+    private com.familie.cheltuieli_familie.repository.CategoryRepository categoryRepository;
+
+    @Mock
+    private com.familie.cheltuieli_familie.repository.FamilyMemberRepository familyMemberRepository;
+
+    @Mock
+    private com.familie.cheltuieli_familie.repository.ExpenseItemRepository expenseItemRepository;
+
     @InjectMocks
     private ExpenseTools expenseTools;
 
@@ -387,6 +396,72 @@ class ExpenseToolsTest {
         String result = expenseTools.byLocation("Kaufland", "2024-01-01", "2024-01-31");
 
         assertEquals("Error finding location expenses: fail", result);
+    }
+
+    @Test
+    void testGetCurrentDate() {
+        String result = expenseTools.getCurrentDate();
+        assertEquals(LocalDate.now().toString(), result);
+    }
+
+    @Test
+    void testGetDatabaseSchema() {
+        String result = expenseTools.getDatabaseSchema();
+        assertNotNull(result);
+        assertTrue(result.contains("expenses"));
+        assertTrue(result.contains("categories"));
+        assertTrue(result.contains("users"));
+    }
+
+    @Test
+    void testListCategoriesEmpty() {
+        when(categoryRepository.findAll()).thenReturn(Collections.emptyList());
+
+        String result = expenseTools.listCategories();
+
+        assertEquals("No categories found.", result);
+    }
+
+    @Test
+    void testListFamilyMembersEmpty() {
+        when(familyMemberRepository.findAll()).thenReturn(Collections.emptyList());
+
+        String result = expenseTools.listFamilyMembers();
+
+        assertEquals("No family members found.", result);
+    }
+
+    @Test
+    void testGetExpenseItems() {
+        com.familie.cheltuieli_familie.model.ExpenseItem item = new com.familie.cheltuieli_familie.model.ExpenseItem();
+        item.setItemName("Milk");
+        item.setQuantity(new BigDecimal("2"));
+        item.setAmount(new BigDecimal("10.00"));
+
+        when(expenseItemRepository.findByExpenseId(1L)).thenReturn(List.of(item));
+
+        String result = expenseTools.getExpenseItems("1");
+
+        assertTrue(result.contains("Milk"));
+        assertTrue(result.contains("10.00 RON"));
+    }
+
+    @Test
+    void testGetExpenseItemsEmpty() {
+        when(expenseItemRepository.findByExpenseId(1L)).thenReturn(Collections.emptyList());
+
+        String result = expenseTools.getExpenseItems("1");
+
+        assertTrue(result.contains("Nu am găsit articole"));
+    }
+
+    @Test
+    void testGetExpenseItemsError() {
+        when(expenseItemRepository.findByExpenseId(1L)).thenThrow(new RuntimeException("fail"));
+
+        String result = expenseTools.getExpenseItems("1");
+
+        assertTrue(result.contains("Error getting expense items"));
     }
 
     @Test

@@ -54,11 +54,28 @@ public class QdrantContentRetriever implements ContentRetriever {
         }
         String cleaned = text.trim();
         // Remove leading/trailing quotes that may come from JSON parsing
-        cleaned = cleaned.replaceAll("^['\"]+", "").replaceAll("['\"]+$", "");
+        cleaned = stripLeadingQuotes(cleaned);
+        cleaned = stripTrailingQuotes(cleaned);
         // Remove common Romanian stop words for better semantic search
         cleaned = cleaned.replaceAll("(?i)\\b(salut|buna|te rog|poti sa|mi spui|ceva despre|am adaugat|o cheltuiala)\\b", "");
         // Collapse multiple spaces
         cleaned = cleaned.replaceAll("\\s+", " ").trim();
         return cleaned;
+    }
+
+    private String stripLeadingQuotes(String text) {
+        int i = 0;
+        while (i < text.length() && (text.charAt(i) == '\'' || text.charAt(i) == '"')) {
+            i++;
+        }
+        return text.substring(i);
+    }
+
+    private String stripTrailingQuotes(String text) {
+        int i = text.length() - 1;
+        while (i >= 0 && (text.charAt(i) == '\'' || text.charAt(i) == '"')) {
+            i--;
+        }
+        return text.substring(0, i + 1);
     }
 }

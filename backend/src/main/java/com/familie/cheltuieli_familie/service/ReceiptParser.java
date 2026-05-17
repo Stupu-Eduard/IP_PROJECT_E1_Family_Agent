@@ -53,17 +53,17 @@ public class ReceiptParser {
             ParsedReceipt receipt = objectMapper.readValue(json, ParsedReceipt.class);
 
             // Validate and normalize
-            if (receipt.totalAmount == null || receipt.totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                log.warn("LLM extraction returned invalid amount: {}", receipt.totalAmount);
+            if (receipt.getTotalAmount() == null || receipt.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("LLM extraction returned invalid amount: {}", receipt.getTotalAmount());
                 return null;
             }
 
-            receipt.date = normalizeDate(receipt.date);
-            receipt.storeName = normalizeText(receipt.storeName);
-            receipt.category = normalizeText(receipt.category);
+            receipt.setDate(normalizeDate(receipt.getDate()));
+            receipt.setStoreName(normalizeText(receipt.getStoreName()));
+            receipt.setCategory(normalizeText(receipt.getCategory()));
 
             log.info("Parsed receipt: store={}, amount={}, date={}, category={}",
-                    receipt.storeName, receipt.totalAmount, receipt.date, receipt.category);
+                    receipt.getStoreName(), receipt.getTotalAmount(), receipt.getDate(), receipt.getCategory());
 
             return receipt;
 
@@ -82,6 +82,7 @@ public class ReceiptParser {
                 LocalDate date = LocalDate.parse(dateStr, formatter);
                 return date.toString();
             } catch (DateTimeParseException ignored) {
+                // Date format did not match; try next formatter
             }
         }
         return null;
@@ -137,16 +138,34 @@ public class ReceiptParser {
     }
 
     public static class ParsedReceipt {
-        public String storeName;
-        public BigDecimal totalAmount;
-        public String date;
-        public String category;
-        public List<ReceiptItem> items;
+        private String storeName;
+        private BigDecimal totalAmount;
+        private String date;
+        private String category;
+        private List<ReceiptItem> items;
+
+        public String getStoreName() { return storeName; }
+        public void setStoreName(String storeName) { this.storeName = storeName; }
+        public BigDecimal getTotalAmount() { return totalAmount; }
+        public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+        public String getDate() { return date; }
+        public void setDate(String date) { this.date = date; }
+        public String getCategory() { return category; }
+        public void setCategory(String category) { this.category = category; }
+        public List<ReceiptItem> getItems() { return items; }
+        public void setItems(List<ReceiptItem> items) { this.items = items; }
     }
 
     public static class ReceiptItem {
-        public String name;
-        public BigDecimal quantity;
-        public BigDecimal unitPrice;
+        private String name;
+        private BigDecimal quantity;
+        private BigDecimal unitPrice;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public BigDecimal getQuantity() { return quantity; }
+        public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
+        public BigDecimal getUnitPrice() { return unitPrice; }
+        public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
     }
 }

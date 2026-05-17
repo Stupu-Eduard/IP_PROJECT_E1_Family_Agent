@@ -62,8 +62,7 @@ public class OcrService {
         try {
             PDFTextStripper stripper = new PDFTextStripper();
             stripper.setSortByPosition(true);
-            String text = stripper.getText(document);
-            return text;
+            return stripper.getText(document);
         } catch (IOException e) {
             log.warn("Direct text extraction failed: {}", e.getMessage());
             return null;

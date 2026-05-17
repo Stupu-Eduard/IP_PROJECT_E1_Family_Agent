@@ -43,6 +43,12 @@ public class AgentChatService {
         }
     }
 
+    private static final String[] STOP_WORDS = {
+            "salut", "buna", "te rog", "poti sa", "mi spui", "spune-mi",
+            "ceva despre", "am adaugat", "o cheltuiala", "despre",
+            "vreau sa stiu", "ai gasit"
+    };
+
     /**
      * Cleans user query by removing stop words and filler text for better semantic search.
      */
@@ -50,32 +56,56 @@ public class AgentChatService {
         if (text == null || text.isBlank()) {
             return text;
         }
-        String cleaned = text.trim();
-        // Remove leading/trailing quotes
-        while (!cleaned.isEmpty() && (cleaned.charAt(0) == '\'' || cleaned.charAt(0) == '"')) {
+        String cleaned = stripQuotes(text.trim());
+        cleaned = removeStopWords(cleaned);
+        return collapseSpaces(cleaned);
+    }
+
+    private static String stripQuotes(String text) {
+        String cleaned = text;
+        while (!cleaned.isEmpty() && isQuote(cleaned.charAt(0))) {
             cleaned = cleaned.substring(1);
         }
-        while (!cleaned.isEmpty() && (cleaned.charAt(cleaned.length() - 1) == '\'' || cleaned.charAt(cleaned.length() - 1) == '"')) {
+        while (!cleaned.isEmpty() && isQuote(cleaned.charAt(cleaned.length() - 1))) {
             cleaned = cleaned.substring(0, cleaned.length() - 1);
         }
-        // Remove common Romanian stop words and filler phrases (case-insensitive, whole words only)
-        String[] stopWords = {"salut", "buna", "te rog", "poti sa", "mi spui", "spune-mi", "ceva despre", "am adaugat", "o cheltuiala", "despre", "vreau sa stiu", "ai gasit"};
+        return cleaned;
+    }
+
+    private static boolean isQuote(char c) {
+        return c == '\'' || c == '"';
+    }
+
+    private static String removeStopWords(String text) {
+        String cleaned = text;
         String lower = cleaned.toLowerCase();
-        for (String sw : stopWords) {
-            // Replace whole-word matches only
-            int idx;
-            while ((idx = lower.indexOf(sw)) >= 0) {
-                boolean startBoundary = idx == 0 || !Character.isLetterOrDigit(lower.charAt(idx - 1));
-                boolean endBoundary = idx + sw.length() >= lower.length() || !Character.isLetterOrDigit(lower.charAt(idx + sw.length()));
-                if (startBoundary && endBoundary) {
-                    cleaned = cleaned.substring(0, idx) + " " + cleaned.substring(idx + sw.length());
-                    lower = cleaned.toLowerCase();
-                } else {
-                    break;
-                }
+        for (String sw : STOP_WORDS) {
+            int idx = findWholeWord(lower, sw);
+            while (idx >= 0) {
+                cleaned = cleaned.substring(0, idx) + " " + cleaned.substring(idx + sw.length());
+                lower = cleaned.toLowerCase();
+                idx = findWholeWord(lower, sw);
             }
         }
-        // Collapse multiple spaces
+        return cleaned;
+    }
+
+    private static int findWholeWord(String text, String word) {
+        int idx = text.indexOf(word);
+        if (idx < 0) {
+            return -1;
+        }
+        boolean startBoundary = idx == 0 || !Character.isLetterOrDigit(text.charAt(idx - 1));
+        boolean endBoundary = idx + word.length() >= text.length()
+                || !Character.isLetterOrDigit(text.charAt(idx + word.length()));
+        if (startBoundary && endBoundary) {
+            return idx;
+        }
+        return -1;
+    }
+
+    private static String collapseSpaces(String text) {
+        String cleaned = text;
         while (cleaned.contains("  ")) {
             cleaned = cleaned.replace("  ", " ");
         }
@@ -100,43 +130,62 @@ public class AgentChatService {
             return text;
         }
         String cleaned = text;
-        // Remove markdown tables: lines containing | ... |
+        cleaned = removeTables(cleaned);
+        cleaned = removeBoldItalic(cleaned);
+        cleaned = removeCodeBlocks(cleaned);
+        cleaned = removeHeaders(cleaned);
+        cleaned = removeListItems(cleaned);
+        return collapseNewlines(cleaned);
+    }
+
+    private static String removeTables(String text) {
         StringBuilder noTables = new StringBuilder();
-        for (String line : cleaned.split("\n", -1)) {
+        for (String line : text.split("\n", -1)) {
             String t = line.trim();
             if (!t.startsWith("|") || t.indexOf('|', 1) < 0) {
                 noTables.append(line).append("\n");
             }
         }
-        cleaned = noTables.toString();
-        // Remove bold/italic markers
-        cleaned = cleaned.replace("**", "");
-        cleaned = cleaned.replace("__", "");
-        // Remove single * and _ that are word boundaries (simple approach)
+        return noTables.toString();
+    }
+
+    private static String removeBoldItalic(String text) {
+        String cleaned = text.replace("**", "").replace("__", "");
         cleaned = boundaryReplace(cleaned, '*');
         cleaned = boundaryReplace(cleaned, '_');
-        // Remove code block markers
-        cleaned = cleaned.replace("```", "");
-        // Remove inline code backticks and content between them
-        cleaned = removeBetween(cleaned, '`', '`');
-        // Remove headers (# ... at start of line)
+        return cleaned;
+    }
+
+    private static String removeCodeBlocks(String text) {
+        String cleaned = text.replace("```", "");
+        return removeBetween(cleaned, '`', '`');
+    }
+
+    private static String removeHeaders(String text) {
         StringBuilder noHeaders = new StringBuilder();
-        for (String line : cleaned.split("\n", -1)) {
+        for (String line : text.split("\n", -1)) {
             String trimmed = line.trim();
-            int hashCount = 0;
-            while (hashCount < trimmed.length() && hashCount < 6 && trimmed.charAt(hashCount) == '#') {
-                hashCount++;
-            }
+            int hashCount = countLeadingHashes(trimmed);
             if (hashCount > 0 && hashCount < trimmed.length() && trimmed.charAt(hashCount) == ' ') {
                 noHeaders.append(trimmed.substring(hashCount + 1)).append("\n");
             } else {
                 noHeaders.append(line).append("\n");
             }
         }
-        cleaned = noHeaders.toString();
-        // Remove bullet points and numbered lists at line start
+        return noHeaders.toString();
+    }
+
+    private static int countLeadingHashes(String text) {
+        int count = 0;
+        while (count < text.length() && count < 6 && text.charAt(count) == '#') {
+            count++;
+        }
+        return count;
+    }
+
+    private static String removeListItems(String text) {
         StringBuilder noLists = new StringBuilder();
-        for (String line : cleaned.split("\n", -1)) {
+        for (String line : text.split("\n", -1)) {
             String trimmed = line.trim();
             if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ ")) {
                 noLists.append(line.substring(line.indexOf(trimmed) + 2)).append("\n");
@@ -147,8 +196,11 @@ public class AgentChatService {
                 noLists.append(line).append("\n");
             }
         }
-        cleaned = noLists.toString();
-        // Collapse multiple newlines
+        return noLists.toString();
+    }
+
+    private static String collapseNewlines(String text) {
+        String cleaned = text;
         while (cleaned.contains("\n\n")) {
             cleaned = cleaned.replace("\n\n", "\n");
         }
@@ -178,12 +230,14 @@ public class AgentChatService {
             int s = text.indexOf(start, i);
             if (s < 0) {
                 sb.append(text, i, text.length());
-                break;
+                i = text.length();
+                continue;
             }
             int e = text.indexOf(end, s + 1);
             if (e < 0) {
                 sb.append(text, i, text.length());
-                break;
+                i = text.length();
+                continue;
             }
             sb.append(text, i, s);
             i = e + 1;

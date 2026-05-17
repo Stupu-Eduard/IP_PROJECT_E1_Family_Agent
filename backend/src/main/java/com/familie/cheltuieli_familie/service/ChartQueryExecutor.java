@@ -21,8 +21,14 @@ public class ChartQueryExecutor {
 
     private final JdbcTemplate jdbcTemplate;
 
+    private static final String COL_PERSON = "person";
+    private static final String COL_CATEGORY = "category";
+    private static final String COL_LOCATION = "location";
+    private static final String COL_MONTH = "month";
+    private static final String COL_YEAR = "year";
+
     private static final Set<String> ALLOWED_COLUMNS = Set.of(
-            "person", "category", "location", "month", "year"
+            COL_PERSON, COL_CATEGORY, COL_LOCATION, COL_MONTH, COL_YEAR
     );
     private static final Set<String> ALLOWED_AGGREGATIONS = Set.of("SUM", "COUNT", "AVG");
 
@@ -86,12 +92,12 @@ public class ChartQueryExecutor {
 
     private String buildLabelColumn(String groupBy) {
         return switch (groupBy) {
-            case "month" ->
+            case COL_MONTH ->
                     "CONCAT(CAST(EXTRACT(YEAR FROM e.expense_date) AS VARCHAR), '-', LPAD(CAST(EXTRACT(MONTH FROM e.expense_date) AS VARCHAR), 2, '0'))";
-            case "year" -> "CAST(EXTRACT(YEAR FROM e.expense_date) AS VARCHAR)";
-            case "category" -> "c.name";
-            case "location" -> "l.store";
-            case "person" -> "u.name";
+            case COL_YEAR -> "CAST(EXTRACT(YEAR FROM e.expense_date) AS VARCHAR)";
+            case COL_CATEGORY -> "c.name";
+            case COL_LOCATION -> "l.store";
+            case COL_PERSON -> "u.name";
             default -> groupBy;
         };
     }
@@ -100,15 +106,15 @@ public class ChartQueryExecutor {
         StringBuilder from = new StringBuilder("FROM expenses e ");
 
         // Always join categories if category is used anywhere
-        if ("category".equals(groupBy) || "category".equals(seriesBy)) {
+        if (COL_CATEGORY.equals(groupBy) || COL_CATEGORY.equals(seriesBy)) {
             from.append("LEFT JOIN categories c ON e.category_id = c.id ");
         }
         // Always join locations if location is used anywhere
-        if ("location".equals(groupBy) || "location".equals(seriesBy)) {
+        if (COL_LOCATION.equals(groupBy) || COL_LOCATION.equals(seriesBy)) {
             from.append("LEFT JOIN locations l ON e.location_id = l.id ");
         }
         // Always join users if person is used anywhere
-        if ("person".equals(groupBy) || "person".equals(seriesBy)) {
+        if (COL_PERSON.equals(groupBy) || COL_PERSON.equals(seriesBy)) {
             from.append("LEFT JOIN users u ON e.user_id = u.id ");
         }
 

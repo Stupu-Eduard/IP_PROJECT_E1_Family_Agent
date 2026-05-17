@@ -172,4 +172,118 @@ class AgentChatServiceTest {
         assertNotNull(result.getMessage());
         assertFalse(result.getMessage().isBlank());
     }
+
+    @Test
+    void stripMarkdown_shouldReturnNullForNull() {
+        assertNull(AgentChatService.stripMarkdown(null));
+    }
+
+    @Test
+    void stripMarkdown_shouldReturnBlankForBlank() {
+        assertEquals("   ", AgentChatService.stripMarkdown("   "));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveTables() {
+        String input = "| col1 | col2 |\n| val1 | val2 |\nHello world";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("|"));
+        assertTrue(result.contains("Hello world"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveBoldAndItalic() {
+        String input = "This is **bold** and __italic__ and *also* _this_";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("**"));
+        assertFalse(result.contains("__"));
+        assertTrue(result.contains("bold"));
+        assertTrue(result.contains("italic"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveCodeBlocks() {
+        String input = "Some text ```java code``` more text";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("```"));
+        assertTrue(result.contains("Some text"));
+        assertTrue(result.contains("more text"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveInlineCode() {
+        String input = "Use `variable` here";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("`"));
+        assertTrue(result.contains("Use"));
+        assertTrue(result.contains("here"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveHeaders() {
+        String input = "# Header 1\n## Header 2\nNormal text";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("#"));
+        assertTrue(result.contains("Header 1"));
+        assertTrue(result.contains("Normal text"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveBulletLists() {
+        String input = "- item 1\n* item 2\n+ item 3";
+        String result = AgentChatService.stripMarkdown(input);
+        assertTrue(result.contains("item 1"));
+        assertTrue(result.contains("item 2"));
+        assertFalse(result.startsWith("-"));
+    }
+
+    @Test
+    void stripMarkdown_shouldRemoveNumberedLists() {
+        String input = "1. First\n2. Second";
+        String result = AgentChatService.stripMarkdown(input);
+        assertTrue(result.contains("First"));
+        assertTrue(result.contains("Second"));
+        assertFalse(result.contains("1."));
+    }
+
+    @Test
+    void stripMarkdown_shouldCollapseMultipleNewlines() {
+        String input = "Line 1\n\n\nLine 2";
+        String result = AgentChatService.stripMarkdown(input);
+        assertFalse(result.contains("\n\n"));
+        assertTrue(result.contains("Line 1"));
+        assertTrue(result.contains("Line 2"));
+    }
+
+    @Test
+    void cleanQueryForRag_shouldRemoveStopWords() {
+        String input = "salut buna te rog spune-mi despre cheltuieli";
+        String result = invokeCleanQueryForRag(input);
+        assertFalse(result.contains("salut"));
+        assertFalse(result.contains("buna"));
+        assertTrue(result.contains("cheltuieli"));
+    }
+
+    @Test
+    void cleanQueryForRag_shouldStripQuotes() {
+        String input = "\"How much did I spend?\"";
+        String result = invokeCleanQueryForRag(input);
+        assertFalse(result.contains("\""));
+        assertTrue(result.contains("How much did I spend?"));
+    }
+
+    @Test
+    void cleanQueryForRag_shouldReturnNullForNull() {
+        assertNull(invokeCleanQueryForRag(null));
+    }
+
+    @Test
+    void cleanQueryForRag_shouldReturnBlankForBlank() {
+        assertEquals("   ", invokeCleanQueryForRag("   "));
+    }
+
+    private String invokeCleanQueryForRag(String input) {
+        return org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                agentChatService, "cleanQueryForRag", input);
+    }
 }
