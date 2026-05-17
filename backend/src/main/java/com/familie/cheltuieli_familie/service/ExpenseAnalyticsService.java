@@ -28,6 +28,8 @@ public class ExpenseAnalyticsService {
     private static final String SCOPE_FAMILY = " AND e.family_id = ?";
     private static final String SCOPE_USER = " AND e.user_id = ?";
 
+    private static final String WHERE_CATEGORY_AND_DATE = " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?";
+
     private static final String BASE_SQL =
         "SELECT e.id, e.amount, e.description, e.expense_date as date, " +
         "c.name as category, l.store as location, u.name as person, " +
@@ -81,12 +83,12 @@ public class ExpenseAnalyticsService {
     private static final String SQL_TOP_EXPENSES_USER = BASE_SQL + " WHERE 1=1" + SCOPE_USER + " ORDER BY e.amount DESC LIMIT ?";
 
     private static final String SQL_TREND_FAMILY = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
-            " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY;
+            WHERE_CATEGORY_AND_DATE + SCOPE_FAMILY;
     private static final String SQL_TREND_USER = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
-            " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER;
+            WHERE_CATEGORY_AND_DATE + SCOPE_USER;
 
-    private static final String SQL_FIND_BY_CATEGORY_FAMILY = BASE_SQL + " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
-    private static final String SQL_FIND_BY_CATEGORY_USER = BASE_SQL + " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_CATEGORY_FAMILY = BASE_SQL + WHERE_CATEGORY_AND_DATE + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_CATEGORY_USER = BASE_SQL + WHERE_CATEGORY_AND_DATE + SCOPE_USER + ORDER_BY_DATE_DESC;
 
     private static final String SQL_FIND_BY_LOCATION_FAMILY = BASE_SQL + " WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
     private static final String SQL_FIND_BY_LOCATION_USER = BASE_SQL + " WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;

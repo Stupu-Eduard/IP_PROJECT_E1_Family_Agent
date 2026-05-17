@@ -1,12 +1,8 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.config.LlmConfig;
-import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,27 +18,14 @@ public class ReportService {
 
     private final ExpenseAnalyticsService analyticsService;
     private final LlmConfig.ReportAssistant reportAssistant;
-    private final FamilyMemberRepository familyMemberRepository;
-
-    private Long[] resolveScope() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
-            return new Long[]{null, null};
-        }
-        Long userId = user.getId();
-        Long familyId = familyMemberRepository.findByUserId(userId).stream()
-                .findFirst()
-                .map(fm -> fm.getFamily() != null ? fm.getFamily().getId() : null)
-                .orElse(null);
-        return new Long[]{familyId, userId};
-    }
+    private final com.familie.cheltuieli_familie.security.util.SecurityService securityService;
 
     public String generateMonthlySummary(int year, int month) {
         log.info("Generating monthly summary for {}/{}", month, year);
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.plusMonths(1).minusDays(1);
 
-        Long[] scope = resolveScope();
+        Long[] scope = securityService.resolveScope();
         BigDecimal total = analyticsService.calculateTotal(from, to, scope[0], scope[1]);
         Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to, scope[0], scope[1]);
 

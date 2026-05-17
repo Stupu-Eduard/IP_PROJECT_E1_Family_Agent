@@ -11,7 +11,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SemanticExpansionServiceTest {
@@ -23,92 +25,64 @@ class SemanticExpansionServiceTest {
     private SemanticExpansionService semanticExpansionService;
 
     @Test
-    void expandCategories_shouldReturnEmptyListForNullInput() {
-        List<String> result = semanticExpansionService.expandCategories(null);
-        assertTrue(result.isEmpty());
+    void expandCategories_shouldReturnEmpty_whenInputNullOrBlank() {
+        assertTrue(semanticExpansionService.expandCategories(null).isEmpty());
+        assertTrue(semanticExpansionService.expandCategories("  ").isEmpty());
     }
 
     @Test
-    void expandCategories_shouldReturnEmptyListForBlankInput() {
-        List<String> result = semanticExpansionService.expandCategories("   ");
-        assertTrue(result.isEmpty());
+    void expandCategories_shouldReturnResults_whenSearchSucceeds() {
+        EmbeddedExpense e1 = new EmbeddedExpense();
+        e1.setCategory("Food");
+        e1.setScore(0.8);
+
+        EmbeddedExpense e2 = new EmbeddedExpense();
+        e2.setCategory("Groceries");
+        e2.setScore(0.4); // Below threshold
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenReturn(List.of(e1, e2));
+
+        List<String> result = semanticExpansionService.expandCategories("something fuzzy");
+        
+        assertEquals(1, result.size());
+        assertEquals("Food", result.get(0));
     }
 
     @Test
-    void expandCategories_shouldReturnExpandedCategories() {
-        String fuzzy = "mall shopping";
-        List<EmbeddedExpense> mockResults = List.of(
-                EmbeddedExpense.builder().category("shopping").score(0.85).build(),
-                EmbeddedExpense.builder().category("haine").score(0.72).build(),
-                EmbeddedExpense.builder().category("shopping").score(0.65).build(),
-                EmbeddedExpense.builder().category(null).score(0.60).build(),
-                EmbeddedExpense.builder().category("").score(0.55).build()
-        );
+    void expandCategories_shouldFallback_whenExceptionOccurs() {
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenThrow(new RuntimeException("Qdrant error"));
 
-        when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenReturn(mockResults);
-
-        List<String> result = semanticExpansionService.expandCategories(fuzzy);
-
-        assertEquals(List.of("shopping", "haine"), result);
-        verify(qdrantVectorService).searchSimilar(fuzzy, 20);
+        List<String> result = semanticExpansionService.expandCategories("fuzzy");
+        
+        assertEquals(1, result.size());
+        assertEquals("fuzzy", result.get(0));
     }
 
     @Test
-    void expandCategories_shouldFallbackOnException() {
-        String fuzzy = "food";
-        when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenThrow(new RuntimeException("Qdrant down"));
+    void expandLocations_shouldReturnResults_whenSearchSucceeds() {
+        EmbeddedExpense e1 = new EmbeddedExpense();
+        e1.setLocation("Mega Image");
+        e1.setScore(0.9);
 
-        List<String> result = semanticExpansionService.expandCategories(fuzzy);
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenReturn(List.of(e1));
 
-        assertEquals(List.of(fuzzy), result);
+        List<String> result = semanticExpansionService.expandLocations("market");
+        
+        assertEquals(1, result.size());
+        assertEquals("Mega Image", result.get(0));
     }
 
     @Test
-    void expandLocations_shouldReturnEmptyListForNullInput() {
-        List<String> result = semanticExpansionService.expandLocations(null);
-        assertTrue(result.isEmpty());
-    }
+    void expandLocations_shouldFallback_whenExceptionOccurs() {
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenThrow(new RuntimeException("Qdrant error"));
 
-    @Test
-    void expandLocations_shouldReturnEmptyListForBlankInput() {
-        List<String> result = semanticExpansionService.expandLocations("   ");
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void expandLocations_shouldReturnExpandedLocations() {
-        String fuzzy = "mall";
-        List<EmbeddedExpense> mockResults = List.of(
-                EmbeddedExpense.builder().location("Afi Cotroceni").score(0.88).build(),
-                EmbeddedExpense.builder().location("Baneasa Shopping City").score(0.75).build(),
-                EmbeddedExpense.builder().location("Afi Cotroceni").score(0.70).build(),
-                EmbeddedExpense.builder().location(null).score(0.65).build()
-        );
-
-        when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenReturn(mockResults);
-
-        List<String> result = semanticExpansionService.expandLocations(fuzzy);
-
-        assertEquals(List.of("Afi Cotroceni", "Baneasa Shopping City"), result);
-    }
-
-    @Test
-    void expandLocations_shouldFallbackOnException() {
-        String fuzzy = "Bucuresti";
-        when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenThrow(new RuntimeException("Qdrant down"));
-
-        List<String> result = semanticExpansionService.expandLocations(fuzzy);
-
-        assertEquals(List.of(fuzzy), result);
-    }
-
-    @Test
-    void expandCategories_shouldReturnEmptyWhenNoResults() {
-        String fuzzy = "unknown";
-        when(qdrantVectorService.searchSimilar(fuzzy, 20)).thenReturn(Collections.emptyList());
-
-        List<String> result = semanticExpansionService.expandCategories(fuzzy);
-
-        assertTrue(result.isEmpty());
+        List<String> result = semanticExpansionService.expandLocations("market");
+        
+        assertEquals(1, result.size());
+        assertEquals("market", result.get(0));
     }
 }

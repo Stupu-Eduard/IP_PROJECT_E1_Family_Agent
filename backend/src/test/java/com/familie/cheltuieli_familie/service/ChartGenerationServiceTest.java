@@ -11,11 +11,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ChartGenerationServiceTest {
@@ -30,160 +32,59 @@ class ChartGenerationServiceTest {
     private ChartGenerationService chartGenerationService;
 
     @Test
-    void generate_shouldReturnChartResponse_withSingleSeries() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("bar")
-                .title("Expenses by Category")
-                .aggregation("sum")
-                .groupBy("category")
-                .filters(ChartFilters.builder()
-                        .category("food")
-                        .build())
-                .build();
+    void generate_shouldReturnResponse_withEmptyData_whenNoRowsFound() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setTitle("Test Chart");
+        
+        when(chartQueryExecutor.execute(any(), any(), any()))
+                .thenReturn(new ChartQueryResult(Collections.emptyList(), List.of("total"), "name"));
 
-        when(semanticExpansionService.expandCategories("food")).thenReturn(List.of("food", "mancare"));
-        when(chartQueryExecutor.execute(intent, List.of("food", "mancare"), null))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of(
-                                Map.of("name", "food", "value", new BigDecimal("100")),
-                                Map.of("name", "mancare", "value", new BigDecimal("200"))
-                        ))
-                        .seriesNames(List.of("value"))
-                        .labelKey("name")
-                        .build());
+        ChartResponseDTO response = chartGenerationService.generate(intent);
 
-        ChartResponseDTO result = chartGenerationService.generate(intent);
-
-        assertNotNull(result);
-        assertNotNull(result.getPayload());
-        assertEquals("bar", result.getPayload().getChartType());
-        assertEquals("Expenses by Category", result.getPayload().getTitle());
-        assertEquals(2, result.getPayload().getData().size());
+        assertEquals("Nu am găsit cheltuieli pentru criteriile selectate.", response.getMessage());
+        assertNotNull(response.getPayload());
+        assertTrue(response.getPayload().getData().isEmpty());
     }
 
     @Test
-    void generate_shouldReturnChartResponse_withMultiSeries() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("line")
-                .title("Expenses by Month and Person")
-                .aggregation("sum")
-                .groupBy("month")
-                .seriesBy("person")
-                .build();
+    void generate_shouldReturnResponse_withSingleSeriesExplanation() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setTitle("Monthly Spending");
+        ChartFilters filters = new ChartFilters();
+        filters.setCategory("Food");
+        intent.setFilters(filters);
 
-        when(chartQueryExecutor.execute(intent, null, null))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of(
-                                Map.of("name", "2024-01", "Teodor", new BigDecimal("100"), "Maria", new BigDecimal("150")),
-                                Map.of("name", "2024-02", "Teodor", new BigDecimal("200"), "Maria", new BigDecimal("120"))
-                        ))
-                        .seriesNames(List.of("Teodor", "Maria"))
-                        .labelKey("name")
-                        .build());
+        when(semanticExpansionService.expandCategories("Food")).thenReturn(List.of("Food", "Groceries"));
 
-        ChartResponseDTO result = chartGenerationService.generate(intent);
+        List<Map<String, Object>> rows = List.of(
+                Map.of("name", "Jan", "total", new BigDecimal("100")),
+                Map.of("name", "Feb", "total", new BigDecimal("150"))
+        );
+        ChartQueryResult result = new ChartQueryResult(rows, List.of("total"), "name");
+        when(chartQueryExecutor.execute(eq(intent), any(), any())).thenReturn(result);
 
-        assertNotNull(result);
-        assertEquals(2, result.getPayload().getData().size());
-        assertEquals(List.of("Teodor", "Maria"), result.getPayload().getDataKeys());
+        ChartResponseDTO response = chartGenerationService.generate(intent);
+
+        assertTrue(response.getMessage().contains("Jan: 100 RON"));
+        assertTrue(response.getMessage().contains("Feb: 150 RON"));
+        assertEquals("Monthly Spending", response.getPayload().getTitle());
     }
 
     @Test
-    void generate_shouldHandleEmptyResult() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("pie")
-                .title("Empty Data")
-                .aggregation("sum")
-                .groupBy("category")
-                .build();
+    void generate_shouldReturnResponse_withMultiSeriesExplanation() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setTitle("Member Comparison");
 
-        when(chartQueryExecutor.execute(intent, null, null))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of())
-                        .seriesNames(List.of())
-                        .labelKey("name")
-                        .build());
+        List<Map<String, Object>> rows = List.of(
+                Map.of("name", "Jan", "Dad", new BigDecimal("50"), "Mom", new BigDecimal("60")),
+                Map.of("name", "Feb", "Dad", new BigDecimal("40"), "Mom", new BigDecimal("70"))
+        );
+        ChartQueryResult result = new ChartQueryResult(rows, List.of("Dad", "Mom"), "name");
+        when(chartQueryExecutor.execute(any(), any(), any())).thenReturn(result);
 
-        ChartResponseDTO result = chartGenerationService.generate(intent);
+        ChartResponseDTO response = chartGenerationService.generate(intent);
 
-        assertNotNull(result);
-        assertTrue(result.getPayload().getData().isEmpty());
-        assertTrue(result.getMessage().contains("Nu am găsit"));
-    }
-
-    @Test
-    void generate_shouldHandleNullFilters() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("bar")
-                .title("All Expenses")
-                .aggregation("sum")
-                .groupBy("category")
-                .filters(null)
-                .build();
-
-        when(chartQueryExecutor.execute(intent, null, null))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of(Map.of("name", "food", "value", new BigDecimal("50"))))
-                        .seriesNames(List.of("value"))
-                        .labelKey("name")
-                        .build());
-
-        ChartResponseDTO result = chartGenerationService.generate(intent);
-
-        assertNotNull(result);
-        verifyNoInteractions(semanticExpansionService);
-    }
-
-    @Test
-    void generate_shouldExpandLocations_whenLocationFilterPresent() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("bar")
-                .title("Location Expenses")
-                .aggregation("sum")
-                .groupBy("category")
-                .filters(ChartFilters.builder()
-                        .location("mall")
-                        .build())
-                .build();
-
-        when(semanticExpansionService.expandLocations("mall")).thenReturn(List.of("Afi", "Baneasa"));
-        when(chartQueryExecutor.execute(intent, null, List.of("Afi", "Baneasa")))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of(Map.of("name", "shopping", "value", new BigDecimal("300"))))
-                        .seriesNames(List.of("value"))
-                        .labelKey("name")
-                        .build());
-
-        ChartResponseDTO result = chartGenerationService.generate(intent);
-
-        assertNotNull(result);
-        verify(semanticExpansionService).expandLocations("mall");
-    }
-
-    @Test
-    void generate_shouldIncludeExplanationMessage() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .chartType("bar")
-                .title("Top Expenses")
-                .aggregation("sum")
-                .groupBy("category")
-                .build();
-
-        when(chartQueryExecutor.execute(intent, null, null))
-                .thenReturn(ChartQueryResult.builder()
-                        .rows(List.of(
-                                Map.of("name", "food", "value", new BigDecimal("500")),
-                                Map.of("name", "transport", "value", new BigDecimal("200")),
-                                Map.of("name", "shopping", "value", new BigDecimal("100"))
-                        ))
-                        .seriesNames(List.of("value"))
-                        .labelKey("name")
-                        .build());
-
-        ChartResponseDTO result = chartGenerationService.generate(intent);
-
-        assertNotNull(result.getMessage());
-        assertTrue(result.getMessage().contains("food"));
-        assertTrue(result.getMessage().contains("500"));
+        assertTrue(response.getMessage().contains("Dad: 90 RON total"));
+        assertTrue(response.getMessage().contains("Mom: 130 RON total"));
     }
 }

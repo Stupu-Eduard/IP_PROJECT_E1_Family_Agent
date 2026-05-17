@@ -19,6 +19,7 @@ public class VectorStoreSyncService {
 
     private final ExpenseRepository expenseRepository;
     private final QdrantVectorService qdrantVectorService;
+    private final com.familie.cheltuieli_familie.mapper.ExpenseMapper expenseMapper;
 
     @EventListener(ApplicationReadyEvent.class)
     public void syncMissingExpenses() {
@@ -36,7 +37,7 @@ public class VectorStoreSyncService {
                     continue;
                 }
 
-                ExpenseEntity entity = toExpenseEntity(expense);
+                ExpenseEntity entity = expenseMapper.toExpenseEntity(expense);
                 qdrantVectorService.storeExpense(entity);
                 synced++;
                 log.debug("Synced expense ID {} to vector store", expense.getId());
@@ -47,27 +48,5 @@ public class VectorStoreSyncService {
         }
 
         log.info("Vector store sync complete. Synced: {}, Skipped: {}, Failed: {}", synced, skipped, failed);
-    }
-
-    private ExpenseEntity toExpenseEntity(Expense expense) {
-        ExpenseEntity entity = new ExpenseEntity();
-        entity.setId(expense.getId());
-        entity.setAmount(expense.getAmount());
-        entity.setCategory(expense.getCategory() != null ? expense.getCategory().getName() : null);
-        entity.setLocation(expense.getLocation() != null ? expense.getLocation().getStore() : null);
-        entity.setPerson(expense.getUser() != null ? expense.getUser().getName() : null);
-        entity.setDate(expense.getExpenseDate() != null ? expense.getExpenseDate().toLocalDate() : null);
-
-        String rawInput = expense.getRawInput();
-        if (rawInput == null || rawInput.isBlank()) {
-            rawInput = String.format("Cheltuială %s: %s, Sumă: %s RON, Categorie: %s, Magazin: %s, Persoană: %s",
-                    expense.getSourceType(), expense.getDescription(), expense.getAmount(),
-                    expense.getCategory() != null ? expense.getCategory().getName() : null,
-                    expense.getLocation() != null ? expense.getLocation().getStore() : null,
-                    expense.getUser() != null ? expense.getUser().getName() : null);
-        }
-        entity.setRawInput(rawInput);
-        entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
-        return entity;
     }
 }

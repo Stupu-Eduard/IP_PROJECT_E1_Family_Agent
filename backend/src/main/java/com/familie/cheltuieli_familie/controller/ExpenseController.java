@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.CreateExpenseRequest;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
-import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -38,17 +36,20 @@ public class ExpenseController {
     private final FamilyMemberRepository familyMemberRepository;
     private final LocationRepository locationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.familie.cheltuieli_familie.mapper.ExpenseMapper expenseMapper;
 
     public ExpenseController(ExpenseRepository expenseRepository,
                              CategoryRepository categoryRepository,
                              FamilyMemberRepository familyMemberRepository,
                              LocationRepository locationRepository,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             com.familie.cheltuieli_familie.mapper.ExpenseMapper expenseMapper) {
         this.expenseRepository = expenseRepository;
         this.categoryRepository = categoryRepository;
         this.familyMemberRepository = familyMemberRepository;
         this.locationRepository = locationRepository;
         this.eventPublisher = eventPublisher;
+        this.expenseMapper = expenseMapper;
     }
 
     @GetMapping
@@ -75,12 +76,12 @@ public class ExpenseController {
                     .orElseGet(() -> expenseRepository.findAllByUserFiltered(
                             user.getId(), date, categoryFilter))
                     .stream()
-                    .map(this::toDto)
+                    .map(expenseMapper::toDto)
                     .toList();
         } else {
             return expenseRepository.findAllByUserFiltered(user.getId(), date, categoryFilter)
                     .stream()
-                    .map(this::toDto)
+                    .map(expenseMapper::toDto)
                     .toList();
         }
     }
@@ -102,14 +103,7 @@ public class ExpenseController {
         expense.setUser(user);
         expense.setSourceType(SOURCE_MANUAL);
 
-        if (request.getStoreName() != null && !request.getStoreName().isBlank()) {
-            Location location = new Location();
-            location.setStore(request.getStoreName().trim());
-            if (request.getCity() != null && !request.getCity().isBlank()) {
-                location.setCity(request.getCity().trim());
-            }
-            expense.setLocation(locationRepository.save(location));
-        }
+        updateLocationFromRequest(expense, request);
 
         familyMemberRepository.findByUserId(user.getId()).stream()
                 .findFirst()
@@ -118,10 +112,10 @@ public class ExpenseController {
         Expense saved = expenseRepository.save(expense);
 
         // Sync to Qdrant vector store for semantic / RAG search
-        ExpenseEntity entity = toExpenseEntity(saved);
+        ExpenseEntity entity = expenseMapper.toExpenseEntity(saved);
         eventPublisher.publishEvent(new ExpenseSyncEvent(this, entity));
 
-        return toDto(expenseRepository.findOneWithLocation(saved.getId()));
+        return expenseMapper.toDto(expenseRepository.findOneWithLocation(saved.getId()));
     }
 
     @GetMapping("/{id}")
@@ -130,7 +124,7 @@ public class ExpenseController {
         if (row == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cheltuiala nu a fost găsită.");
         }
-        return toDto(row);
+        return expenseMapper.toDto(row);
     }
 
     @PutMapping("/{id}")
@@ -166,6 +160,13 @@ public class ExpenseController {
         expense.setExpenseDate(request.getDate().atStartOfDay());
         expense.setCategory(category);
 
+        updateLocationFromRequest(expense, request);
+
+        Expense saved = expenseRepository.save(expense);
+        return expenseMapper.toDto(expenseRepository.findOneWithLocation(saved.getId()));
+    }
+
+    private void updateLocationFromRequest(Expense expense, CreateExpenseRequest request) {
         if (request.getStoreName() != null && !request.getStoreName().isBlank()) {
             Location location = expense.getLocation() != null ? expense.getLocation() : new Location();
             location.setStore(request.getStoreName().trim());
@@ -173,9 +174,6 @@ public class ExpenseController {
                     ? request.getCity().trim() : null);
             expense.setLocation(locationRepository.save(location));
         }
-
-        Expense saved = expenseRepository.save(expense);
-        return toDto(expenseRepository.findOneWithLocation(saved.getId()));
     }
 
     @DeleteMapping("/{id}")
@@ -215,53 +213,5 @@ public class ExpenseController {
         if (!ownExpense && !sameFamily) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Nu ai acces la această cheltuială.");
         }
-    }
-
-    private ExpenseEntity toExpenseEntity(Expense expense) {
-        ExpenseEntity entity = new ExpenseEntity();
-        entity.setId(expense.getId());
-        entity.setAmount(expense.getAmount());
-        entity.setCategory(expense.getCategory() != null ? expense.getCategory().getName() : null);
-        entity.setLocation(expense.getLocation() != null ? expense.getLocation().getStore() : null);
-        entity.setPerson(expense.getUser() != null ? expense.getUser().getName() : null);
-        entity.setDate(expense.getExpenseDate() != null ? expense.getExpenseDate().toLocalDate() : null);
-        String rawInput = expense.getRawInput();
-        if (rawInput == null || rawInput.isBlank()) {
-            rawInput = String.format("Cheltuială manuală: %s, Sumă: %s RON, Categorie: %s, Magazin: %s, Persoană: %s",
-                    expense.getDescription(), expense.getAmount(),
-                    expense.getCategory() != null ? expense.getCategory().getName() : null,
-                    expense.getLocation() != null ? expense.getLocation().getStore() : null,
-                    expense.getUser() != null ? expense.getUser().getName() : null);
-        }
-        entity.setRawInput(rawInput);
-        entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
-        return entity;
-    }
-
-    private ExpenseListDto toDto(ExpenseRepository.ExpenseWithLocationProjection row) {
-        LocationDto locationDto = null;
-        if (row.getLocationId() != null) {
-            locationDto = new LocationDto(
-                    row.getLocationId(),
-                    row.getStore(),
-                    row.getAddress(),
-                    row.getCity(),
-                    row.getCountry(),
-                    row.getLat(),
-                    row.getLng()
-            );
-        }
-
-        return new ExpenseListDto(
-                row.getId(),
-                row.getAmount(),
-                row.getCurrency(),
-                row.getDescription(),
-                row.getExpenseDate(),
-                row.getCategory(),
-                row.getPerson(),
-                locationDto,
-                row.getSourceType()
-        );
     }
 }
