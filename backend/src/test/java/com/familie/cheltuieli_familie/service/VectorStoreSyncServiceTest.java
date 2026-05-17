@@ -1,9 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.Category;
-import com.familie.cheltuieli_familie.model.Expense;
-import com.familie.cheltuieli_familie.model.Location;
-import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.mapper.ExpenseMapper;
+import com.familie.cheltuieli_familie.model.*;
 import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,6 +25,9 @@ class VectorStoreSyncServiceTest {
 
     @Mock
     private QdrantVectorService qdrantVectorService;
+
+    @Mock
+    private ExpenseMapper expenseMapper;
 
     @InjectMocks
     private VectorStoreSyncService vectorStoreSyncService;
@@ -42,6 +44,7 @@ class VectorStoreSyncServiceTest {
 
         when(expenseRepository.findAll()).thenReturn(List.of(expense));
         when(qdrantVectorService.existsInVectorStore(1L)).thenReturn(false);
+        when(expenseMapper.toExpenseEntity(any())).thenReturn(new ExpenseEntity());
         doNothing().when(qdrantVectorService).storeExpense(any());
 
         vectorStoreSyncService.syncMissingExpenses();
@@ -66,6 +69,7 @@ class VectorStoreSyncServiceTest {
 
         verify(qdrantVectorService).existsInVectorStore(2L);
         verify(qdrantVectorService, never()).storeExpense(any());
+        verify(expenseMapper, never()).toExpenseEntity(any());
     }
 
     @Test
@@ -92,6 +96,7 @@ class VectorStoreSyncServiceTest {
 
         when(expenseRepository.findAll()).thenReturn(List.of(expense));
         when(qdrantVectorService.existsInVectorStore(3L)).thenReturn(false);
+        when(expenseMapper.toExpenseEntity(any())).thenReturn(new ExpenseEntity());
         doNothing().when(qdrantVectorService).storeExpense(any());
 
         vectorStoreSyncService.syncMissingExpenses();
@@ -110,6 +115,7 @@ class VectorStoreSyncServiceTest {
 
         when(expenseRepository.findAll()).thenReturn(List.of(expense));
         when(qdrantVectorService.existsInVectorStore(4L)).thenReturn(false);
+        when(expenseMapper.toExpenseEntity(any())).thenReturn(new ExpenseEntity());
         doThrow(new RuntimeException("Qdrant error")).when(qdrantVectorService).storeExpense(any());
 
         assertDoesNotThrow(() -> vectorStoreSyncService.syncMissingExpenses());
