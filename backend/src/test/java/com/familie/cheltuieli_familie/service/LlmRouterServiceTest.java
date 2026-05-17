@@ -14,9 +14,6 @@ import static org.mockito.Mockito.*;
 class LlmRouterServiceTest {
 
     @Mock
-    private LlmConfig.RouterAssistant routerAssistant;
-
-    @Mock
     private LlmConfig.RagAssistant ragAssistant;
 
     @InjectMocks

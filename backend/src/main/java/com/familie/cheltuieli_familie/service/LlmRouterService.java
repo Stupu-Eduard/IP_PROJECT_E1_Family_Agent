@@ -10,12 +10,10 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class LlmRouterService {
 
-    private final LlmConfig.RouterAssistant routerAssistant;
     private final LlmConfig.RagAssistant ragAssistant;
 
     public LlmRouterService(LlmConfig.RouterAssistant routerAssistant,
                             LlmConfig.RagAssistant ragAssistant) {
-        this.routerAssistant = routerAssistant;
         this.ragAssistant = ragAssistant;
     }
 

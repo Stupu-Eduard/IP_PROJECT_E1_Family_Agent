@@ -4,6 +4,8 @@ import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
 import com.familie.cheltuieli_familie.model.ChartQueryResult;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -93,55 +95,20 @@ class ChartQueryExecutorTest {
     }
 
     @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldBuildQueryWithCategoryGroupBy() {
+    @ParameterizedTest
+    @CsvSource({
+            "category, sum",
+            "person, sum",
+            "location, sum"
+    })
+    void execute_shouldBuildQueryWithGroupBy(String groupBy, String aggregation) {
         ChartQueryIntent intent = ChartQueryIntent.builder()
-                .groupBy("category")
-                .aggregation("sum")
+                .groupBy(groupBy)
+                .aggregation(aggregation)
                 .build();
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(
-                        Map.of("label", "food", "total", new BigDecimal("100"))
-                ));
-
-        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
-
-        assertNotNull(result);
-        assertEquals(1, result.getRows().size());
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldBuildQueryWithPersonGroupBy() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .groupBy("person")
-                .aggregation("sum")
-                .build();
-
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(
-                        Map.of("label", "Teodor", "total", new BigDecimal("100"))
-                ));
-
-        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
-
-        assertNotNull(result);
-        assertEquals(1, result.getRows().size());
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldBuildQueryWithLocationGroupBy() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .groupBy("location")
-                .aggregation("sum")
-                .build();
-
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(
-                        Map.of("label", "Bucuresti", "total", new BigDecimal("100"))
-                ));
+                .thenReturn(List.of(Map.of("label", "test", "total", new BigDecimal("100"))));
 
         ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
 

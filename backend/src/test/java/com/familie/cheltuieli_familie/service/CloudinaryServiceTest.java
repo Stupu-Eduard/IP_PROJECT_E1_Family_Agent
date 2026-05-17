@@ -87,7 +87,7 @@ class CloudinaryServiceTest {
     }
 
     @Test
-    void testDetectResourceTypePdf() throws Exception {
+    void testDetectResourceTypePdf() {
         File pdfFile = mock(File.class);
         when(pdfFile.getName()).thenReturn("document.pdf");
 
@@ -97,7 +97,7 @@ class CloudinaryServiceTest {
     }
 
     @Test
-    void testDetectResourceTypeImage() throws Exception {
+    void testDetectResourceTypeImage() {
         File imageFile = mock(File.class);
         when(imageFile.getName()).thenReturn("photo.png");
 
@@ -107,21 +107,21 @@ class CloudinaryServiceTest {
     }
 
     @Test
-    void testSanitizePublicId() throws Exception {
+    void testSanitizePublicId() {
         String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "sanitizePublicId", "my-file@name#1.jpg");
 
         assertEquals("my-file_name_1.jpg", result);
     }
 
     @Test
-    void testSanitizePublicIdMultipleSpecialChars() throws Exception {
+    void testSanitizePublicIdMultipleSpecialChars() {
         String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "sanitizePublicId", "file@name#test");
 
         assertEquals("file_name_test", result);
     }
 
     @Test
-    void testSanitizePublicIdLongName() throws Exception {
+    void testSanitizePublicIdLongName() {
         String longName = "a".repeat(150);
         String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "sanitizePublicId", longName);
 

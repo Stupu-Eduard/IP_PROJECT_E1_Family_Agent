@@ -19,9 +19,10 @@ public class ExpenseAnalyticsService {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private static final String KEY_CATEGORY = "category";
-    private static final String KEY_TOTAL = "total";
-    private static final String KEY_PERSON = "person";
+    private static final String COL_CATEGORY = "category";
+    private static final String COL_PERSON = "person";
+    private static final String COL_LOCATION = "location";
+    private static final String COL_TOTAL = "total";
 
     // Actual DB schema uses foreign keys with JOINs for names
     private static final String BASE_SQL =
@@ -55,14 +56,14 @@ public class ExpenseAnalyticsService {
             GROUP BY c.name
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
-                KEY_CATEGORY, rs.getString("category_name"),
-                KEY_TOTAL, rs.getBigDecimal(KEY_TOTAL)
+                COL_CATEGORY, rs.getString("category_name"),
+                COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
-        .filter(m -> m.get(KEY_CATEGORY) != null)
+        .filter(m -> m.get(COL_CATEGORY) != null)
         .collect(Collectors.toMap(
-                m -> (String) m.get(KEY_CATEGORY),
-                m -> (BigDecimal) m.get(KEY_TOTAL),
+                m -> (String) m.get(COL_CATEGORY),
+                m -> (BigDecimal) m.get(COL_TOTAL),
                 BigDecimal::add
         ));
     }
@@ -77,14 +78,14 @@ public class ExpenseAnalyticsService {
             GROUP BY u.name
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
-                KEY_PERSON, rs.getString("person_name"),
-                KEY_TOTAL, rs.getBigDecimal(KEY_TOTAL)
+                COL_PERSON, rs.getString("person_name"),
+                COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
         ), from.atStartOfDay(), to.plusDays(1).atStartOfDay())
         .stream()
-        .filter(m -> m.get(KEY_PERSON) != null)
+        .filter(m -> m.get(COL_PERSON) != null)
         .collect(Collectors.toMap(
-                m -> (String) m.get(KEY_PERSON),
-                m -> (BigDecimal) m.get(KEY_TOTAL),
+                m -> (String) m.get(COL_PERSON),
+                m -> (BigDecimal) m.get(COL_TOTAL),
                 BigDecimal::add
         ));
     }
@@ -189,9 +190,9 @@ public class ExpenseAnalyticsService {
             row.put("amount", rs.getBigDecimal("amount"));
             row.put("description", rs.getString("description"));
             row.put("date", rs.getTimestamp("date"));
-            row.put(KEY_CATEGORY, rs.getString("category"));
-            row.put("location", rs.getString("location"));
-            row.put(KEY_PERSON, rs.getString("person"));
+            row.put(COL_CATEGORY, rs.getString("category"));
+            row.put(COL_LOCATION, rs.getString("location"));
+            row.put(COL_PERSON, rs.getString("person"));
             row.put("currency", rs.getString("currency"));
             row.put("source_type", rs.getString("source_type"));
             return row;
