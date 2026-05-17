@@ -128,8 +128,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
                 .thenReturn(Optional.empty());
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteFamily(family.getId(), requester));
+                () -> familyService.deleteFamily(famId, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -139,8 +140,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
                 .thenReturn(Optional.of(parentMembership));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteFamily(family.getId(), requester));
+                () -> familyService.deleteFamily(famId, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -159,8 +161,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyId(family.getId()))
                 .thenReturn(List.of(parentMembership, other));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteFamily(family.getId(), requester));
+                () -> familyService.deleteFamily(famId, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
@@ -193,8 +196,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyId(family.getId()))
                 .thenReturn(List.of(parentMembership));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.leaveFamily(family.getId(), requester));
+                () -> familyService.leaveFamily(famId, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
@@ -203,8 +207,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
                 .thenReturn(Optional.empty());
 
+        Long famId = family.getId();
         assertThrows(ResponseStatusException.class,
-                () -> familyService.leaveFamily(family.getId(), requester));
+                () -> familyService.leaveFamily(famId, requester));
     }
 
     // ── getMembers ───────────────────────────────────────────────────────────
@@ -227,8 +232,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.existsByFamilyIdAndUserId(family.getId(), requester.getId()))
                 .thenReturn(false);
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.getMembers(family.getId(), requester));
+                () -> familyService.getMembers(famId, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -286,8 +292,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
                 .thenReturn(Optional.of(parentMembership));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(family.getId(), 200L, "parent", requester));
+                () -> familyService.updateMemberRole(famId, 200L, "parent", requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -297,8 +304,9 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(100L)).thenReturn(Optional.of(parentMembership));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(family.getId(), 100L, "child", requester));
+                () -> familyService.updateMemberRole(famId, 100L, "child", requester));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
@@ -324,8 +332,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyId(family.getId()))
                 .thenReturn(List.of(targetParent));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(family.getId(), 200L, "child", requester));
+                () -> familyService.updateMemberRole(famId, 200L, "child", requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
@@ -349,8 +358,9 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(memberOfOtherFamily));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(family.getId(), 200L, "parent", requester));
+                () -> familyService.updateMemberRole(famId, 200L, "parent", requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
@@ -386,8 +396,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyId(family.getId()))
                 .thenReturn(List.of(parentMembership));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.removeMember(family.getId(), 100L, requester));
+                () -> familyService.removeMember(famId, 100L, requester));
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
@@ -409,8 +420,9 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(memberOfOtherFamily));
 
+        Long famId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.removeMember(family.getId(), 200L, requester));
+                () -> familyService.removeMember(famId, 200L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }

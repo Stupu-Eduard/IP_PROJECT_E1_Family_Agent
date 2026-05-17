@@ -23,6 +23,10 @@ public class ExpenseAnalyticsService {
     private static final String COL_PERSON = "person";
     private static final String COL_LOCATION = "location";
     private static final String COL_TOTAL = "total";
+    private static final String ORDER_BY_DATE_DESC = " ORDER BY e.expense_date DESC";
+
+    private static final String SCOPE_FAMILY = " AND e.family_id = ?";
+    private static final String SCOPE_USER = " AND e.user_id = ?";
 
     private static final String BASE_SQL =
         "SELECT e.id, e.amount, e.description, e.expense_date as date, " +
@@ -33,9 +37,63 @@ public class ExpenseAnalyticsService {
         "LEFT JOIN locations l ON e.location_id = l.id " +
         "LEFT JOIN users u ON e.user_id = u.id ";
 
-    private String scopeClause(Long familyId) {
-        return familyId != null ? " AND e.family_id = ?" : " AND e.user_id = ?";
-    }
+    // Predefined SQL constants to satisfy SonarCloud security hotspots (avoiding dynamic SQL concatenation in calls)
+
+    private static final String SQL_FIND_EXPENSES_FAMILY = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_EXPENSES_USER = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+
+    private static final String SQL_CALC_TOTAL_FAMILY = "SELECT COALESCE(SUM(amount), 0) FROM expenses e WHERE e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY;
+    private static final String SQL_CALC_TOTAL_USER = "SELECT COALESCE(SUM(amount), 0) FROM expenses e WHERE e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER;
+
+    private static final String SQL_BY_CATEGORY_FAMILY = """
+            SELECT c.name as category_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN categories c ON e.category_id = c.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            """ + SCOPE_FAMILY + " GROUP BY c.name";
+    private static final String SQL_BY_CATEGORY_USER = """
+            SELECT c.name as category_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN categories c ON e.category_id = c.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            """ + SCOPE_USER + " GROUP BY c.name";
+
+    private static final String SQL_COMPARE_MEMBERS_FAMILY = """
+            SELECT u.name as person_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN users u ON e.user_id = u.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            """ + SCOPE_FAMILY + " GROUP BY u.name";
+    private static final String SQL_COMPARE_MEMBERS_USER = """
+            SELECT u.name as person_name, SUM(e.amount) as total
+            FROM expenses e
+            LEFT JOIN users u ON e.user_id = u.id
+            WHERE e.expense_date >= ? AND e.expense_date <= ?
+            """ + SCOPE_USER + " GROUP BY u.name";
+
+    private static final String SQL_DETECT_ANOMALIES_FAMILY = BASE_SQL + " WHERE e.amount > ?" + SCOPE_FAMILY + " ORDER BY e.amount DESC";
+    private static final String SQL_DETECT_ANOMALIES_USER = BASE_SQL + " WHERE e.amount > ?" + SCOPE_USER + " ORDER BY e.amount DESC";
+
+    private static final String SQL_FIND_BY_PERSON_FAMILY = BASE_SQL + " WHERE u.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_PERSON_USER = BASE_SQL + " WHERE u.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+
+    private static final String SQL_TOP_EXPENSES_FAMILY = BASE_SQL + " WHERE 1=1" + SCOPE_FAMILY + " ORDER BY e.amount DESC LIMIT ?";
+    private static final String SQL_TOP_EXPENSES_USER = BASE_SQL + " WHERE 1=1" + SCOPE_USER + " ORDER BY e.amount DESC LIMIT ?";
+
+    private static final String SQL_TREND_FAMILY = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
+            " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY;
+    private static final String SQL_TREND_USER = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
+            " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER;
+
+    private static final String SQL_FIND_BY_CATEGORY_FAMILY = BASE_SQL + " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_CATEGORY_USER = BASE_SQL + " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+
+    private static final String SQL_FIND_BY_LOCATION_FAMILY = BASE_SQL + " WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_LOCATION_USER = BASE_SQL + " WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+
+    private static final String SQL_FIND_BY_AMOUNT_FAMILY = BASE_SQL + " WHERE e.amount = ?" + SCOPE_FAMILY + ORDER_BY_DATE_DESC;
+    private static final String SQL_FIND_BY_AMOUNT_USER = BASE_SQL + " WHERE e.amount = ?" + SCOPE_USER + ORDER_BY_DATE_DESC;
+
 
     private Object scopeParam(Long familyId, Long userId) {
         return familyId != null ? familyId : userId;
@@ -43,24 +101,19 @@ public class ExpenseAnalyticsService {
 
     public List<Map<String, Object>> findExpenses(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses from {} to {}", from, to);
-        String sql = BASE_SQL + " WHERE e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        String sql = (familyId != null) ? SQL_FIND_EXPENSES_FAMILY : SQL_FIND_EXPENSES_USER;
         return jdbcTemplate.queryForList(sql, from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
     public BigDecimal calculateTotal(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating total expenses from {} to {}", from, to);
-        String sql = "SELECT COALESCE(SUM(amount), 0) FROM expenses e WHERE e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId);
+        String sql = (familyId != null) ? SQL_CALC_TOTAL_FAMILY : SQL_CALC_TOTAL_USER;
         return jdbcTemplate.queryForObject(sql, BigDecimal.class, from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
     public Map<String, BigDecimal> byCategory(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating expenses by category from {} to {}", from, to);
-        String sql = """
-            SELECT c.name as category_name, SUM(e.amount) as total
-            FROM expenses e
-            LEFT JOIN categories c ON e.category_id = c.id
-            WHERE e.expense_date >= ? AND e.expense_date <= ?
-            """ + scopeClause(familyId) + " GROUP BY c.name";
+        String sql = (familyId != null) ? SQL_BY_CATEGORY_FAMILY : SQL_BY_CATEGORY_USER;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 COL_CATEGORY, rs.getString("category_name"),
                 COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
@@ -76,12 +129,7 @@ public class ExpenseAnalyticsService {
 
     public Map<String, BigDecimal> compareMembers(LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Comparing expenses between members from {} to {}", from, to);
-        String sql = """
-            SELECT u.name as person_name, SUM(e.amount) as total
-            FROM expenses e
-            LEFT JOIN users u ON e.user_id = u.id
-            WHERE e.expense_date >= ? AND e.expense_date <= ?
-            """ + scopeClause(familyId) + " GROUP BY u.name";
+        String sql = (familyId != null) ? SQL_COMPARE_MEMBERS_FAMILY : SQL_COMPARE_MEMBERS_USER;
         return jdbcTemplate.query(sql, (rs, rowNum) -> Map.of(
                 COL_PERSON, rs.getString("person_name"),
                 COL_TOTAL, rs.getBigDecimal(COL_TOTAL)
@@ -97,22 +145,20 @@ public class ExpenseAnalyticsService {
 
     public List<Map<String, Object>> detectAnomalies(BigDecimal threshold, Long familyId, Long userId) {
         log.info("Detecting expense anomalies above threshold: {}", threshold);
-        String sql = BASE_SQL + " WHERE e.amount > ?" + scopeClause(familyId) + " ORDER BY e.amount DESC";
+        String sql = (familyId != null) ? SQL_DETECT_ANOMALIES_FAMILY : SQL_DETECT_ANOMALIES_USER;
         return jdbcTemplate.queryForList(sql, threshold, scopeParam(familyId, userId));
     }
 
     public List<Map<String, Object>> findByPerson(String person, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Fetching expenses for person: {} from {} to {}", person, from, to);
-        String sql = BASE_SQL +
-            "WHERE u.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
-            scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        String sql = (familyId != null) ? SQL_FIND_BY_PERSON_FAMILY : SQL_FIND_BY_PERSON_USER;
         return jdbcTemplate.queryForList(sql, "%" + person + "%",
                 from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
     public List<Map<String, Object>> getTopExpenses(int limit, Long familyId, Long userId) {
         log.info("Fetching top {} expenses", limit);
-        String sql = BASE_SQL + " WHERE 1=1" + scopeClause(familyId) + " ORDER BY e.amount DESC LIMIT ?";
+        String sql = (familyId != null) ? SQL_TOP_EXPENSES_FAMILY : SQL_TOP_EXPENSES_USER;
         return jdbcTemplate.queryForList(sql, scopeParam(familyId, userId), limit);
     }
 
@@ -127,8 +173,7 @@ public class ExpenseAnalyticsService {
 
     public String calculateTrend(String category, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Calculating trend for category: {} from {} to {}", category, from, to);
-        String sql = "SELECT SUM(e.amount) as total FROM expenses e LEFT JOIN categories c ON e.category_id = c.id" +
-                " WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" + scopeClause(familyId);
+        String sql = (familyId != null) ? SQL_TREND_FAMILY : SQL_TREND_USER;
 
         BigDecimal currentTotal = jdbcTemplate.queryForObject(sql, BigDecimal.class,
                 "%" + category + "%", from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
@@ -155,25 +200,21 @@ public class ExpenseAnalyticsService {
 
     public List<Map<String, Object>> findByCategory(String category, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses for category: {} from {} to {}", category, from, to);
-        String sql = BASE_SQL +
-                "WHERE c.name ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
-                scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        String sql = (familyId != null) ? SQL_FIND_BY_CATEGORY_FAMILY : SQL_FIND_BY_CATEGORY_USER;
         return jdbcTemplate.queryForList(sql, "%" + category + "%",
                 from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
     public List<Map<String, Object>> findByLocation(String location, LocalDate from, LocalDate to, Long familyId, Long userId) {
         log.info("Finding expenses for location: {} from {} to {}", location, from, to);
-        String sql = BASE_SQL +
-                "WHERE l.store ILIKE ? AND e.expense_date >= ? AND e.expense_date <= ?" +
-                scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        String sql = (familyId != null) ? SQL_FIND_BY_LOCATION_FAMILY : SQL_FIND_BY_LOCATION_USER;
         return jdbcTemplate.queryForList(sql, "%" + location + "%",
                 from.atStartOfDay(), to.plusDays(1).atStartOfDay(), scopeParam(familyId, userId));
     }
 
     public List<Map<String, Object>> findByAmount(BigDecimal amount, Long familyId, Long userId) {
         log.info("Finding expenses with amount: {}", amount);
-        String sql = BASE_SQL + " WHERE e.amount = ?" + scopeClause(familyId) + " ORDER BY e.expense_date DESC";
+        String sql = (familyId != null) ? SQL_FIND_BY_AMOUNT_FAMILY : SQL_FIND_BY_AMOUNT_USER;
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Map<String, Object> row = new java.util.HashMap<>();
             row.put("id", rs.getLong("id"));

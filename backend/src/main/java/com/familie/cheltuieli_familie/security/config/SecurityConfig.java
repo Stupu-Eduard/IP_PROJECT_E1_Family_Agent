@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.security.config;
 
 import com.familie.cheltuieli_familie.security.filter.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -29,6 +30,9 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -90,22 +94,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // REPARATIE SECURITY HOTSPOT: Originile CORS sunt configurate in application.yml
-        // pentru a evita IP-uri hardcodate in codul sursa.
-        // In productie, acestea ar trebui sa vina exclusiv din fisierele de configurare.
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173", // Vite (Frontend implicit)
-                "http://localhost:3000", // React standard
-                "http://127.0.0.1:5173", // 127.0.0.1 variant
-                "http://127.0.0.1:3000",
-                // NOSONAR: IP-urile de mai jos sunt necesare pentru mediul de dezvoltare WSL2.
-                // In productie, acestea ar trebui inlocuite cu domenii proprii.
-                "http://172.27.84.187:5173", // Server network IP - dev only
-                "http://172.27.84.187:8080", // WSL2 backend direct - dev only
-                "https://family-agent.me",
-                "https://api.family-agent.me",
-                "http://localhost:4173" // vite preview
-        ));
+        // Originile sunt configurate in application.yml pentru a evita IP-uri hardcodate.
+        configuration.setAllowedOrigins(allowedOrigins);
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
