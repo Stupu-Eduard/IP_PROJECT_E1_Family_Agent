@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -92,4 +93,39 @@ class ReceiptParserTest {
 
         assertNull(receiptParser.parseReceipt("bon lidl"));
     }
+
+    @Test
+    void testReceiptItemPojo() {
+        ReceiptParser.ReceiptItem item = new ReceiptParser.ReceiptItem();
+        item.setName("Milk");
+        item.setQuantity(new BigDecimal("2"));
+        item.setUnitPrice(new BigDecimal("5.5"));
+
+        assertEquals("Milk", item.getName());
+        assertEquals(new BigDecimal("2"), item.getQuantity());
+        assertEquals(new BigDecimal("5.5"), item.getUnitPrice());
+    }
+
+    @Test
+    void parseReceipt_shouldHandleMalformedJson() {
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from("not a json")));
+        assertNull(receiptParser.parseReceipt("some text"));
+    }
+
+    @Test
+    void parsedReceiptPojo() {
+        ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
+        receipt.setStoreName("Shop");
+        receipt.setTotalAmount(new BigDecimal("100"));
+        receipt.setDate("2026-05-17");
+        receipt.setCategory("Food");
+        receipt.setItems(List.of(new ReceiptParser.ReceiptItem()));
+
+        assertEquals("Shop", receipt.getStoreName());
+        assertEquals(new BigDecimal("100"), receipt.getTotalAmount());
+        assertEquals("2026-05-17", receipt.getDate());
+        assertEquals("Food", receipt.getCategory());
+        assertEquals(1, receipt.getItems().size());
+    }
 }
+

@@ -72,4 +72,18 @@ class ReportServiceTest {
         assertEquals("Narrative Report Content", result);
         verify(reportAssistant).generateReport(anyString());
     }
+
+    @Test
+    void generateMonthlySummary_shouldHandleEmptyData() {
+        when(analyticsService.calculateTotal(any(), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(analyticsService.byCategory(any(), any(), any(), any()))
+                .thenReturn(Map.of());
+
+        String result = reportService.generateMonthlySummary(2026, 5);
+
+        assertNotNull(result);
+        assertTrue(result.contains("Total Spent: 0 RON"));
+        assertFalse(result.contains("Top Category"));
+    }
 }

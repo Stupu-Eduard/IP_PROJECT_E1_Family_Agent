@@ -7,7 +7,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -84,5 +83,28 @@ class SemanticExpansionServiceTest {
         
         assertEquals(1, result.size());
         assertEquals("market", result.get(0));
+    }
+
+    @Test
+    void expandCategories_shouldReturnEmpty_whenSearchReturnsNoResults() {
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenReturn(List.of());
+
+        List<String> result = semanticExpansionService.expandCategories("nothing");
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void expandCategories_shouldFilterResultsExactlyAtThreshold() {
+        EmbeddedExpense e1 = new EmbeddedExpense();
+        e1.setCategory("Exact");
+        e1.setScore(0.5); // Threshold is 0.5
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+                .thenReturn(List.of(e1));
+
+        List<String> result = semanticExpansionService.expandCategories("test");
+        assertEquals(1, result.size());
+        assertEquals("Exact", result.get(0));
     }
 }
