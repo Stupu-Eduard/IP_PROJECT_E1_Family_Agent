@@ -84,17 +84,20 @@ public class OcrController {
 
             if (receipt == null) {
                 log.warn("Receipt parsing failed for file: {}", originalName);
-                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, Collections.emptyList()));
+                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, null, Collections.emptyList()));
             }
 
             Category category = resolveCategory(receipt.getCategory());
             
-            log.info("OCR parsed: amount={} category={} store={} date={} items={}",
+            String cloudinaryUrl = uploadReceipt(file, user);
+
+            log.info("OCR parsed: amount={} category={} store={} date={} items={} url={}",
                     receipt.getTotalAmount(),
                     category != null ? category.getName() : null,
                     receipt.getStoreName(),
                     receipt.getDate(),
-                    receipt.getItems().size());
+                    receipt.getItems().size(),
+                    cloudinaryUrl);
 
             return ResponseEntity.ok(new OcrResponseDTO(
                     receipt.getTotalAmount(),
@@ -102,6 +105,7 @@ public class OcrController {
                     receipt.getDate(),
                     receipt.getStoreName(),
                     confidence,
+                    cloudinaryUrl,
                     mapItems(receipt.getItems())
             ));
 
@@ -228,6 +232,7 @@ public class OcrController {
                 receipt.getDate(),
                 receipt.getStoreName(),
                 confidence,
+                saved.getReceiptUrl(),
                 mapItems(receipt.getItems())
         );
     }

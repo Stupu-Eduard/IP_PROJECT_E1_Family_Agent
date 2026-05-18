@@ -12,6 +12,7 @@ public record ExpenseListDto(
         String category,
         String person,
         LocationDto location,
-        String sourceType
+        String sourceType,
+        String receiptUrl
 ) {
 }
