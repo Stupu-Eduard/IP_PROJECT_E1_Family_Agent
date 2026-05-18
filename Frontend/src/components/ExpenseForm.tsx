@@ -49,6 +49,7 @@ const ExpenseForm: React.FC = () => {
     setIsAnalyzing(true);
     setOcrError(null);
     setError('');
+    setSuccess(false);
     try {
       const data = await processReceiptOCR(file);
       if (data.amount)   setAmount(data.amount);
@@ -57,8 +58,16 @@ const ExpenseForm: React.FC = () => {
         const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         setDate(formattedDate);
       }
+      if (data.locationName) setStoreName(data.locationName);
+
+      // Backend now auto-saves the expense. Show success if we got valid data.
+      if (data.amount && data.amount > 0) {
+        notifyExpenseAdded();
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      }
     } catch {
-      setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
+      setOcrError('Nu am putut citi automat bonul. Te rugăm să introduci datele manual.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -337,7 +346,7 @@ const ExpenseForm: React.FC = () => {
             }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🔐</div>
               <div style={{ fontSize: 11.5, color: 'var(--color-muted)', lineHeight: 1.5 }}>
-                Procesare locală + criptată. Bonurile nu sunt stocate fără confirmarea ta.
+                Bonurile scanate sunt salvate automat în baza de date. Poți edita detaliile înainte de a salva manual.
               </div>
             </div>
           </div>

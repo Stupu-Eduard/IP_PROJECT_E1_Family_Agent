@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @org.springframework.scheduling.annotation.EnableAsync
+@org.springframework.retry.annotation.EnableRetry
 public class CheltuieliFamilieApplication {
 
 	public static void main(String[] args) {

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git stash *)",
+      "Bash(git pull *)",
+      "Bash(git add *)",
+      "Bash(git merge *)",
+      "Bash(git log *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Alex\\\\IP_PROJECT_E1_Family_Agent\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(./mvnw.cmd test *)",
+      "Bash(git fetch *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(OPENROUTER_API_KEY=\"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\" DEEPSEEK_API_KEY=\"sk-ef5a0c4905e143f4809d360a6dde03c0\" ./mvnw.cmd test)"
+    ]
+  }
+}

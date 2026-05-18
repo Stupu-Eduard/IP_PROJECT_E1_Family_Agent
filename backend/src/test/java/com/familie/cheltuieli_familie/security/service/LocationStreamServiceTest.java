@@ -36,7 +36,7 @@ class LocationStreamServiceTest {
 
         // Configuram mock-ul adaptorului sa returneze un DTO valid la orice apel
         when(locationAdapterService.adapt(anyLong(), anyLong(), anyDouble(), anyDouble(), anyList()))
-                .thenReturn(new LocationMapDto(2L, "Copil Test", 1L, 47.1585, 27.6014, false, LocalDateTime.now()));
+                .thenReturn(new LocationMapDto(2L, "Copil Test", 1L, 47.1585, 27.6014, false, false, LocalDateTime.now()));
     }
 
     @Test

@@ -30,6 +30,8 @@ public class FamilyService {
     private final FamilyMemberRepository familyMemberRepository;
     private final FamilyRepository       familyRepository;
     private final JwtUtil                jwtUtil;
+    private final com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
+    private final com.familie.cheltuieli_familie.repository.BudgetRepository budgetRepository;
 
     @Transactional
     public Map<String, Object> createFamily(String name, User requester) {
@@ -47,6 +49,7 @@ public class FamilyService {
         member.setUser(requester);
         member.setRole(ROLE_PARENT);
         familyMemberRepository.save(member);
+        expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
         log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
@@ -86,6 +89,8 @@ public class FamilyService {
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Familia nu există."));
 
+        expenseRepository.clearFamilyFromExpenses(familyId);
+        budgetRepository.clearFamilyFromBudgets(familyId);
         familyMemberRepository.deleteAll(allMembers);
         familyRepository.delete(family);
         log.info("Familie ștearsă: id={} de către {}", familyId, requester.getEmail());

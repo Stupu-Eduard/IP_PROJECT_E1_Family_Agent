@@ -43,6 +43,12 @@ public class Expense {
     @JoinColumn(name = "location_id")
     private Location location; //expense -> location (Unde?)
 
+    @Column(name = "receipt_url")
+    private String receiptUrl;
+
+    @Column(name = "raw_input", length = 4000)
+    private String rawInput;
+
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL)
     private java.util.List<ExpenseItem> items; // Task: expense -> expense_items
 }

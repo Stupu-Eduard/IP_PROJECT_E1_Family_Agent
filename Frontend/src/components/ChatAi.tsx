@@ -44,7 +44,7 @@ const ChatAI: React.FC = () => {
         setIsTyping(true);
 
         try {
-            const { data } = await api.post('/v1/chat', { message: input });
+            const { data } = await api.post('/v1/agent/chat', { message: input });
             // Backend-ul returnează direct AgentResponse (text/chart/map).
             // Dacă payload-ul e malformat, AgentResponseRenderer afișează fallback elegant.
             setMessages(prev => [...prev, {
