@@ -1,10 +1,16 @@
 package com.familie.cheltuieli_familie.controller;
 
+import com.familie.cheltuieli_familie.dto.ForgotPasswordRequest;
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.dto.ResetPasswordRequest;
+import com.familie.cheltuieli_familie.dto.SecurityQuestionsRequest;
+import com.familie.cheltuieli_familie.dto.SecurityQuestion;
+import com.familie.cheltuieli_familie.model.Answer;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.AnswerRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
@@ -21,16 +27,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class AuthController {
 
     private static final String ROLE_PARENT  = "Parent";
@@ -42,6 +47,7 @@ public class AuthController {
     private static final String FAMILY_ID_KEY = "familyId";
 
     private final UserRepository userRepository;
+    private final AnswerRepository answerRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final FamilyRepository familyRepository;
     private final JwtUtil jwtUtil;
@@ -103,6 +109,13 @@ public class AuthController {
         user.setCreatedAt(java.time.LocalDate.now());
         userRepository.save(user);
 
+        Answer answer = new Answer();
+        answer.setUser(user);
+        answer.setAnimal(passwordEncoder.encode(registerRequest.getFavoriteAnimal()));
+        answer.setColor(passwordEncoder.encode(registerRequest.getFavoriteColor()));
+        answer.setStreet(passwordEncoder.encode(registerRequest.getChildhoodStreet()));
+        answerRepository.save(answer);
+
         boolean isChild = ROLE_CHILD.equalsIgnoreCase(registerRequest.getRole());
 
         Map<String, Object> claims = new HashMap<>();
@@ -142,6 +155,31 @@ public class AuthController {
                         "userName", user.getName(),
                         "role", role
                 ));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Object> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        if (loadVerifiedAnswers(request).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
+        }
+
+        return ResponseEntity.ok(Map.of(MSG_KEY, "Verificare reușită."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Object> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        Optional<Answer> verifiedAnswers = loadVerifiedAnswers(request);
+        if (verifiedAnswers.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(ERR_KEY, "Email sau răspunsuri invalide."));
+        }
+
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
+        user.setPasswordH(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of(MSG_KEY, "Parola a fost actualizată."));
     }
 
     @PostMapping("/refresh")
@@ -185,5 +223,41 @@ public class AuthController {
             }
         }
         return ResponseEntity.badRequest().body(Map.of(ERR_KEY, "Token invalid sau inexistent."));
+    }
+
+    private boolean matchesSecurityAnswer(Answer answers, SecurityQuestion question, String value) {
+        String stored = switch (question) {
+            case ANIMAL -> answers.getAnimal();
+            case COLOR -> answers.getColor();
+            case STREET -> answers.getStreet();
+        };
+        if (stored == null || value == null) {
+            return false;
+        }
+        return passwordEncoder.matches(value, stored);
+    }
+
+    private Optional<Answer> loadVerifiedAnswers(SecurityQuestionsRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+        if (userOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (request.getQuestion1() == request.getQuestion2()) {
+            return Optional.empty();
+        }
+
+        Optional<Answer> answerOpt = answerRepository.findByUserId(userOpt.get().getId());
+        if (answerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Answer answers = answerOpt.get();
+        if (!matchesSecurityAnswer(answers, request.getQuestion1(), request.getAnswer1())
+                || !matchesSecurityAnswer(answers, request.getQuestion2(), request.getAnswer2())) {
+            return Optional.empty();
+        }
+
+        return answerOpt;
     }
 }

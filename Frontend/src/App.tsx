@@ -6,6 +6,7 @@ import KidDashboard from './pages/KidDashboard'
 import LoginForm from './pages/LoginForm'
 import RegisterForm from './pages/RegisterForm'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import LandingPage from './pages/LandingPage'
 import ExpenseForm from './components/ExpenseForm'
 import Expenses from './pages/Expenses'
@@ -15,7 +16,7 @@ import Reports from './pages/Reports'
 import FamilySettings from './pages/FamilySettings'
 import AppErrorBoundary from './components/AppErrorBoundary'
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password']
 
 function DevCrashGate() {
     const location = useLocation()
@@ -43,6 +44,7 @@ function App() {
                     <Route path="/login" element={<LoginForm />} />
                     <Route path="/register" element={<RegisterForm />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
                     {/* Protected — sidebar layout */}
                     <Route element={<PrivateRoute><ProtectedLayout /></PrivateRoute>}>
