@@ -215,8 +215,10 @@ class PdfExportServiceTest {
         TestProjection expenseWithNulls = new TestProjection(
                 2L, BigDecimal.valueOf(75.0), "RON", null,
                 LocalDate.now().minusDays(1).atStartOfDay(),
-                null, null, "manual", null, null, null, null, null, null, null
+                null, null, "manual",
+                null, null, null, null, null, null, null, null
         );
+
 
         when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
         when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))

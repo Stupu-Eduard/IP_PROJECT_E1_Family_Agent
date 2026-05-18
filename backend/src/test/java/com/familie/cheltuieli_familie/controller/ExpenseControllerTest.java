@@ -238,6 +238,7 @@ class ExpenseControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -265,7 +266,7 @@ class ExpenseControllerTest {
         when(auth.getAuthorities()).thenAnswer(i -> List.of(new SimpleGrantedAuthority("ROLE_CHILD")));
 
         Projection row = new Projection(5L, BigDecimal.ONE, "RON", null,
-                LocalDateTime.of(2026, 1, 1, 0, 0), null, null, "manual", null, null, null, null, null, null, null);
+                LocalDateTime.of(2026, 1, 1, 0, 0), null, null, "manual", null, null, null, null, null, null, null, null);
         when(expenseRepository.findAllByUserFiltered(eq(3L), isNull(), isNull())).thenReturn(List.of(row));
 
         List<ExpenseListDto> result = controller.list(null, null, null, auth);
@@ -287,7 +288,7 @@ class ExpenseControllerTest {
         when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of());
 
         Projection row = new Projection(7L, BigDecimal.TEN, "RON", null,
-                LocalDateTime.of(2026, 3, 1, 0, 0), null, null, "manual", null, null, null, null, null, null, null);
+                LocalDateTime.of(2026, 3, 1, 0, 0), null, null, "manual", null, null, null, null, null, null, null, null);
         when(expenseRepository.findAllByUserFiltered(eq(4L), isNull(), isNull())).thenReturn(List.of(row));
 
         List<ExpenseListDto> result = controller.list(null, null, null, auth);
@@ -332,7 +333,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(10L, BigDecimal.valueOf(50), "RON", "lunch",
                 LocalDateTime.of(2026, 5, 1, 12, 0), "Food", "Alex", "manual",
-                1L, "Restaurant", "Main St", "Cluj", "RO", 46.77, 23.59);
+                null, 1L, "Restaurant", "Main St", "Cluj", "RO", 46.77, 23.59);
         when(expenseRepository.findOneWithLocation(10L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -969,7 +970,7 @@ class ExpenseControllerTest {
         when(savedExpense.getId()).thenReturn(1L);
         when(expenseRepository.save(any())).thenReturn(savedExpense);
         
-        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", null, null, null, null, null, null, null);
+        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(1L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -1001,7 +1002,7 @@ class ExpenseControllerTest {
         when(categoryRepository.findByName("Food")).thenReturn(Optional.of(mock(Category.class)));
         when(locationRepository.save(any())).thenReturn(new Location());
 
-        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", 10L, "New Store", null, null, null, null, null);
+        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", null, 10L, "New Store", null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(any())).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -1034,7 +1035,7 @@ class ExpenseControllerTest {
         when(categoryRepository.findByName("Food")).thenReturn(Optional.of(mock(Category.class)));
         when(locationRepository.save(any())).thenReturn(loc);
 
-        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", 10L, "Store", null, null, null, null, null);
+        Projection row = new Projection(1L, BigDecimal.TEN, "RON", "desc", LocalDateTime.now(), "Food", "Alex", "manual", null, 10L, "Store", null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(any())).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -1077,7 +1078,7 @@ class ExpenseControllerTest {
         LocalDateTime now = LocalDateTime.now();
         Projection row = new Projection(
                 1L, BigDecimal.TEN, "USD", "Description", now, "Category", "Person", "source",
-                100L, "Store", "Address", "City", "Country", 1.23, 4.56
+                null, 100L, "Store", "Address", "City", "Country", 1.23, 4.56
         );
 
         when(expenseRepository.findOneWithLocation(1L)).thenReturn(row);
