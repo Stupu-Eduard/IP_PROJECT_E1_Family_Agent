@@ -35,6 +35,7 @@ app:
       - http://127.0.0.1:5173
       - http://127.0.0.1:3000
       - https://family-agent.me
+      - https://www.family-agent.me
       - https://api.family-agent.me
       - http://localhost:4173
 
