@@ -210,7 +210,7 @@ public class OCRPreProcessor {
             );
         }
 
-        Mat upscaled = upscale(src, 2.0);
+        Mat upscaled = upscale(src, 3.0);
 
         Mat bankCropped;
         String bankKey = bank != null ? bank.toLowerCase() : "";
