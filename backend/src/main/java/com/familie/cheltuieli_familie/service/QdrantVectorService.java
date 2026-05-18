@@ -141,8 +141,9 @@ public class QdrantVectorService {
                 double avgScore = results.stream()
                         .mapToDouble(r -> ((Number) r.get("score")).doubleValue())
                         .average().orElse(0.0);
-                log.info("Qdrant returned {} results, score range: {:.4f} - {:.4f}, avg: {:.4f}",
-                        results.size(), minScore, maxScore, avgScore);
+                log.info("Qdrant returned {} results, score range: {} - {}, avg: {}",
+                        results.size(), String.format("%.4f", minScore), String.format("%.4f", maxScore),
+                        String.format("%.4f", avgScore));
             } else {
                 log.info("Qdrant returned 0 results for query: '{}'", query);
             }
