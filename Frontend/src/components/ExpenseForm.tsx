@@ -28,12 +28,13 @@ const ExpenseForm: React.FC = () => {
   const isManualMode = searchParams.get('mode') === 'manual';
   const notifyExpenseAdded = useExpenseStore((s) => s.notifyExpenseAdded);
 
-  const [amount,     setAmount]     = useState<number | ''>('');
-  const [category,   setCategory]   = useState('');
-  const [date,       setDate]       = useState(new Date().toISOString().split('T')[0]);
-  const [storeName,  setStoreName]  = useState('');
-  const [city,       setCity]       = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [amount,      setAmount]      = useState<number | ''>('');
+  const [category,    setCategory]    = useState('');
+  const [date,        setDate]        = useState(new Date().toISOString().split('T')[0]);
+  const [storeName,   setStoreName]   = useState('');
+  const [city,        setCity]        = useState('');
+  const [description, setDescription] = useState('');
+  const [categories,  setCategories]  = useState<string[]>([]);
 
   const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -59,6 +60,16 @@ const ExpenseForm: React.FC = () => {
         setDate(formattedDate);
       }
       if (data.locationName) setStoreName(data.locationName);
+      if (data.items && data.items.length > 0) {
+        const desc = data.items
+          .map(item => {
+            const qty = item.quantity && item.quantity !== 1 ? ` x${item.quantity}` : '';
+            const price = item.unitPrice ? ` - ${item.unitPrice} RON` : '';
+            return `${item.name}${qty}${price}`;
+          })
+          .join('\n');
+        setDescription(desc);
+      }
 
       // OCR completează câmpurile — userul poate corecta înainte de a salva manual.
     } catch {
@@ -78,7 +89,7 @@ const ExpenseForm: React.FC = () => {
     }
     setLoading(true);
     try {
-      await createExpense({ amount: Number(amount), categoryName: category, date, description: undefined, storeName: storeName || undefined, city: city || undefined });
+      await createExpense({ amount: Number(amount), categoryName: category, date, description: description || undefined, storeName: storeName || undefined, city: city || undefined });
       notifyExpenseAdded();
       setSuccess(true);
       setAmount('');
@@ -86,6 +97,7 @@ const ExpenseForm: React.FC = () => {
       setDate(new Date().toISOString().split('T')[0]);
       setStoreName('');
       setCity('');
+      setDescription('');
       setOcrError(null);
       setTimeout(() => navigate('/expenses'), 1500);
     } catch (err: any) {
@@ -316,6 +328,22 @@ const ExpenseForm: React.FC = () => {
                       style={{ opacity: isInputDisabled ? 0.6 : 1 }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="description" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  Detalii produse <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(opțional)</span>
+                </label>
+                <textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="input"
+                    placeholder="Ex: Inel aur x1 - 150 RON&#10;Colier argint x2 - 80 RON"
+                    rows={3}
+                    disabled={isInputDisabled}
+                    style={{ opacity: isInputDisabled ? 0.6 : 1, resize: 'vertical', fontFamily: 'inherit' }}
+                />
               </div>
 
               <button

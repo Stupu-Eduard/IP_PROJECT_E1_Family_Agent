@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.controller;
 
+import com.familie.cheltuieli_familie.dto.OcrItemDTO;
 import com.familie.cheltuieli_familie.dto.OcrResponseDTO;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.User;
@@ -21,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/ocr")
@@ -58,22 +61,26 @@ public class OcrController {
 
             if (receipt == null) {
                 log.warn("Receipt parsing failed for file: {}", originalName);
-                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, 0.0));
+                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, 0.0, Collections.emptyList()));
             }
 
             Category category = resolveCategory(receipt.getCategory());
-            log.info("OCR parsed: amount={} category={} store={} date={}",
+            List<OcrItemDTO> items = mapItems(receipt.getItems());
+
+            log.info("OCR parsed: amount={} category={} store={} date={} items={}",
                     receipt.getTotalAmount(),
                     category != null ? category.getName() : null,
                     receipt.getStoreName(),
-                    receipt.getDate());
+                    receipt.getDate(),
+                    items.size());
 
             return ResponseEntity.ok(new OcrResponseDTO(
                     receipt.getTotalAmount(),
                     category != null ? category.getName() : null,
                     receipt.getDate(),
                     receipt.getStoreName(),
-                    0.90
+                    0.90,
+                    items
             ));
 
         } finally {
@@ -103,6 +110,14 @@ public class OcrController {
                     log.warn("Category '{}' not found, defaulting to first available", categoryName);
                     return categoryRepository.findAll().stream().findFirst().orElse(null);
                 });
+    }
+
+    private List<OcrItemDTO> mapItems(List<ReceiptParser.ReceiptItem> items) {
+        if (items == null || items.isEmpty()) return Collections.emptyList();
+        return items.stream()
+                .filter(i -> i.getName() != null && !i.getName().isBlank())
+                .map(i -> new OcrItemDTO(i.getName(), i.getQuantity(), i.getUnitPrice()))
+                .toList();
     }
 
     private boolean isImageFile(String extension) {
