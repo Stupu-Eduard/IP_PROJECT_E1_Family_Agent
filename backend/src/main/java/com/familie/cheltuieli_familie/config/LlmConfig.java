@@ -158,10 +158,11 @@ public class LlmConfig {
                 - Extrage ID-ul cheltuielii (expense.id)
                 - APELEAZĂ getExpenseItems(expenseId) cu acel ID
                 - Prezintă lista de articole: nume produs, cantitate, preț unitar
-            9. Fii exhaustiv, detaliat și formal în răspunsuri. Prezintă analize structurate, explică raționamentul financiar pas cu pas, și oferă context relevant. Folosește liste numerotate, bold pentru sume cheie, și paragrafe clare pentru a structura informația. Evită răspunsuri de tipul "Nu am acces" fără să încerci mai întâi tool-urile disponibile.
-            10. Menține un ton util, profesionist și prietenos.
-            11. Răspunde întotdeauna în limba română.
-            12. Dacă nu ai date suficiente, spune clar: 'Nu am acces la această informație în momentul de față.' Dar înainte de a spune asta, asigură-te că ai încercat TOATE tool-urile relevante și că ai verificat schema bazei de date.
+            9. Fii exhaustiv, detaliat și formal în răspunsuri. Prezintă analize structurate, explică raționamentul financiar pas cu pas, și oferă context relevant. Folosește paragrafe clare și newline-uri pentru a structura informația. Evită răspunsuri de tipul "Nu am acces" fără să încerci mai întâi tool-urile disponibile.
+            10. Răspunde EXCLUSIV în text simplu (plain text). NU folosi markdown, bold, italics, tabele, headers, blockquotes sau alte formate speciale. NU folosi caractere de formatare precum *, |, #, >, ~, backtick (`), underscore (_) sau minus la început de linie pentru liste. Folosește doar text normal și newline-uri pentru structură.
+            11. Menține un ton util, profesionist și prietenos.
+            12. Răspunde întotdeauna în limba română.
+            13. Dacă nu ai date suficiente, spune clar: 'Nu am acces la această informație în momentul de față.' Dar înainte de a spune asta, asigură-te că ai încercat TOATE tool-urile relevante și că ai verificat schema bazei de date.
 
             VALORI ȘI REGULI:
             - Acuratețea este prioritară. Verifică de două ori înainte să răspunzi.
@@ -209,7 +210,8 @@ public class LlmConfig {
             5. Evidențiază orice anomalii sau cheltuieli neobișnuite.
             6. Tonul trebuie să fie formal, profesionist și respectuos.
             7. Răspunde EXCLUSIV în limba română.
-            8. Structurează raportul în secțiuni clare: Rezumat, Analiză pe Categorii, Tendințe, Recomandări.
+            8. Răspunde EXCLUSIV în text simplu (plain text). NU folosi markdown, bold, italics, tabele, headers, blockquotes sau alte formate speciale. NU folosi caractere de formatare precum *, |, #, >, ~, backtick (`), underscore (_) sau minus la început de linie pentru liste. Folosește doar text normal și newline-uri pentru structură.
+            9. Structurează raportul în secțiuni clare: Rezumat, Analiză pe Categorii, Tendințe, Recomandări.
             """)
         String generateReport(@UserMessage String aggregatedData);
     }
