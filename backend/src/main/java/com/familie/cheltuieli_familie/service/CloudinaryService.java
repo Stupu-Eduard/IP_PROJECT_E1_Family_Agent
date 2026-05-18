@@ -34,7 +34,7 @@ public class CloudinaryService {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap(
                     "folder", folder,
                     "public_id", sanitizePublicId(fileName),
-                    "resource_type", detectResourceType(file),
+                    "resource_type", detectResourceType(file.getName()),
                     "overwrite", false
             ));
 
@@ -44,6 +44,36 @@ public class CloudinaryService {
 
         } catch (IOException e) {
             log.error("Cloudinary upload failed for file: {}", fileName, e);
+            throw new ExternalServiceException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Uploads a MultipartFile to Cloudinary.
+     *
+     * @param multipartFile the file from the request
+     * @param folder        the folder path
+     * @param fileName      the descriptive name
+     * @return the secure URL
+     */
+    public String uploadMultipartFile(org.springframework.web.multipart.MultipartFile multipartFile, String folder, String fileName) {
+        try {
+            log.info("Uploading MultipartFile to Cloudinary: {} ({} bytes)", fileName, multipartFile.getSize());
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(multipartFile.getBytes(), ObjectUtils.asMap(
+                    "folder", folder,
+                    "public_id", sanitizePublicId(fileName),
+                    "resource_type", detectResourceType(multipartFile.getOriginalFilename()),
+                    "overwrite", false
+            ));
+
+            String url = (String) uploadResult.get("secure_url");
+            log.info("Cloudinary upload successful: {}", url);
+            return url;
+
+        } catch (IOException e) {
+            log.error("Cloudinary upload failed for multipart file: {}", fileName, e);
             throw new ExternalServiceException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
         }
     }
@@ -62,8 +92,9 @@ public class CloudinaryService {
         }
     }
 
-    private String detectResourceType(File file) {
-        String name = file.getName().toLowerCase();
+    private String detectResourceType(String fileName) {
+        if (fileName == null) return "image";
+        String name = fileName.toLowerCase();
         if (name.endsWith(".pdf")) {
             return "raw";
         }

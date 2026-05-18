@@ -41,6 +41,9 @@ public class ExpenseOCREntity {
     @Column(name = "source_type")
     private String sourceType;
 
+    @Column(name = "receipt_url")
+    private String receiptUrl;
+
     public ExpenseOCREntity() {
     }
 
@@ -98,6 +101,10 @@ public class ExpenseOCREntity {
         return sourceType;
     }
 
+    public String getReceiptUrl() {
+        return receiptUrl;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -140,5 +147,9 @@ public class ExpenseOCREntity {
 
     public void setSourceType(String sourceType) {
         this.sourceType = sourceType;
+    }
+
+    public void setReceiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
     }
 }
