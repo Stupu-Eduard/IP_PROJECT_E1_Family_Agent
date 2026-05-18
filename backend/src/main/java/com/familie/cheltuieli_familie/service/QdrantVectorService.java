@@ -108,12 +108,6 @@ public class QdrantVectorService {
         return searchWithFilter(query, topK, new SearchFilter(category, person, from, to, null, null));
     }
 
-    public List<EmbeddedExpense> searchWithFilter(
-            String query, int topK, String category, String person, LocalDate from, LocalDate to,
-            Long familyId, Long userId) {
-        return searchWithFilter(query, topK, new SearchFilter(category, person, from, to, familyId, userId));
-    }
-
     public List<EmbeddedExpense> searchWithFilter(String query, int topK, SearchFilter filter) {
 
         log.info("Searching vector store for query: '{}', topK: {}, category: {}, person: {}, familyId: {}, userId: {}",

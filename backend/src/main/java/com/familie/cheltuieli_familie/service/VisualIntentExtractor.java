@@ -197,13 +197,6 @@ public class VisualIntentExtractor {
     }
 
     String stripMarkdownFences(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        if (trimmed.startsWith("```")) {
-            trimmed = trimmed.replaceFirst("```json\\s*", "").replaceFirst("```\\s*", "");
-            int lastFence = trimmed.lastIndexOf("```");
-            if (lastFence >= 0) trimmed = trimmed.substring(0, lastFence).trim();
-        }
-        return trimmed;
+        return com.familie.cheltuieli_familie.util.MarkdownUtil.stripMarkdownFences(raw);
     }
 }
