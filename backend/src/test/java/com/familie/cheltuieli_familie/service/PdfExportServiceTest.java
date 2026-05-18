@@ -35,7 +35,7 @@ class PdfExportServiceTest {
     private record TestProjection(
             Long id, BigDecimal amount, String currency, String description,
             LocalDateTime expenseDate, String category, String person, String sourceType,
-            Long locationId, String store, String address,
+            String receiptUrl, Long locationId, String store, String address,
             String city, String country, Double lat, Double lng
     ) implements ExpenseWithLocationProjection {
         public Long getId()                  { return id; }
@@ -46,6 +46,7 @@ class PdfExportServiceTest {
         public String getCategory()          { return category; }
         public String getPerson()            { return person; }
         public String getSourceType()        { return sourceType; }
+        public String getReceiptUrl()        { return receiptUrl; }
         public Long getLocationId()          { return locationId; }
         public String getStore()             { return store; }
         public String getAddress()           { return address; }
@@ -90,7 +91,7 @@ class PdfExportServiceTest {
         return new TestProjection(
                 1L, BigDecimal.valueOf(amount), "RON", "Descriere test",
                 date.atStartOfDay(), category, person, "manual",
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
     }
 

@@ -33,7 +33,7 @@ class ExpenseControllerTest {
 
     private record Projection(Long id, BigDecimal amount, String currency, String description,
                               LocalDateTime expenseDate, String category, String person, String sourceType,
-                              Long locationId, String store,
+                              String receiptUrl, Long locationId, String store,
                               String address, String city, String country, Double lat,
                               Double lng) implements ExpenseRepository.ExpenseWithLocationProjection {
 
@@ -75,6 +75,11 @@ class ExpenseControllerTest {
         @Override
         public String getSourceType() {
             return sourceType;
+        }
+
+        @Override
+        public String getReceiptUrl() {
+            return receiptUrl;
         }
 
         @Override
@@ -150,7 +155,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(
                 10L, BigDecimal.valueOf(12.50), "RON", "coffee",
-                expenseDate, "Food", "Alex", "manual",
+                expenseDate, "Food", "Alex", "manual", null,
                 7L, "Store X", "Street 1", "Cluj", "RO", 46.77, 23.59
         );
 
@@ -188,7 +193,7 @@ class ExpenseControllerTest {
         Projection row = new Projection(
                 1L, BigDecimal.ONE, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
-                null, null, "manual", null, null, null, null, null, null, null
+                null, null, "manual", null, null, null, null, null, null, null, null
         );
 
         when(expenseRepository.findAllByFamilyFiltered(eq(5L), isNull(), isNull(), isNull()))
