@@ -95,4 +95,60 @@ class QdrantContentRetrieverTest {
         assertNotNull(results);
         assertEquals(5, results.size());
     }
+
+    @Test
+    void testRetrieveFiltersByScoreThreshold() {
+        EmbeddedExpense highScore = EmbeddedExpense.builder()
+                .id(1L)
+                .rawInput("High score")
+                .score(0.9)
+                .build();
+        EmbeddedExpense lowScore = EmbeddedExpense.builder()
+                .id(2L)
+                .rawInput("Low score")
+                .score(0.3)
+                .build();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(highScore, lowScore));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("query"));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).textSegment().text().contains("High score"));
+    }
+
+    @Test
+    void testRetrieveWithStopWordsAndQuotes() {
+        EmbeddedExpense expense = EmbeddedExpense.builder()
+                .id(1L)
+                .rawInput("Test expense")
+                .score(0.95)
+                .build();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("'\"mancare'\""));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        verify(qdrantVectorService).searchSimilar(argThat(arg -> arg != null && !arg.contains("'") && !arg.contains("\"")), anyInt());
+    }
+
+    @Test
+    void testRetrieveStripsStopWords() {
+        EmbeddedExpense expense = EmbeddedExpense.builder()
+                .id(1L)
+                .rawInput("Test expense")
+                .score(0.95)
+                .build();
+
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt())).thenReturn(List.of(expense));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("salut buna te rog mancare"));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        verify(qdrantVectorService).searchSimilar(argThat(arg -> arg != null && !arg.toLowerCase().contains("salut")), anyInt());
+    }
 }

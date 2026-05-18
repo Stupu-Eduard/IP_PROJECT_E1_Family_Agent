@@ -23,6 +23,8 @@ public class SemanticExpansionService {
      *
      * Example: "mall shopping" → ["shopping", "haine", "brand-uri"]
      */
+    private static final double MIN_SCORE_THRESHOLD = 0.5;
+
     public List<String> expandCategories(String fuzzyCategory) {
         if (fuzzyCategory == null || fuzzyCategory.isBlank()) {
             return Collections.emptyList();
@@ -31,6 +33,7 @@ public class SemanticExpansionService {
         try {
             List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyCategory, DEFAULT_TOP_K);
             List<String> categories = results.stream()
+                    .filter(r -> r.getScore() >= MIN_SCORE_THRESHOLD)
                     .map(EmbeddedExpense::getCategory)
                     .filter(Objects::nonNull)
                     .filter(c -> !c.isBlank())
@@ -59,6 +62,7 @@ public class SemanticExpansionService {
         try {
             List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyLocation, DEFAULT_TOP_K);
             List<String> locations = results.stream()
+                    .filter(r -> r.getScore() >= MIN_SCORE_THRESHOLD)
                     .map(EmbeddedExpense::getLocation)
                     .filter(Objects::nonNull)
                     .filter(l -> !l.isBlank())

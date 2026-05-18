@@ -18,14 +18,16 @@ public class ReportService {
 
     private final ExpenseAnalyticsService analyticsService;
     private final LlmConfig.ReportAssistant reportAssistant;
+    private final com.familie.cheltuieli_familie.security.util.SecurityService securityService;
 
     public String generateMonthlySummary(int year, int month) {
         log.info("Generating monthly summary for {}/{}", month, year);
         LocalDate from = LocalDate.of(year, month, 1);
         LocalDate to = from.plusMonths(1).minusDays(1);
 
-        BigDecimal total = analyticsService.calculateTotal(from, to);
-        Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to);
+        Long[] scope = securityService.resolveScope();
+        BigDecimal total = analyticsService.calculateTotal(from, to, scope[0], scope[1]);
+        Map<String, BigDecimal> byCategory = analyticsService.byCategory(from, to, scope[0], scope[1]);
 
         StringBuilder summary = new StringBuilder();
         summary.append(String.format("Monthly Report for %s %d:%n", from.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH), year));
@@ -41,7 +43,7 @@ public class ReportService {
                     .max(Map.Entry.comparingByValue())
                     .get().getKey();
             summary.append(String.format("- Top Category: %s%n", topCategory));
-            summary.append("- Trend: ").append(analyticsService.calculateTrend(topCategory, from, to));
+            summary.append("- Trend: ").append(analyticsService.calculateTrend(topCategory, from, to, scope[0], scope[1]));
         }
 
         return summary.toString();

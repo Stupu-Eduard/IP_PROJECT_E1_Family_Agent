@@ -1,0 +1,1 @@
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS raw_input TEXT;

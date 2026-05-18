@@ -8,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,9 +38,18 @@ class ExpenseSyncListenerTest {
 
         doThrow(new RuntimeException("Qdrant down")).when(qdrantVectorService).storeExpense(expense);
 
-        // Should not throw — exception is caught and logged
-        expenseSyncListener.handleExpenseSync(event);
+        // With @Retryable, exceptions propagate up for retry handling
+        assertThrows(RuntimeException.class, () -> expenseSyncListener.handleExpenseSync(event));
 
         verify(qdrantVectorService, times(1)).storeExpense(expense);
+    }
+
+    @Test
+    void testRecover() {
+        ExpenseEntity expense = ExpenseEntity.builder().id(3L).build();
+        ExpenseSyncEvent event = new ExpenseSyncEvent(this, expense);
+        Exception exception = new RuntimeException("All retries failed");
+
+        assertDoesNotThrow(() -> expenseSyncListener.recover(exception, event));
     }
 }

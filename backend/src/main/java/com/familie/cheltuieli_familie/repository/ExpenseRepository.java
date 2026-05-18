@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.repository;
 
 import com.familie.cheltuieli_familie.model.Expense;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -182,4 +183,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     @Query(value = "SELECT COALESCE(SUM(e.amount), 0) FROM expenses e WHERE e.user_id = :userId AND EXTRACT(YEAR FROM e.expense_date) = :year AND EXTRACT(MONTH FROM e.expense_date) = :month", nativeQuery = true)
     BigDecimal sumByUserCurrentMonth(@Param("userId") Long userId, @Param("year") int year, @Param("month") int month);
+
+    @Modifying
+    @Query("UPDATE Expense e SET e.family = null WHERE e.family.id = :familyId")
+    void clearFamilyFromExpenses(@Param("familyId") Long familyId);
+
+    @Modifying
+    @Query("UPDATE Expense e SET e.family.id = :familyId WHERE e.user.id = :userId AND e.family IS NULL")
+    void linkUserExpensesToFamily(@Param("userId") Long userId, @Param("familyId") Long familyId);
 }
