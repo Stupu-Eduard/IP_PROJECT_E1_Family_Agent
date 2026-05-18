@@ -3,6 +3,8 @@ package com.familie.cheltuieli_familie.controller;
 import com.familie.cheltuieli_familie.dto.OcrResponseDTO;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.FamilyMember;
+import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
@@ -18,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +38,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class OcrControllerTest {
 
     @Mock
@@ -100,7 +105,18 @@ class OcrControllerTest {
         category.setName("Mâncare");
         when(categoryRepository.findByName("Mâncare")).thenReturn(Optional.of(category));
 
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("Kaufland");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        Expense savedExpense = new Expense();
+        savedExpense.setId(100L);
+        savedExpense.setAmount(new BigDecimal("150.50"));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
@@ -136,7 +152,18 @@ class OcrControllerTest {
         category.setName("Transport");
         when(categoryRepository.findByName("Transport")).thenReturn(Optional.of(category));
 
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("OMV");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        Expense savedExpense = new Expense();
+        savedExpense.setId(101L);
+        savedExpense.setAmount(new BigDecimal("200.00"));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
@@ -195,7 +222,19 @@ class OcrControllerTest {
         category.setName("Mâncare");
         when(categoryRepository.findByName("Mâncare")).thenReturn(Optional.of(category));
 
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("Lidl");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        Expense savedExpense = new Expense();
+        savedExpense.setId(102L);
+        savedExpense.setAmount(new BigDecimal("50.00"));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
+        when(expenseItemRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
@@ -232,7 +271,18 @@ class OcrControllerTest {
         when(categoryRepository.findByName("Diverse")).thenReturn(Optional.empty());
         when(categoryRepository.findAll()).thenReturn(List.of(fallback));
 
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("Necunoscut");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenThrow(new RuntimeException("Cloudinary down"));
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        Expense savedExpense = new Expense();
+        savedExpense.setId(103L);
+        savedExpense.setAmount(new BigDecimal("10.00"));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
@@ -266,7 +316,23 @@ class OcrControllerTest {
         category.setName("Mâncare");
         when(categoryRepository.findByName("Mâncare")).thenReturn(Optional.of(category));
 
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("Kaufland");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
+
+        FamilyMember fm = new FamilyMember();
+        com.familie.cheltuieli_familie.model.Family family = new com.familie.cheltuieli_familie.model.Family();
+        family.setId(10L);
+        fm.setFamily(family);
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(fm));
+
+        Expense savedExpense = new Expense();
+        savedExpense.setId(104L);
+        savedExpense.setAmount(new BigDecimal("75.00"));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
