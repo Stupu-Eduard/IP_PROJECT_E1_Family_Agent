@@ -60,6 +60,9 @@ class ExtractionControllerTest {
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
 
     @MockBean
+    private com.familie.cheltuieli_familie.service.CloudinaryService cloudinaryService;
+
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test

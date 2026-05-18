@@ -79,6 +79,14 @@ class ExpenseOCREntityTest {
     }
 
     @Test
+    void receiptUrlGetterAndSetterShouldWork() {
+        ExpenseOCREntity entity = new ExpenseOCREntity();
+        assertNull(entity.getReceiptUrl());
+        entity.setReceiptUrl("https://cloudinary.com/receipt.jpg");
+        assertEquals("https://cloudinary.com/receipt.jpg", entity.getReceiptUrl());
+    }
+
+    @Test
     void settersShouldAcceptNullValues() {
         ExpenseOCREntity entity = new ExpenseOCREntity(
                 BigDecimal.valueOf(100.50),

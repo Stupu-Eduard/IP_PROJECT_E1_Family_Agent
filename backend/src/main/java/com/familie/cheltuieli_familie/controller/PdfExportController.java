@@ -48,7 +48,7 @@ public class PdfExportController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .body(pdf);
 
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Error generating PDF", e);
             return ResponseEntity.internalServerError().build();
         }

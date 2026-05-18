@@ -40,7 +40,6 @@ class CloudinaryServiceTest {
     @Test
     void testUploadFileSuccess() throws IOException {
         File file = mock(File.class);
-        when(file.getName()).thenReturn("receipt.jpg");
         when(file.length()).thenReturn(1024L);
 
         Map<String, Object> uploadResult = Map.of("secure_url", "https://cloudinary.com/test-url");
@@ -55,7 +54,6 @@ class CloudinaryServiceTest {
     @Test
     void testUploadFileIOException() throws IOException {
         File file = mock(File.class);
-        when(file.getName()).thenReturn("receipt.jpg");
         when(file.length()).thenReturn(1024L);
 
         when(uploader.upload(any(File.class), anyMap())).thenThrow(new IOException("Network error"));
@@ -87,23 +85,17 @@ class CloudinaryServiceTest {
     }
 
     @Test
-    void testDetectResourceTypePdf() {
-        File pdfFile = mock(File.class);
-        when(pdfFile.getName()).thenReturn("document.pdf");
+    void testUploadFileUnexpectedException() throws IOException {
+        File file = mock(File.class);
+        when(file.length()).thenReturn(1024L);
 
-        String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "detectResourceType", pdfFile);
+        when(uploader.upload(any(File.class), anyMap())).thenThrow(new RuntimeException("Unexpected error"));
 
-        assertEquals("raw", result);
-    }
+        ExternalServiceException exception = assertThrows(ExternalServiceException.class,
+                () -> cloudinaryService.uploadFile(file, "receipts/2026-05", "receipt.jpg"));
 
-    @Test
-    void testDetectResourceTypeImage() {
-        File imageFile = mock(File.class);
-        when(imageFile.getName()).thenReturn("photo.png");
-
-        String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "detectResourceType", imageFile);
-
-        assertEquals("image", result);
+        assertTrue(exception.getMessage().contains("Unexpected error during Cloudinary upload"));
+        assertTrue(exception.getCause() instanceof RuntimeException);
     }
 
     @Test

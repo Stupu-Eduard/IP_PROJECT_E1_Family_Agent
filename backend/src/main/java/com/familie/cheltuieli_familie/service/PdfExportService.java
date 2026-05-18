@@ -410,7 +410,17 @@ public class PdfExportService {
 
     private String truncate(String s, int max) {
         if (s == null) return "-";
-        String sanitized = s.replace("\n", " ").replace("\r", " ");
-        return sanitized.length() > max ? sanitized.substring(0, max - 1) + "..." : sanitized;
+        String normalized = normalizeRo(s).replace("\n", " ").replace("\r", " ");
+        return normalized.length() > max ? normalized.substring(0, max - 1) + "..." : normalized;
+    }
+
+    private String normalizeRo(String s) {
+        return s.replace("ă", "a").replace("Ă", "A")
+                .replace("â", "a").replace("Â", "A")
+                .replace("î", "i").replace("Î", "I")
+                .replace("ș", "s").replace("Ș", "S")
+                .replace("ş", "s").replace("Ş", "S")
+                .replace("ț", "t").replace("Ț", "T")
+                .replace("ţ", "t").replace("Ţ", "T");
     }
 }
