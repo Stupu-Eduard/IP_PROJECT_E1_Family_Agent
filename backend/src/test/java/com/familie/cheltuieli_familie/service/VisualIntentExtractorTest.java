@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
+import com.familie.cheltuieli_familie.util.MarkdownUtil;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
@@ -145,27 +146,27 @@ class VisualIntentExtractorTest {
     @Test
     void stripMarkdownFences_shouldRemoveJsonFence() {
         String raw = "```json\n{\"responseType\": \"chart\"}\n```";
-        String cleaned = extractor.stripMarkdownFences(raw);
+        String cleaned = MarkdownUtil.stripMarkdownFences(raw);
         assertEquals("{\"responseType\": \"chart\"}", cleaned.trim());
     }
 
     @Test
     void stripMarkdownFences_shouldRemoveGenericFence() {
         String raw = "```\n{\"responseType\": \"chart\"}\n```";
-        String cleaned = extractor.stripMarkdownFences(raw);
+        String cleaned = MarkdownUtil.stripMarkdownFences(raw);
         assertEquals("{\"responseType\": \"chart\"}", cleaned);
     }
 
     @Test
     void stripMarkdownFences_shouldReturnPlainText() {
         String raw = "{\"responseType\": \"chart\"}";
-        String cleaned = extractor.stripMarkdownFences(raw);
+        String cleaned = MarkdownUtil.stripMarkdownFences(raw);
         assertEquals(raw, cleaned);
     }
 
     @Test
     void stripMarkdownFences_shouldHandleNull() {
-        assertNull(extractor.stripMarkdownFences(null));
+        assertNull(MarkdownUtil.stripMarkdownFences(null));
     }
 
     @Test

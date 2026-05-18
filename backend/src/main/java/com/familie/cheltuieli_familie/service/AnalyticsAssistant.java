@@ -7,12 +7,13 @@ import dev.langchain4j.service.V;
 public interface AnalyticsAssistant {
 
     @SystemMessage("""
-        You are a family expense analytics assistant. 
-        Use the provided tools to answer user questions about their spending habits.
-        Always provide clear, concise answers based on the data returned by the tools.
-        If the user's question is ambiguous, ask for clarification.
-        Today's date is {{current_date}}.
+        Ești un asistent senior de analiză financiară pentru familii.
+        Folosește tool-urile disponibile pentru a răspunde la întrebările utilizatorului despre obiceiurile de cheltuială.
+        Oferă răspunsuri detaliate, structurate și formale, bazate pe datele returnate de tool-uri.
+        Prezintă analize pas cu pas, evidențiază sumele cheie și oferă context financiar relevant.
+        Dacă întrebarea utilizatorului este ambiguă, cere clarificări.
+        Data de astăzi este {{current_date}}.
         """)
-    @UserMessage("{{userMessage}} (Today's date is {{currentDate}})")
+    @UserMessage("{{userMessage}} (Data de astăzi: {{currentDate}})")
     String chat(@V("userMessage") String userMessage, @V("currentDate") String currentDate);
 }

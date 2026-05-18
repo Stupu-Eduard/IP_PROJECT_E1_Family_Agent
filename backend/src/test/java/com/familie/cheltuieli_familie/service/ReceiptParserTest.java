@@ -6,6 +6,8 @@ import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -127,5 +129,180 @@ class ReceiptParserTest {
         assertEquals("Food", receipt.getCategory());
         assertEquals(1, receipt.getItems().size());
     }
-}
 
+    @Test
+    void parseReceipt_shouldNormalizeOcrStoreNames() {
+        String mockJsonResponse = """
+            {
+              "storeName": "L1dl",
+              "totalAmount": 45.99,
+              "date": "15/05/2026",
+              "category": "Mâncare"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJsonResponse)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("bon l1dl");
+
+        assertNotNull(result);
+        assertEquals("Lidl", result.getStoreName());
+    }
+
+    @Test
+    void parseReceipt_shouldNormalizeKauflardToKaufland() {
+        String mockJsonResponse = """
+            {
+              "storeName": "Kauflard",
+              "totalAmount": 123.45,
+              "date": "01.05.2026",
+              "category": "Mâncare"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJsonResponse)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("bon kauflard");
+
+        assertNotNull(result);
+        assertEquals("Kaufland", result.getStoreName());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "L1dl, Lidl",
+        "l1d1, Lidl",
+        "lid1, Lidl",
+        "Kauflard, Kaufland",
+        "kauf1and, Kaufland",
+        "kaufl@nd, Kaufland",
+        "mega 1mage, Mega Image",
+        "mega lmage, Mega Image",
+        "mega1mage, Mega Image",
+        "carref0ur, Carrefour",
+        "carrefour, Carrefour",
+        "peny, Penny",
+        "P3nny, Penny",
+        "auch@n, Auchan",
+        "auch4n, Auchan",
+        "pr0fi, Profi",
+        "prof1, Profi",
+        "s3lgros, Selgros",
+        "se1gros, Selgros",
+        "c@tena, Catena",
+        "cat3na, Catena",
+        "sens1b1u, Sensiblu",
+        "sensib1u, Sensiblu",
+        "d0na, Dona",
+        "p3trom, Petrom",
+        "petr0m, Petrom",
+        "r0mpetr0l, Rompetrol",
+        "0mv, OMV"
+    })
+    void normalizeStoreName_shouldNormalizeOcrVariants(String input, String expected) {
+        String mockJson = String.format("""
+            {
+              "storeName": "%s",
+              "totalAmount": 10.0,
+              "date": "01/01/2026",
+              "category": "Test"
+            }
+            """, input);
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertEquals(expected, result.getStoreName());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "2026-05-18, 2026-05-18",
+        "18-05-2026, 2026-05-18"
+    })
+    void parseReceipt_shouldNormalizeVariousDateFormats(String inputDate, String expectedDate) {
+        String mockJson = String.format("""
+            {
+              "storeName": "Test",
+              "totalAmount": 10.0,
+              "date": "%s",
+              "category": "Test"
+            }
+            """, inputDate);
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertEquals(expectedDate, result.getDate());
+    }
+
+    @Test
+    void parseReceipt_shouldHandleNullDate() {
+        String mockJson = """
+            {
+              "storeName": "Test",
+              "totalAmount": 10.0,
+              "date": null,
+              "category": "Test"
+            }
+            """;
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertNull(result.getDate());
+    }
+
+    @Test
+    void parseReceipt_shouldHandleInvalidDate() {
+        String mockJson = """
+            {
+              "storeName": "Test",
+              "totalAmount": 10.0,
+              "date": "not-a-date",
+              "category": "Test"
+            }
+            """;
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertNull(result.getDate());
+    }
+
+    @Test
+    void parseReceipt_shouldHandleNullStoreName() {
+        String mockJson = """
+            {
+              "storeName": null,
+              "totalAmount": 10.0,
+              "date": "01/01/2026",
+              "category": "Test"
+            }
+            """;
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertNull(result.getStoreName());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'', ''",
+            "Unknown Shop, Unknown Shop",
+            "penny market, penny market",
+            "mypenyz, mypenyz",
+            "xd0nax, xd0nax",
+            "xxx0mv, xxx0mv"
+    })
+    void parseReceipt_shouldNotNormalizeOrPreserveStoreName(String storeName, String expected) {
+        String mockJson = String.format("""
+            {
+              "storeName": "%s",
+              "totalAmount": 10.0,
+              "date": "01/01/2026",
+              "category": "Test"
+            }
+            """, storeName);
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
+        assertNotNull(result);
+        assertEquals(expected, result.getStoreName());
+    }
+}

@@ -20,6 +20,7 @@ import java.util.*;
 public class ChartQueryExecutor {
 
     private final JdbcTemplate jdbcTemplate;
+    private final com.familie.cheltuieli_familie.security.util.SecurityService securityService;
 
     private static final String COL_PERSON = "person";
     private static final String COL_CATEGORY = "category";
@@ -35,6 +36,9 @@ public class ChartQueryExecutor {
     private static final String LABEL_KEY = "label";
     private static final String SERIES_KEY = "series";
     private static final String VALUE_KEY = "value";
+
+    private static final String SCOPE_FAMILY = " AND e.family_id = ?";
+    private static final String SCOPE_USER = " AND e.user_id = ?";
 
     public ChartQueryResult execute(ChartQueryIntent intent, List<String> expandedCategories, List<String> expandedLocations) {
         validateIntent(intent);
@@ -59,6 +63,17 @@ public class ChartQueryExecutor {
 
         List<Object> params = new ArrayList<>();
         applyFilters(sql, params, intent, expandedCategories, expandedLocations);
+
+        Long[] scope = securityService.resolveScope();
+        Long familyId = scope[0];
+        Long userId = scope[1];
+        if (familyId != null) {
+            sql.append(SCOPE_FAMILY);
+            params.add(familyId);
+        } else if (userId != null) {
+            sql.append(SCOPE_USER);
+            params.add(userId);
+        }
 
         sql.append("GROUP BY ").append(labelExpression);
         if (seriesExpression != null) {

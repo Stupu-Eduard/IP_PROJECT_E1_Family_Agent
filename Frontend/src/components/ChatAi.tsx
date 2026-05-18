@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, X, MessageSquare } from 'lucide-react';
+import axios from 'axios';
 import { api } from '../services/api';
 import AgentResponseRenderer from './AgentResponseRenderer';
 import type { AgentResponse } from '../types/AgentResponseDTO';
@@ -24,6 +25,16 @@ const ChatAI: React.FC = () => {
     const [input,    setInput]    = useState('');
     const [isTyping, setIsTyping] = useState(false);
 
+    // ── AbortController for cancelling pending requests ──────────────────
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort();
+            abortControllerRef.current = null;
+        };
+    }, []);
+
     // ── Auto-scroll ───────────────────────────────────────────────────────
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); };
@@ -32,7 +43,12 @@ const ChatAI: React.FC = () => {
     // ── handleSend ────────────────────────────────────────────────────────
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || isTyping) return;
+        if (!input.trim()) return;
+
+        // Abort any pending request before starting a new one
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         const userMsg: ChatMessage = {
             id: Date.now(),
@@ -44,7 +60,9 @@ const ChatAI: React.FC = () => {
         setIsTyping(true);
 
         try {
-            const { data } = await api.post('/v1/agent/chat', { message: input });
+            const { data } = await api.post('/v1/chat', { message: input }, { signal: controller.signal });
+            // Ignore stale responses if a newer request has already started
+            if (abortControllerRef.current !== controller) return;
             // Backend-ul returnează direct AgentResponse (text/chart/map).
             // Dacă payload-ul e malformat, AgentResponseRenderer afișează fallback elegant.
             setMessages(prev => [...prev, {
@@ -53,6 +71,11 @@ const ChatAI: React.FC = () => {
                 sender: 'bot',
             }]);
         } catch (error: any) {
+            // Don't show error for user-cancelled requests
+            if (axios.isCancel(error)) {
+                return;
+            }
+
             console.error('Chat API error:', error);
 
             // 401 este deja gestionat de interceptorul din services/api.ts
@@ -67,7 +90,10 @@ const ChatAI: React.FC = () => {
                 sender: 'bot',
             }]);
         } finally {
-            setIsTyping(false);
+            // Only clear typing indicator if this is still the current request
+            if (abortControllerRef.current === controller) {
+                setIsTyping(false);
+            }
         }
     };
 
@@ -268,7 +294,6 @@ const ChatAI: React.FC = () => {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            disabled={isTyping}
                             placeholder={isTyping ? 'Agentul scrie...' : 'Întreabă ceva...'}
                             className="input"
                             style={{
@@ -282,7 +307,7 @@ const ChatAI: React.FC = () => {
                         />
                         <button
                             type="submit"
-                            disabled={!input.trim() || isTyping}
+                            disabled={!input.trim()}
                             style={{
                                 width: 34, height: 34,
                                 background: 'var(--color-ink)',

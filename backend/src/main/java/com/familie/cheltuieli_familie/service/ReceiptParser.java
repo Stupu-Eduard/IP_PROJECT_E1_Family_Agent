@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Service
 @Slf4j
@@ -90,40 +91,103 @@ public class ReceiptParser {
 
     private String normalizeText(String text) {
         if (text == null) return null;
-        return text.trim();
+        String normalized = text.trim();
+        normalized = normalizeStoreName(normalized);
+        return normalized;
+    }
+
+    private record OcrRule(String replacement, Predicate<String> condition) {}
+
+    private static final List<OcrRule> OCR_RULES = List.of(
+            new OcrRule("Lidl", s -> containsAny(s, "l1dl", "l1d1", "lid1")),
+            new OcrRule("Kaufland", s -> containsAny(s, "kauflard", "kauf1and", "kaufl@nd")),
+            new OcrRule("Mega Image", s -> containsAny(s, "mega 1mage", "mega lmage", "mega1mage")),
+            new OcrRule("Carrefour", s -> containsAny(s, "carref0ur", "carrefour")),
+            new OcrRule("Penny", s -> (s.contains("peny") || s.contains("p3nny")) && !s.contains("penny market") && s.length() <= 6),
+            new OcrRule("Auchan", s -> containsAny(s, "auch@n", "auch4n")),
+            new OcrRule("Profi", s -> containsAny(s, "pr0fi", "prof1")),
+            new OcrRule("Selgros", s -> containsAny(s, "s3lgros", "se1gros")),
+            new OcrRule("Catena", s -> containsAny(s, "c@tena", "cat3na")),
+            new OcrRule("Sensiblu", s -> containsAny(s, "sens1b1u", "sensib1u")),
+            new OcrRule("Dona", s -> s.contains("d0na") && s.length() <= 5),
+            new OcrRule("Petrom", s -> containsAny(s, "p3trom", "petr0m")),
+            new OcrRule("Rompetrol", s -> s.contains("r0mpetr0l")),
+            new OcrRule("OMV", s -> s.contains("0mv") && s.length() <= 5)
+    );
+
+    private static boolean containsAny(String text, String... patterns) {
+        for (String pattern : patterns) {
+            if (text.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeStoreName(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String lower = text.toLowerCase();
+        for (OcrRule rule : OCR_RULES) {
+            if (rule.condition().test(lower)) {
+                return rule.replacement();
+            }
+        }
+        return text;
     }
 
     private String stripMarkdownFences(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        if (trimmed.startsWith("```")) {
-            trimmed = trimmed.replaceFirst("```json\\s*", "").replaceFirst("```\\s*", "");
-            int lastFence = trimmed.lastIndexOf("```");
-            if (lastFence >= 0) trimmed = trimmed.substring(0, lastFence).trim();
-        }
-        return trimmed;
+        return com.familie.cheltuieli_familie.util.MarkdownUtil.stripMarkdownFences(raw);
     }
 
     public interface ReceiptExtractor {
         @SystemMessage("""
-            Ești un parser inteligent de bonuri fiscale și extrase bancare. Extrage informațiile structurate din textul OCR furnizat.
+            Ești un parser inteligent de bonuri fiscale românești și extrase bancare. Primești text brut provenit din OCR și trebuie să extragi informațiile structurate. Textul OCR poate fi fragmentat, murdar sau conține erori de recunoaștere a caracterelor.
 
-            Reguli:
-            1. Identifică numele magazinului/băncii (storeName) - de obicei în partea de sus a bonului.
-            2. Identifică suma totală (totalAmount) - caută "TOTAL", "SUMĂ", "TOTAL DE PLATĂ".
-            3. Identifică data (date) - în format dd/MM/yyyy sau similar.
+            REGULI GENERALE:
+            1. Identifică numele magazinului/băncii (storeName) - apare de obicei în partea de sus a bonului. Corectează automat erorile OCR comune.
+            2. Identifică suma totală (totalAmount) - caută "TOTAL", "SUMĂ", "TOTAL DE PLATĂ", "PLATĂ", "DE PLATĂ". Ignoră subtotalurile parțiale.
+            3. Identifică data (date) - poate fi în orice format românesc cunoscut (dd/MM/yyyy, dd.MM.yyyy, yyyy-MM-dd, dd-MM-yyyy). Dacă anul are doar 2 cifre, presupune 20xx.
             4. Identifică categoria (category) - inferă din tipul magazinului sau articolelor:
-               - Supermarketuri (Lidl, Kaufland, Mega Image, Carrefour) → "Mâncare"
-               - Benzinării (OMV, Petrom, Rompetrol, Shell) → "Transport"
-               - Farmacii (Catena, Sensiblu, Dona) → "Sănătate"
-               - Restaurante, cafenele → "Divertisment"
-               - Magazine de haine (H&M, Zara, etc.) → "Haine"
-               - Facturi utilități → "Utilități"
+               - Supermarketuri (Lidl, Kaufland, Mega Image, Carrefour, Penny, Auchan, Profi, Selgros) → "Mâncare"
+               - Benzinării (OMV, Petrom, Rompetrol, Shell, Lukoil, MOL) → "Transport"
+               - Farmacii (Catena, Sensiblu, Dona, Help Net, Farmacia Tei) → "Sănătate"
+               - Restaurante, fast-food, cafenele → "Divertisment"
+               - Magazine de haine (H&M, Zara, C&A, Deichmann, CCC) → "Haine"
+               - Facturi utilități (electrică, gaze, apă, internet) → "Utilități"
                - Dacă nu ești sigur, folosește "Diverse"
-            5. Lista de articole (items) este opțională.
+            5. Lista de articole (items) este opțională. Extrage doar dacă este clară.
 
-            Răspunde EXCLUSIV cu un JSON valid, fără markdown, fără explicații suplimentare.
-            Format:
+            CORECȚII OCR OBLIGATORII - normalizează numele magazinului:
+            - "L1dl", "Lidl", "L1d1" → "Lidl"
+            - "Kauflard", "Kaufl@nd", "Kauf1and" → "Kaufland"
+            - "Mega 1mage", "Mega lmage", "Mega1mage" → "Mega Image"
+            - "Carref0ur", "Carrefour", "CarrefOur" → "Carrefour"
+            - "Peny", "Penny", "P3nny" → "Penny"
+            - "Auch@n", "Auchan", "Auch4n" → "Auchan"
+            - "Pr0fi", "Prof1", "Profi" → "Profi"
+            - "S3lgros", "Se1gros", "Selgros" → "Selgros"
+            - "0MV", "OMV" → "OMV"
+            - "P3trom", "Petrom", "Petr0m" → "Petrom"
+            - "R0mpetr0l", "Rompetrol" → "Rompetrol"
+            - "C@tena", "Cat3na", "Catena" → "Catena"
+            - "Sens1b1u", "Sensiblu" → "Sensiblu"
+            - "D0na", "Dona" → "Dona"
+
+            SUBSTITUȚII FRECVENTE DE CARACTERE (aplică-le când interpretezi textul):
+            - Cifra "1" poate fi litera mică "l" sau mare "I" sau "L"
+            - Cifra "0" poate fi litera "O" (mare) sau "o" (mică)
+            - Cifra "5" poate fi litera "S" (mare) sau "s" (mică)
+            - Cifra "8" poate fi litera "B" (mare) sau "b" (mică)
+            - Simbolul "@" poate fi litera "a" sau "A"
+            - Cifra "3" poate fi litera mică "e" sau "E" (contextual)
+            - Cifra "4" poate fi litera "A" sau "h" (contextual)
+            - Litera "m" mică poate fi interpretată greșit ca "rn" sau "n"
+            - Textul de pe bonurile termice poate fi fragmentat, cu rânduri rupte sau spații ciudate - reconstruiește cuvintele logic.
+
+            Răspunde EXCLUSIV cu un JSON valid, fără markdown, fără explicații suplimentare. Nu adăuga text înainte sau după JSON.
+            Format exact:
             {
               "storeName": "string",
               "totalAmount": "number",

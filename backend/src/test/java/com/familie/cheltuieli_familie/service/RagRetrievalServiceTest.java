@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,28 +26,33 @@ class RagRetrievalServiceTest {
     @Mock
     private LlmRouterService llmRouterService;
 
+    @Mock
+    private SecurityService securityService;
+
     @InjectMocks
     private RagRetrievalService ragRetrievalService;
 
     @Test
-    void askWithContext_shouldDelegateRawQueryToLlmRouterService() {
+    void askWithContext_shouldDelegateAugmentedQueryToLlmRouterService() {
         String query = "How much did I spend?";
         String expectedAnswer = "You spent 500 RON.";
 
-        when(llmRouterService.routeAndChat(query)).thenReturn(expectedAnswer);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(llmRouterService.routeAndChat(anyString())).thenReturn(expectedAnswer);
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any())).thenReturn(Collections.emptyList());
 
         String result = ragRetrievalService.askWithContext(query);
 
         assertEquals(expectedAnswer, result);
-        verify(llmRouterService).routeAndChat(query);
-        // Qdrant search is now handled internally by the RagAssistant's RetrievalAugmentor
-        verifyNoInteractions(qdrantVectorService);
+        verify(llmRouterService).routeAndChat(contains(query));
+        verify(qdrantVectorService).searchSimilar(query, 10, null, 1L);
     }
 
     @Test
     void retrieveContext_shouldReturnNoResultsMessage_whenEmpty() {
         String query = "Find something";
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(Collections.emptyList());
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(query, 10, null, 1L)).thenReturn(Collections.emptyList());
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 
@@ -74,7 +81,8 @@ class RagRetrievalServiceTest {
                         .build()
         );
 
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(query, 10, null, 1L)).thenReturn(results);
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 
@@ -100,7 +108,8 @@ class RagRetrievalServiceTest {
                         .build())
                 .toList();
 
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(query, 10, null, 1L)).thenReturn(results);
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 
@@ -118,7 +127,8 @@ class RagRetrievalServiceTest {
                 EmbeddedExpense.builder().category("mid").score(0.75).amount(BigDecimal.ZERO).build()
         );
 
-        when(qdrantVectorService.searchSimilar(query, 10)).thenReturn(results);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(query, 10, null, 1L)).thenReturn(results);
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 

@@ -2,10 +2,12 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.service.AnalyticsAssistant;
 import com.familie.cheltuieli_familie.service.ReportService;
+import com.familie.cheltuieli_familie.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,9 +23,11 @@ public class AnalyticsController {
     private final ReportService reportService;
 
     @PostMapping("/query")
-    public ResponseEntity<String> query(@RequestBody String userMessage) {
+    public ResponseEntity<String> query(@RequestBody String userMessage, Authentication authentication) {
         log.info("Received analytics query: {}", userMessage);
-        String response = analyticsAssistant.chat(userMessage, LocalDate.now().toString());
+        String identityBlock = buildIdentityBlock(authentication);
+        String augmentedMessage = identityBlock + userMessage;
+        String response = analyticsAssistant.chat(augmentedMessage, LocalDate.now().toString());
         return ResponseEntity.ok(response);
     }
 
@@ -32,5 +36,12 @@ public class AnalyticsController {
         log.info("Requesting narrative report for {}/{}", month, year);
         String report = reportService.generateNarrativeReport(year, month);
         return ResponseEntity.ok(report);
+    }
+
+    private String buildIdentityBlock(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User user)) {
+            return "";
+        }
+        return String.format("[IDENTITATE_AUTENTIFICATA: nume='%s', user_id=%d] ", user.getName(), user.getId());
     }
 }
