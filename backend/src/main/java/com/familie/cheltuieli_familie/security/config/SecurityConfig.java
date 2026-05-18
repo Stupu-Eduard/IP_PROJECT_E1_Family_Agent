@@ -31,7 +31,7 @@ public class SecurityConfig {
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    @Value("#{'${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://family-agent.me,https://www.family-agent.me}'.split(',')}")
     private List<String> allowedOrigins;
 
     @Bean
@@ -98,13 +98,19 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(allowedOrigins);
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
 
-        // Permite orice headere trimise de frontend
-        configuration.setAllowedHeaders(List.of("*"));
+
+        // Permite headerele necesare
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        
+        // Expunem headerul Authorization pentru ca frontendul sa poata citi tokenul daca e cazul
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Link", "X-Total-Count"));
 
         // Crucial pentru WebSockets si SSE ca sa isi mentina conexiunea deschisa
         configuration.setAllowCredentials(true);
+        
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // Aplica aceste reguli pe absolut toate rutele aplicației

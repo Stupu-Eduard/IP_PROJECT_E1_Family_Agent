@@ -24,7 +24,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/expenses")
-@CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 public class ExpenseController {
 
     private static final String ROLE_PARENT    = "ROLE_PARENT";
