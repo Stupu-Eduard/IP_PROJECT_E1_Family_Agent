@@ -20,6 +20,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.familie.cheltuieli_familie.service.CloudinaryService;
+import org.springframework.security.core.Authentication;
+import com.familie.cheltuieli_familie.model.User;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/extract")
@@ -30,6 +34,8 @@ public class ExtractionController {
     private final ExtractionService extractionService;
 
     private final ExtractionPipelineService orchestrator;
+    
+    private final CloudinaryService cloudinaryService;
 
     @PostMapping
     public ResponseEntity<List<ExtractionResponse>> extractDetails(@Valid @RequestBody ExtractionRequest request) {
@@ -53,15 +59,30 @@ public class ExtractionController {
     @PostMapping("/process")
     public ResponseEntity<List<Transaction>> processDocument(
             @RequestParam("file") MultipartFile multipartFile,
-            @RequestParam("bank") String bank) throws Exception {
+            @RequestParam("bank") String bank,
+            Authentication authentication) throws Exception {
 
         File tempFile = null;
 
         try {
             tempFile = createSecureTempFile("upload_", ".pdf");
             multipartFile.transferTo(tempFile);
+            
+            String cloudinaryUrl = null;
+            if (authentication != null && authentication.getPrincipal() instanceof User user) {
+                String folder = "receipts/" + java.time.LocalDate.now().toString().substring(0, 7);
+                String publicId = "extract_" + user.getId() + "_" + System.currentTimeMillis();
+                cloudinaryUrl = cloudinaryService.uploadFile(tempFile, folder, publicId);
+            }
 
             List<Transaction> transactions = orchestrator.processDocument(tempFile, bank);
+            
+            if (cloudinaryUrl != null) {
+                for (Transaction t : transactions) {
+                    t.setReceiptUrl(cloudinaryUrl);
+                }
+            }
+            
             return ResponseEntity.ok(transactions);
 
         } catch (Exception e) {

@@ -77,19 +77,21 @@ public class OcrController {
 
         try {
             File file = tempFilePath.toFile();
+            
+            // Upload to Cloudinary FIRST so we have the photo even if OCR fails
+            String cloudinaryUrl = uploadReceipt(file, user);
+            
             OcrResult ocrResult = extractOcrText(file, extension, originalName);
             String ocrText = ocrResult.text();
             double confidence = ocrResult.confidence();
             ReceiptParser.ParsedReceipt receipt = receiptParser.parseReceipt(ocrText);
 
             if (receipt == null) {
-                log.warn("Receipt parsing failed for file: {}", originalName);
-                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, null, Collections.emptyList()));
+                log.warn("Receipt parsing failed for file: {}. Image stored at: {}", originalName, cloudinaryUrl);
+                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, cloudinaryUrl, Collections.emptyList()));
             }
 
             Category category = resolveCategory(receipt.getCategory());
-            
-            String cloudinaryUrl = uploadReceipt(file, user);
 
             log.info("OCR parsed: amount={} category={} store={} date={} items={} url={}",
                     receipt.getTotalAmount(),
