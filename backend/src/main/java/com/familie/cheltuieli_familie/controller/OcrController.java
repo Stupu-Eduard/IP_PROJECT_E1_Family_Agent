@@ -92,6 +92,7 @@ public class OcrController {
             }
 
             Category category = resolveCategory(receipt.getCategory());
+            Location location = resolveLocation(receipt.getStoreName());
 
             log.info("OCR parsed: amount={} category={} store={} date={} items={} url={}",
                     receipt.getTotalAmount(),
@@ -101,8 +102,12 @@ public class OcrController {
                     receipt.getItems().size(),
                     cloudinaryUrl);
 
+            Expense saved = saveExpense(receipt, category, location, user, cloudinaryUrl, ocrText);
+            saveExpenseItems(saved, receipt.getItems(), category);
+            publishSyncEvent(saved, ocrText);
+
             return ResponseEntity.ok(new OcrResponseDTO(
-                    receipt.getTotalAmount(),
+                    saved.getAmount(),
                     category != null ? category.getName() : null,
                     receipt.getDate(),
                     receipt.getStoreName(),
