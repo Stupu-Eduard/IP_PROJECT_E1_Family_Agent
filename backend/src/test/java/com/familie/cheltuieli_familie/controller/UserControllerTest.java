@@ -3,6 +3,8 @@ package com.familie.cheltuieli_familie.controller;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.ExpenseRepository;
+import com.familie.cheltuieli_familie.repository.FamilyInvitationRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
@@ -27,6 +29,8 @@ import static org.mockito.Mockito.*;
 
 class UserControllerTest {
 
+    private ExpenseRepository expenseRepository;
+    private FamilyInvitationRepository familyInvitationRepository;
     private UserRepository userRepository;
     private FamilyMemberRepository familyMemberRepository;
     private FamilyRepository familyRepository;
@@ -39,6 +43,8 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
+        expenseRepository = mock(ExpenseRepository.class);
+        familyInvitationRepository = mock(FamilyInvitationRepository.class);
         userRepository = mock(UserRepository.class);
         familyMemberRepository = mock(FamilyMemberRepository.class);
         familyRepository = mock(FamilyRepository.class);
@@ -46,7 +52,8 @@ class UserControllerTest {
         jwtUtil = mock(JwtUtil.class);
 
         controller = new UserController(
-                userRepository, familyMemberRepository, familyRepository,
+                expenseRepository, userRepository, familyMemberRepository,
+                familyInvitationRepository, familyRepository,
                 blacklistService, jwtUtil
         );
 
