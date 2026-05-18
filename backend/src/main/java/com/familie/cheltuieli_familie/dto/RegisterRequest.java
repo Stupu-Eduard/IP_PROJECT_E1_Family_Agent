@@ -16,5 +16,14 @@ public class RegisterRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
+    @NotBlank(message = "Favorite animal is required")
+    private String favoriteAnimal;
+
+    @NotBlank(message = "Favorite color is required")
+    private String favoriteColor;
+
+    @NotBlank(message = "Childhood street is required")
+    private String childhoodStreet;
+
     private String role;
 }

@@ -1,17 +1,34 @@
 import { useState } from 'react';
 import * as yup from 'yup';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
 
 // ── Schema validare (NEATINSĂ) ─────────────────────────────────────────────
 const resetSchema = yup.object().shape({
     email: yup.string().required('Adresa de email este obligatorie.').email('Email invalid.'),
+    question1: yup.string().required('Alege prima întrebare.'),
+    answer1: yup.string().required('Răspunsul 1 este obligatoriu.'),
+    question2: yup.string().required('Alege a doua întrebare.'),
+    answer2: yup.string().required('Răspunsul 2 este obligatoriu.'),
 });
 
 export default function ForgotPassword() {
+    const navigate = useNavigate();
+
     // ── State (NEATINS) ────────────────────────────────────────────────────
     const [email,   setEmail]   = useState('');
+    const [question1, setQuestion1] = useState('');
+    const [answer1, setAnswer1] = useState('');
+    const [question2, setQuestion2] = useState('');
+    const [answer2, setAnswer2] = useState('');
     const [status,  setStatus]  = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
+
+    const questionOptions = [
+        { value: 'ANIMAL', label: 'Care este animalul tău preferat?' },
+        { value: 'COLOR', label: 'Care este culoarea ta preferată?' },
+        { value: 'STREET', label: 'Pe ce stradă ai locuit în copilărie?' },
+    ];
 
     // ── handleReset (NEATINS) ──────────────────────────────────────────────
     const handleReset = async (e: React.FormEvent) => {
@@ -19,11 +36,28 @@ export default function ForgotPassword() {
         setStatus('idle');
         setMessage('');
         try {
-            await resetSchema.validate({ email });
+            await resetSchema.validate({ email, question1, answer1, question2, answer2 });
+            if (question1 === question2) {
+                throw new Error('Întrebările trebuie să fie diferite.');
+            }
             setStatus('loading');
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await api.post('/api/v1/auth/forgot-password', {
+                email,
+                question1,
+                answer1,
+                question2,
+                answer2,
+            });
+            sessionStorage.setItem('resetPayload', JSON.stringify({
+                email,
+                question1,
+                answer1,
+                question2,
+                answer2,
+            }));
             setStatus('success');
-            setMessage('Dacă adresa există în sistem, vei primi un link pentru resetarea parolei.');
+            setMessage('Verificare reușită.');
+            navigate('/reset-password', { replace: true });
         } catch (err: any) {
             setStatus('error');
             setMessage(err.message);
@@ -84,7 +118,7 @@ export default function ForgotPassword() {
                     </h1>
 
                     <p style={{ fontSize: 16, color: 'var(--color-muted)', lineHeight: 1.55, margin: '0 0 32px', maxWidth: 380 }}>
-                        Toți uităm parole. Îți trimitem un link sigur pe email — funcționează 30 de minute.
+                        Confirmă identitatea ta răspunzând la două întrebări de securitate.
                     </p>
 
                     {/* Card info */}
@@ -103,9 +137,9 @@ export default function ForgotPassword() {
                             </svg>
                         </div>
                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 2 }}>Link securizat</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 2 }}>Verificare securizată</div>
                             <div style={{ fontSize: 12, color: 'var(--color-muted)', lineHeight: 1.5 }}>
-                                Linkul expiră în 30 de minute și poate fi folosit o singură dată.
+                                Ai nevoie de două răspunsuri corecte pentru a continua.
                             </div>
                         </div>
                     </div>
@@ -155,6 +189,64 @@ export default function ForgotPassword() {
                             />
                         </div>
 
+                        <div className="label" style={{ fontSize: 10, margin: '16px 0 6px' }}>
+                            ÎNTREBĂRI DE SECURITATE
+                        </div>
+
+                        {/* Întrebarea 1 */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>ÎNTREBAREA 1</div>
+                            <select
+                                value={question1}
+                                onChange={(e) => setQuestion1(e.target.value)}
+                                disabled={status === 'success' || status === 'loading'}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 16, color: 'var(--color-ink)', padding: 0 }}
+                            >
+                                <option value="">Alege o întrebare</option>
+                                {questionOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Răspuns 1 */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>RĂSPUNS 1</div>
+                            <input
+                                type="text" value={answer1}
+                                onChange={(e) => setAnswer1(e.target.value)}
+                                placeholder="ex: pisica" disabled={status === 'success' || status === 'loading'}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
+                        {/* Întrebarea 2 */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>ÎNTREBAREA 2</div>
+                            <select
+                                value={question2}
+                                onChange={(e) => setQuestion2(e.target.value)}
+                                disabled={status === 'success' || status === 'loading'}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 16, color: 'var(--color-ink)', padding: 0 }}
+                            >
+                                <option value="">Alege o întrebare</option>
+                                {questionOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Răspuns 2 */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>RĂSPUNS 2</div>
+                            <input
+                                type="text" value={answer2}
+                                onChange={(e) => setAnswer2(e.target.value)}
+                                placeholder="ex: albastru" disabled={status === 'success' || status === 'loading'}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
                         <button
                             type="submit"
                             disabled={status === 'success' || status === 'loading'}
@@ -166,7 +258,7 @@ export default function ForgotPassword() {
                                 cursor: status === 'success' ? 'not-allowed' : 'pointer',
                             }}
                         >
-                            <span>{status === 'loading' ? 'Se procesează...' : status === 'success' ? 'Link trimis!' : 'Trimite link de resetare'}</span>
+                            <span>{status === 'loading' ? 'Se procesează...' : status === 'success' ? 'Verificat!' : 'Continuă resetarea'}</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M5 12h14"/><path d="m13 5 7 7-7 7"/>
                             </svg>
