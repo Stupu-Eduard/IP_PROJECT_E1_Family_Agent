@@ -159,6 +159,10 @@ public class ExpenseController {
         expense.setDescription(request.getDescription());
         expense.setExpenseDate(request.getDate().atStartOfDay());
         expense.setCategory(category);
+        expense.setReceiptUrl(request.getReceiptUrl());
+        if (request.getReceiptUrl() != null) {
+            expense.setSourceType("OCR");
+        }
 
         updateLocationFromRequest(expense, request);
 
