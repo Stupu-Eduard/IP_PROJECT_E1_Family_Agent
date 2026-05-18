@@ -7,12 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Method;
@@ -39,15 +39,15 @@ class AnalyticsControllerTest {
     @MockBean
     private AnalyticsAssistant analyticsAssistant;
 
-    @MockitoBean
+    @MockBean
     private ReportService reportService;
 
-    @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testQuery() throws Exception {
-        when(analyticsAssistant.chat(anyString())).thenReturn("Ai cheltuit 100 lei.");
+        when(analyticsAssistant.chat(anyString(), anyString())).thenReturn("Ai cheltuit 100 lei.");
 
         mockMvc.perform(post("/v1/analytics/query")
                         .contentType(MediaType.APPLICATION_JSON)

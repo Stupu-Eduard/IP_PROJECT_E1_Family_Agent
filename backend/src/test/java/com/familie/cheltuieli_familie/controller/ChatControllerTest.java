@@ -1,15 +1,18 @@
 package com.familie.cheltuieli_familie.controller;
 
-import com.familie.cheltuieli_familie.service.RagRetrievalService;
+import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
+import com.familie.cheltuieli_familie.service.AgentChatService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -22,22 +25,24 @@ class ChatControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private RagRetrievalService ragRetrievalService;
+    @MockBean
+    private AgentChatService agentChatService;
 
-    @MockitoBean
-    private com.familie.cheltuieli_familie.security.filter.SessionCookieFilter sessionCookieFilter;
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
-    void testChat_returnsReply() throws Exception {
-        when(ragRetrievalService.askWithContext("Cat am cheltuit luna aceasta?"))
-                .thenReturn("Ai cheltuit 1248 de lei luna aceasta.");
+    void testChat_returnsTextResponse() throws Exception {
+        when(agentChatService.processQuery("Cat am cheltuit luna aceasta?"))
+                .thenReturn(new TextResponseDTO("Ai cheltuit 1248 de lei luna aceasta."));
 
         mockMvc.perform(post("/v1/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\": \"Cat am cheltuit luna aceasta?\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.reply").value("Ai cheltuit 1248 de lei luna aceasta."));
+                .andExpect(jsonPath("$.type").value("text"))
+                .andExpect(jsonPath("$.text").value("Ai cheltuit 1248 de lei luna aceasta."))
+                .andExpect(jsonPath("$.message").value("Ai cheltuit 1248 de lei luna aceasta."));
     }
 
     @Test
@@ -54,5 +59,12 @@ class ChatControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testChat_requiresAuthentication() {
+        PreAuthorize preAuthorize = ChatController.class.getAnnotation(PreAuthorize.class);
+        assertNotNull(preAuthorize, "ChatController should have @PreAuthorize");
+        assertEquals("isAuthenticated()", preAuthorize.value());
     }
 }
