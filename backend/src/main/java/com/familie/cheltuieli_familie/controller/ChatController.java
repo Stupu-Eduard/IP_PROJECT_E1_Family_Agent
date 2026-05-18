@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/chat")
-@CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 @Slf4j
 @RequiredArgsConstructor
 @PreAuthorize("isAuthenticated()")

@@ -100,6 +100,7 @@ public class SecurityConfig {
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
 
+
         // Permite orice headere trimise de frontend
         configuration.setAllowedHeaders(List.of("*"));
 

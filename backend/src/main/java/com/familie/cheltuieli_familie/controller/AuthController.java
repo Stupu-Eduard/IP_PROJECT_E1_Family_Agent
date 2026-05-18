@@ -30,7 +30,6 @@ import java.util.HashMap;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class AuthController {
 
     private static final String ROLE_PARENT  = "Parent";
