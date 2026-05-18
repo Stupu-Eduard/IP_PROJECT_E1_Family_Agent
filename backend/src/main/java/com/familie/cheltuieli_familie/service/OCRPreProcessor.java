@@ -31,7 +31,13 @@ public class OCRPreProcessor {
 
     private static synchronized void ensureOpenCvLoaded() {
         if (!openCvLoaded) {
-            OpenCV.loadLocally();
+            try {
+                System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+                logger.info("Loaded system OpenCV library: {}", org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+            } catch (UnsatisfiedLinkError e) {
+                logger.warn("Failed to load system OpenCV, attempting local load as fallback: {}", e.getMessage());
+                OpenCV.loadLocally();
+            }
             openCvLoaded = true;
         }
     }
