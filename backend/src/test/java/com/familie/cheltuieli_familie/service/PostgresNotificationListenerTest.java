@@ -43,7 +43,7 @@ class PostgresNotificationListenerTest {
         when(connection.getMetaData()).thenReturn(metaData);
         when(metaData.getDriverName()).thenReturn("H2 Driver");
 
-        listener.listenToEvents();
+        listener.listenToLocationUpdates();
 
         verify(connection, never()).unwrap(PGConnection.class);
     }
@@ -59,7 +59,7 @@ class PostgresNotificationListenerTest {
         // Simulate interruption to exit the loop immediately
         Thread.currentThread().interrupt();
 
-        listener.listenToEvents();
+        listener.listenToLocationUpdates();
 
         verify(statement).execute("LISTEN location_updates");
         verify(statement).execute("LISTEN general_notifications");
@@ -69,7 +69,7 @@ class PostgresNotificationListenerTest {
     void listenToEvents_ShouldLogAndRecover_WhenExceptionOccurs() throws Exception {
         when(dataSource.getConnection()).thenThrow(new RuntimeException("DB Down"));
 
-        listener.listenToEvents();
+        listener.listenToLocationUpdates();
 
         // Should not crash, just log error
         verify(dataSource).getConnection();
