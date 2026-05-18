@@ -38,13 +38,14 @@ import java.util.Optional;
 @Slf4j
 public class AuthController {
 
-    private static final String ROLE_PARENT  = "Parent";
-    private static final String ROLE_CHILD   = "Child";
-    private static final String MSG_KEY      = "message";
-    private static final String ERR_KEY      = "error";
-    private static final String TOKEN_KEY    = "token";
-    private static final String USER_ID_KEY  = "userId";
-    private static final String FAMILY_ID_KEY = "familyId";
+    private static final String ROLE_PARENT    = "Parent";
+    private static final String ROLE_CHILD     = "Child";
+    private static final String MSG_KEY        = "message";
+    private static final String ERR_KEY        = "error";
+    private static final String TOKEN_KEY      = "token";
+    private static final String USER_ID_KEY    = "userId";
+    private static final String FAMILY_ID_KEY  = "familyId";
+    private static final String FAMILY_NAME_KEY = "familyName";
 
     private final UserRepository userRepository;
     private final AnswerRepository answerRepository;
@@ -77,7 +78,7 @@ public class AuthController {
             
             if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
                 claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
-                claims.put("familyName", memberships.get(0).getFamily().getName());
+                claims.put(FAMILY_NAME_KEY, memberships.get(0).getFamily().getName());
             }
 
             String token = jwtUtil.generateToken(user.getEmail(), claims);
@@ -144,7 +145,7 @@ public class AuthController {
             familyMemberRepository.save(member);
 
             claims.put(FAMILY_ID_KEY, savedFamily.getId());
-            claims.put("familyName", savedFamily.getName());
+            claims.put(FAMILY_NAME_KEY, savedFamily.getName());
             log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), savedFamily.getId());
         }
 
@@ -199,7 +200,7 @@ public class AuthController {
         claims.put("name", user.getName());
         if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
             claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
-            claims.put("familyName", memberships.get(0).getFamily().getName());
+            claims.put(FAMILY_NAME_KEY, memberships.get(0).getFamily().getName());
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);
