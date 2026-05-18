@@ -244,8 +244,6 @@ public class OCRPreProcessor {
         gray.release();
 
         return result;
-
-        return result;
     }
 
     public List<BufferedImage> processPdf(File pdfFile, String bank) throws IOException {
