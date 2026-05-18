@@ -1,7 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.model.Category;
-import com.familie.cheltuieli_familie.model.ExpenseItem;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;

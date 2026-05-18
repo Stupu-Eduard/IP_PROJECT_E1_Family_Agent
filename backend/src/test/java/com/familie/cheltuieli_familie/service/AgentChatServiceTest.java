@@ -14,8 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.Collections;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -58,7 +56,7 @@ class AgentChatServiceTest {
     }
 
     @Test
-    void stripMarkdown_shouldRemoveCommonFormatting() {
+    void stripMarkdown_shouldRemoveCodeFencesOnly() {
         String markdown = """
             # Header
             ## Subheader
@@ -75,12 +73,12 @@ class AgentChatServiceTest {
         
         String result = AgentChatService.stripMarkdown(markdown);
         
-        assertFalse(result.contains("#"));
-        assertFalse(result.contains("|"));
         assertFalse(result.contains("```"));
-        assertTrue(result.contains("Header"));
-        assertTrue(result.contains("bold"));
-        assertTrue(result.contains("list item"));
+        assertTrue(result.contains("# Header"));
+        assertTrue(result.contains("| col |"));
+        assertTrue(result.contains("**bold**"));
+        assertTrue(result.contains("- list item"));
+        assertTrue(result.contains("1. numbered item"));
     }
 
     @Test

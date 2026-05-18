@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/extract")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class ExtractionController {
 
     private final ExtractionService extractionService;
@@ -59,7 +61,7 @@ public class ExtractionController {
             tempFile = createSecureTempFile("upload_", ".pdf");
             multipartFile.transferTo(tempFile);
 
-            List<Transaction> transactions = orchestrator.processDocument(tempFile);
+            List<Transaction> transactions = orchestrator.processDocument(tempFile, bank);
             return ResponseEntity.ok(transactions);
 
         } catch (Exception e) {

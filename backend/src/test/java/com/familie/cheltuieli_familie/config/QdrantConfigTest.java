@@ -59,6 +59,6 @@ class QdrantConfigTest {
         
         config.initializeCollection();
         
-        verify(mockRest, times(5)).put(anyString(), any());
+        verify(mockRest, times(7)).put(anyString(), any());
     }
 }

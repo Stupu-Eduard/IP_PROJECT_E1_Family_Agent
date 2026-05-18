@@ -35,6 +35,12 @@ public class ExpenseEntity {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "family_id")
+    private Long familyId;
+
+    @Column(name = "user_id")
+    private Long userId;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

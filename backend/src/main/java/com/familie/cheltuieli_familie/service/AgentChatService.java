@@ -32,17 +32,17 @@ public class AgentChatService {
                 return chartGenerationService.generate(intent);
             }
 
-            String cleanQuery = cleanQueryForRag(userContext + userMessage);
-            log.info("Cleaned query for RAG: {}", cleanQuery);
+            String query = userContext + userMessage;
+            log.info("Query for RAG: {}", query);
 
-            String textAnswer = ragRetrievalService.askWithContext(cleanQuery);
+            String textAnswer = ragRetrievalService.askWithContext(query);
             return toTextResponse(textAnswer);
 
         } catch (Exception e) {
             log.warn("Chart pipeline failed for query '{}', falling back to text RAG: {}",
                     userMessage, e.getMessage());
-            String cleanQuery = cleanQueryForRag(userContext + userMessage);
-            String textAnswer = ragRetrievalService.askWithContext(cleanQuery);
+            String query = userContext + userMessage;
+            String textAnswer = ragRetrievalService.askWithContext(query);
             return toTextResponse(textAnswer);
         }
     }
@@ -67,75 +67,6 @@ public class AgentChatService {
         return ctx.toString();
     }
 
-    private static final String[] STOP_WORDS = {
-            "salut", "buna", "te rog", "poti sa", "mi spui", "spune-mi",
-            "ceva despre", "am adaugat", "o cheltuiala", "despre",
-            "vreau sa stiu", "ai gasit"
-    };
-
-    /**
-     * Cleans user query by removing stop words and filler text for better semantic search.
-     */
-    private String cleanQueryForRag(String text) {
-        if (text == null || text.isBlank()) {
-            return text;
-        }
-        String cleaned = stripQuotes(text.trim());
-        cleaned = removeStopWords(cleaned);
-        return collapseSpaces(cleaned);
-    }
-
-    private static String stripQuotes(String text) {
-        String cleaned = text;
-        while (!cleaned.isEmpty() && isQuote(cleaned.charAt(0))) {
-            cleaned = cleaned.substring(1);
-        }
-        while (!cleaned.isEmpty() && isQuote(cleaned.charAt(cleaned.length() - 1))) {
-            cleaned = cleaned.substring(0, cleaned.length() - 1);
-        }
-        return cleaned;
-    }
-
-    private static boolean isQuote(char c) {
-        return c == '\'' || c == '"';
-    }
-
-    private static String removeStopWords(String text) {
-        String cleaned = text;
-        String lower = cleaned.toLowerCase();
-        for (String sw : STOP_WORDS) {
-            int idx = findWholeWord(lower, sw);
-            while (idx >= 0) {
-                cleaned = cleaned.substring(0, idx) + " " + cleaned.substring(idx + sw.length());
-                lower = cleaned.toLowerCase();
-                idx = findWholeWord(lower, sw);
-            }
-        }
-        return cleaned;
-    }
-
-    private static int findWholeWord(String text, String word) {
-        int idx = text.indexOf(word);
-        if (idx < 0) {
-            return -1;
-        }
-        boolean startBoundary = idx == 0 || !Character.isLetterOrDigit(text.charAt(idx - 1));
-        boolean endBoundary = idx + word.length() >= text.length()
-                || !Character.isLetterOrDigit(text.charAt(idx + word.length()));
-        if (startBoundary && endBoundary) {
-            return idx;
-        }
-        return -1;
-    }
-
-    private static String collapseSpaces(String text) {
-        String cleaned = text;
-        while (cleaned.contains("  ")) {
-            cleaned = cleaned.replace("  ", " ");
-        }
-        return cleaned.trim();
-    }
-
     private TextResponseDTO toTextResponse(String textAnswer) {
         if (textAnswer == null || textAnswer.isBlank()) {
             log.error("RAG pipeline returned null or blank text answer");
@@ -147,132 +78,17 @@ public class AgentChatService {
     }
 
     /**
-     * Strips common markdown formatting from LLM responses to ensure clean text output.
+     * Light markdown sanitizer: removes only code fences to prevent UI breakage,
+     * but preserves all other formatting (lists, bold, headers, tables, paragraphs).
      */
     static String stripMarkdown(String text) {
         if (text == null || text.isBlank()) {
             return text;
         }
         String cleaned = text;
-        cleaned = removeTables(cleaned);
-        cleaned = removeBoldItalic(cleaned);
-        cleaned = removeCodeBlocks(cleaned);
-        cleaned = removeHeaders(cleaned);
-        cleaned = removeListItems(cleaned);
-        return collapseNewlines(cleaned);
-    }
-
-    private static String removeTables(String text) {
-        StringBuilder noTables = new StringBuilder();
-        for (String line : text.split("\n", -1)) {
-            String t = line.trim();
-            if (!t.startsWith("|") || t.indexOf('|', 1) < 0) {
-                noTables.append(line).append("\n");
-            }
-        }
-        return noTables.toString();
-    }
-
-    private static String removeBoldItalic(String text) {
-        String cleaned = text.replace("**", "").replace("__", "");
-        cleaned = boundaryReplace(cleaned, '*');
-        cleaned = boundaryReplace(cleaned, '_');
-        return cleaned;
-    }
-
-    private static String removeCodeBlocks(String text) {
-        String cleaned = text.replace("```", "");
-        return removeBetween(cleaned, '`', '`');
-    }
-
-    private static String removeHeaders(String text) {
-        StringBuilder noHeaders = new StringBuilder();
-        for (String line : text.split("\n", -1)) {
-            String trimmed = line.trim();
-            int hashCount = countLeadingHashes(trimmed);
-            if (hashCount > 0 && hashCount < trimmed.length() && trimmed.charAt(hashCount) == ' ') {
-                noHeaders.append(trimmed.substring(hashCount + 1)).append("\n");
-            } else {
-                noHeaders.append(line).append("\n");
-            }
-        }
-        return noHeaders.toString();
-    }
-
-    private static int countLeadingHashes(String text) {
-        int count = 0;
-        while (count < text.length() && count < 6 && text.charAt(count) == '#') {
-            count++;
-        }
-        return count;
-    }
-
-    private static String removeListItems(String text) {
-        StringBuilder noLists = new StringBuilder();
-        for (String line : text.split("\n", -1)) {
-            String trimmed = line.trim();
-            if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ ")) {
-                noLists.append(line.substring(line.indexOf(trimmed) + 2)).append("\n");
-            } else if (isNumberedListItem(trimmed)) {
-                int dotIdx = trimmed.indexOf('.');
-                noLists.append(line.substring(line.indexOf(trimmed) + dotIdx + 1).trim()).append("\n");
-            } else {
-                noLists.append(line).append("\n");
-            }
-        }
-        return noLists.toString();
-    }
-
-    private static String collapseNewlines(String text) {
-        String cleaned = text;
-        while (cleaned.contains("\n\n")) {
-            cleaned = cleaned.replace("\n\n", "\n");
-        }
+        // Remove markdown code fences (```json, ```java, etc.)
+        cleaned = cleaned.replaceAll("```[a-zA-Z]*\\s*", "");
+        cleaned = cleaned.replace("```", "");
         return cleaned.trim();
-    }
-
-    private static String boundaryReplace(String text, char marker) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == marker) {
-                boolean leftBoundary = i == 0 || !Character.isLetterOrDigit(text.charAt(i - 1));
-                boolean rightBoundary = i + 1 >= text.length() || !Character.isLetterOrDigit(text.charAt(i + 1));
-                if (!(leftBoundary && rightBoundary)) {
-                    sb.append(marker);
-                }
-            } else {
-                sb.append(text.charAt(i));
-            }
-        }
-        return sb.toString();
-    }
-
-    private static String removeBetween(String text, char start, char end) {
-        StringBuilder sb = new StringBuilder();
-        int i = 0;
-        while (i < text.length()) {
-            int s = text.indexOf(start, i);
-            int e = (s >= 0) ? text.indexOf(end, s + 1) : -1;
-            if (s < 0 || e < 0) {
-                sb.append(text, i, text.length());
-                break;
-            }
-            sb.append(text, i, s);
-            i = e + 1;
-        }
-        return sb.toString();
-    }
-
-    private static boolean isNumberedListItem(String trimmed) {
-        int dotIdx = trimmed.indexOf('.');
-        if (dotIdx <= 0 || dotIdx >= trimmed.length() - 1 || trimmed.charAt(dotIdx + 1) != ' ') {
-            return false;
-        }
-        for (int i = 0; i < dotIdx; i++) {
-            if (!Character.isDigit(trimmed.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
     }
 }
