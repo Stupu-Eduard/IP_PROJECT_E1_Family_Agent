@@ -34,7 +34,7 @@ public class CloudinaryService {
             Map<String, Object> uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap(
                     "folder", folder,
                     "public_id", sanitizePublicId(fileName),
-                    "resource_type", detectResourceType(file),
+                    "resource_type", "auto",
                     "overwrite", false
             ));
 
@@ -45,6 +45,9 @@ public class CloudinaryService {
         } catch (IOException e) {
             log.error("Cloudinary upload failed for file: {}", fileName, e);
             throw new ExternalServiceException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error during Cloudinary upload for file: {}", fileName, e);
+            throw new ExternalServiceException("Unexpected error during Cloudinary upload: " + e.getMessage(), e);
         }
     }
 
@@ -60,14 +63,6 @@ public class CloudinaryService {
         } catch (IOException e) {
             log.error("Cloudinary delete failed for publicId: {}", publicId, e);
         }
-    }
-
-    private String detectResourceType(File file) {
-        String name = file.getName().toLowerCase();
-        if (name.endsWith(".pdf")) {
-            return "raw";
-        }
-        return "image";
     }
 
     private String sanitizePublicId(String fileName) {
