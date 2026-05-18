@@ -76,7 +76,8 @@ public class AuthController {
             claims.put("name", user.getName());
             
             if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-                claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
+                claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
+                claims.put("familyName", memberships.get(0).getFamily().getName());
             }
 
             String token = jwtUtil.generateToken(user.getEmail(), claims);
@@ -142,7 +143,8 @@ public class AuthController {
             member.setRole(ROLE_PARENT);
             familyMemberRepository.save(member);
 
-            claims.put(FAMILY_ID_KEY,savedFamily.getId());
+            claims.put(FAMILY_ID_KEY, savedFamily.getId());
+            claims.put("familyName", savedFamily.getName());
             log.info("Familie creată automat pentru noul părinte: {} (familyId={})", user.getEmail(), savedFamily.getId());
         }
 
@@ -196,7 +198,8 @@ public class AuthController {
         claims.put("role", role);
         claims.put("name", user.getName());
         if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-            claims.put(FAMILY_ID_KEY,memberships.get(0).getFamily().getId());
+            claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
+            claims.put("familyName", memberships.get(0).getFamily().getName());
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), claims);

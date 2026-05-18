@@ -60,12 +60,7 @@ const ExpenseForm: React.FC = () => {
       }
       if (data.locationName) setStoreName(data.locationName);
 
-      // Backend now auto-saves the expense. Show success if we got valid data.
-      if (data.amount && data.amount > 0) {
-        notifyExpenseAdded();
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-      }
+      // OCR completează câmpurile — userul poate corecta înainte de a salva manual.
     } catch {
       setOcrError('Nu am putut citi automat bonul. Te rugăm să introduci datele manual.');
     } finally {
