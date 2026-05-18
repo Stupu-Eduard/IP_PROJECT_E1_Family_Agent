@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.dto.ExtractionRequest;
 import com.familie.cheltuieli_familie.dto.ExtractionResponse;
 import com.familie.cheltuieli_familie.service.ExtractionService;
 import com.familie.cheltuieli_familie.service.PdfExtractionService;
+import com.familie.cheltuieli_familie.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
