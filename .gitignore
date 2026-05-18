@@ -6,6 +6,7 @@ backend/target/
 *.ear
 *.log
 
+
 # Node.js
 Frontend/node_modules/
 Frontend/dist/
