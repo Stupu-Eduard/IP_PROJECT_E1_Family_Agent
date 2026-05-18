@@ -63,25 +63,9 @@ public class AuthController {
 
         if (userOpt.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPasswordH())) {
             User user = userOpt.get();
-
-            List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
-            String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
-
-            // Normalizăm rolul (frontend se așteaptă la "Parent" sau "Child")
-            if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
-            else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
-
-            Map<String, Object> claims = new HashMap<>();
-            claims.put(USER_ID_KEY, user.getId());
-            claims.put("role", role);
-            claims.put("name", user.getName());
-            
-            if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-                claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
-                claims.put(FAMILY_NAME_KEY, memberships.get(0).getFamily().getName());
-            }
-
-            String token = jwtUtil.generateToken(user.getEmail(), claims);
+            String[] tokenAndRole = buildTokenForUser(user);
+            String token = tokenAndRole[0];
+            String role  = tokenAndRole[1];
 
             return ResponseEntity.ok(Map.of(
                     MSG_KEY, "Login realizat cu succes!",
@@ -188,24 +172,9 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<Object> refresh(Authentication auth) {
         User user = (User) auth.getPrincipal();
-        List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
-
-        String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
-        if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
-        else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put(USER_ID_KEY, user.getId());
-        claims.put("role", role);
-        claims.put("name", user.getName());
-        if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
-            claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
-            claims.put(FAMILY_NAME_KEY, memberships.get(0).getFamily().getName());
-        }
-
-        String token = jwtUtil.generateToken(user.getEmail(), claims);
+        String[] tokenAndRole = buildTokenForUser(user);
         log.info("Token reîmprospătat pentru: {}", user.getEmail());
-        return ResponseEntity.ok(Map.of(TOKEN_KEY, token, "role", role));
+        return ResponseEntity.ok(Map.of(TOKEN_KEY, tokenAndRole[0], "role", tokenAndRole[1]));
     }
 
     @PostMapping("/logout")
@@ -227,6 +196,24 @@ public class AuthController {
             }
         }
         return ResponseEntity.badRequest().body(Map.of(ERR_KEY, "Token invalid sau inexistent."));
+    }
+
+    private String[] buildTokenForUser(User user) {
+        List<FamilyMember> memberships = familyMemberRepository.findByUserId(user.getId());
+        String role = memberships.isEmpty() ? ROLE_PARENT : memberships.get(0).getRole();
+        if (role.equalsIgnoreCase("parent")) role = ROLE_PARENT;
+        else if (role.equalsIgnoreCase("child")) role = ROLE_CHILD;
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(USER_ID_KEY, user.getId());
+        claims.put("role", role);
+        claims.put("name", user.getName());
+        if (!memberships.isEmpty() && memberships.get(0).getFamily() != null) {
+            claims.put(FAMILY_ID_KEY, memberships.get(0).getFamily().getId());
+            claims.put(FAMILY_NAME_KEY, memberships.get(0).getFamily().getName());
+        }
+
+        return new String[]{ jwtUtil.generateToken(user.getEmail(), claims), role };
     }
 
     private boolean matchesSecurityAnswer(Answer answers, SecurityQuestion question, String value) {
