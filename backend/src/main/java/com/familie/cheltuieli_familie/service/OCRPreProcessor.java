@@ -241,6 +241,7 @@ public class OCRPreProcessor {
         src.release();
         upscaled.release();
         bankCropped.release();
+        deskewed.release();
         gray.release();
 
         return result;
