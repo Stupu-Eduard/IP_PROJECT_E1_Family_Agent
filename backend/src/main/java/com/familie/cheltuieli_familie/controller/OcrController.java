@@ -77,24 +77,39 @@ public class OcrController {
 
         try {
             File file = tempFilePath.toFile();
+            
+            // Upload to Cloudinary FIRST so we have the photo even if OCR fails
+            String cloudinaryUrl = uploadReceipt(file, user);
+            
             OcrResult ocrResult = extractOcrText(file, extension, originalName);
             String ocrText = ocrResult.text();
             double confidence = ocrResult.confidence();
             ReceiptParser.ParsedReceipt receipt = receiptParser.parseReceipt(ocrText);
 
             if (receipt == null) {
-                log.warn("Receipt parsing failed for file: {}", originalName);
-                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, Collections.emptyList()));
+                log.warn("Receipt parsing failed for file: {}. Image stored at: {}", originalName, cloudinaryUrl);
+                return ResponseEntity.ok(new OcrResponseDTO(null, null, null, null, confidence, cloudinaryUrl, Collections.emptyList()));
             }
 
             Category category = resolveCategory(receipt.getCategory());
-            Location location = resolveLocation(receipt.getStoreName());
-            String cloudinaryUrl = uploadReceipt(file, user);
-            Expense saved = saveExpense(receipt, category, location, user, cloudinaryUrl, ocrText);
-            saveExpenseItems(saved, receipt.getItems(), category);
-            publishSyncEvent(saved, ocrText);
 
-            return ResponseEntity.ok(buildResponse(saved, receipt, category, confidence));
+            log.info("OCR parsed: amount={} category={} store={} date={} items={} url={}",
+                    receipt.getTotalAmount(),
+                    category != null ? category.getName() : null,
+                    receipt.getStoreName(),
+                    receipt.getDate(),
+                    receipt.getItems().size(),
+                    cloudinaryUrl);
+
+            return ResponseEntity.ok(new OcrResponseDTO(
+                    receipt.getTotalAmount(),
+                    category != null ? category.getName() : null,
+                    receipt.getDate(),
+                    receipt.getStoreName(),
+                    confidence,
+                    cloudinaryUrl,
+                    mapItems(receipt.getItems())
+            ));
 
         } finally {
             Files.deleteIfExists(tempFilePath);
@@ -219,6 +234,7 @@ public class OcrController {
                 receipt.getDate(),
                 receipt.getStoreName(),
                 confidence,
+                saved.getReceiptUrl(),
                 mapItems(receipt.getItems())
         );
     }

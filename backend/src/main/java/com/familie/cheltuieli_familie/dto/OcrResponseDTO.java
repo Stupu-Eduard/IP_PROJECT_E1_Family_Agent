@@ -9,6 +9,7 @@ public record OcrResponseDTO(
     String date,
     String locationName,
     double confidence,
+    String receiptUrl,
     List<OcrItemDTO> items
 ) {}
 

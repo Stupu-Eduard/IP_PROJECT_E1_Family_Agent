@@ -35,7 +35,7 @@ class PdfExportServiceTest {
     private record TestProjection(
             Long id, BigDecimal amount, String currency, String description,
             LocalDateTime expenseDate, String category, String person, String sourceType,
-            Long locationId, String store, String address,
+            String receiptUrl, Long locationId, String store, String address,
             String city, String country, Double lat, Double lng
     ) implements ExpenseWithLocationProjection {
         public Long getId()                  { return id; }
@@ -46,6 +46,7 @@ class PdfExportServiceTest {
         public String getCategory()          { return category; }
         public String getPerson()            { return person; }
         public String getSourceType()        { return sourceType; }
+        public String getReceiptUrl()        { return receiptUrl; }
         public Long getLocationId()          { return locationId; }
         public String getStore()             { return store; }
         public String getAddress()           { return address; }
@@ -90,7 +91,7 @@ class PdfExportServiceTest {
         return new TestProjection(
                 1L, BigDecimal.valueOf(amount), "RON", "Descriere test",
                 date.atStartOfDay(), category, person, "manual",
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
     }
 
@@ -214,12 +215,33 @@ class PdfExportServiceTest {
         TestProjection expenseWithNulls = new TestProjection(
                 2L, BigDecimal.valueOf(75.0), "RON", null,
                 LocalDate.now().minusDays(1).atStartOfDay(),
-                null, null, "manual", null, null, null, null, null, null, null
+                null, null, "manual",
+                null, null, null, null, null, null, null, null
         );
+
 
         when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
         when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
                 .thenReturn(List.of(expenseWithNulls));
+
+        byte[] pdf = pdfExportService.generatePdf(LocalDate.now().minusDays(6), LocalDate.now(), parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    void generatePdf_handlesNewlineCharactersGracefully() throws Exception {
+        TestProjection expenseWithNewline = new TestProjection(
+                3L, BigDecimal.valueOf(50.0), "RON", "Descriere\ncu newline",
+                LocalDate.now().minusDays(1).atStartOfDay(),
+                "Categorie\nNoua", "Persoana\nTest", "manual",
+                null, null, null, null, null, null, null, null
+        );
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of(expenseWithNewline));
 
         byte[] pdf = pdfExportService.generatePdf(LocalDate.now().minusDays(6), LocalDate.now(), parentAuth);
 

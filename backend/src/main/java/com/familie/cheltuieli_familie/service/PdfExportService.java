@@ -410,6 +410,7 @@ public class PdfExportService {
 
     private String truncate(String s, int max) {
         if (s == null) return "-";
-        return s.length() > max ? s.substring(0, max - 1) + "..." : s;
+        String sanitized = s.replace("\n", " ").replace("\r", " ");
+        return sanitized.length() > max ? sanitized.substring(0, max - 1) + "..." : sanitized;
     }
 }

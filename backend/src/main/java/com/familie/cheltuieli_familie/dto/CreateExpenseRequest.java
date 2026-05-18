@@ -25,4 +25,5 @@ public class CreateExpenseRequest {
 
     private String storeName;
     private String city;
+    private String receiptUrl;
 }

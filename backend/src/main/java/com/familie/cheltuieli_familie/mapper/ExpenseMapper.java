@@ -85,7 +85,8 @@ public class ExpenseMapper {
                 row.getCategory(),
                 row.getPerson(),
                 locationDto,
-                row.getSourceType()
+                row.getSourceType(),
+                row.getReceiptUrl()
         );
     }
 }

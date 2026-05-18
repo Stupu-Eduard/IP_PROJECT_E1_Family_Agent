@@ -31,7 +31,13 @@ public class OCRPreProcessor {
 
     private static synchronized void ensureOpenCvLoaded() {
         if (!openCvLoaded) {
-            OpenCV.loadLocally();
+            try {
+                System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+                logger.info("Loaded system OpenCV library: {}", org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+            } catch (UnsatisfiedLinkError e) {
+                logger.warn("Failed to load system OpenCV, attempting local load as fallback: {}", e.getMessage());
+                OpenCV.loadLocally();
+            }
             openCvLoaded = true;
         }
     }
@@ -204,7 +210,7 @@ public class OCRPreProcessor {
             );
         }
 
-        Mat upscaled = upscale(src, 2.0);
+        Mat upscaled = upscale(src, 3.0);
 
         Mat bankCropped;
         String bankKey = bank != null ? bank.toLowerCase() : "";
@@ -227,22 +233,15 @@ public class OCRPreProcessor {
                 break;
         }
 
-        Mat deskewed = deskew(bankCropped);
-        Mat gray = toGrayScale(deskewed);
-        Mat denoised = denoiseImage(gray);
-        Mat enhanced = enhanceContrast(denoised);
-        Mat thresholded = applyOtsuThreshold(enhanced);
-
-        BufferedImage result = matToBufferedImage(thresholded);
+        Mat gray = toGrayScale(bankCropped);
+        // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
+        
+        BufferedImage result = matToBufferedImage(gray);
 
         src.release();
         upscaled.release();
         bankCropped.release();
-        deskewed.release();
         gray.release();
-        denoised.release();
-        enhanced.release();
-        thresholded.release();
 
         return result;
     }

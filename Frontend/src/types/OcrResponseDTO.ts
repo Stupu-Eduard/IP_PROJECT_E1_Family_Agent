@@ -10,5 +10,6 @@ export interface OcrResponseDTO {
     date: string;
     locationName?: string;
     confidence: number;
+    receiptUrl?: string;
     items?: OcrItemDTO[];
 }

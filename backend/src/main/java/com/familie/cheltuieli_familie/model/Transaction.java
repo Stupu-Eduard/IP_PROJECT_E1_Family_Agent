@@ -10,6 +10,7 @@ public class Transaction implements Serializable {
     private double amount;
     private String currency = "RON";
     private String type = "EXPENSE";
+    private String receiptUrl;
 
     public Transaction() {
     }
@@ -28,6 +29,15 @@ public class Transaction implements Serializable {
         this.amount = amount;
         this.currency = currency;
         this.type = type;
+    }
+
+    public Transaction(LocalDate date, String description, double amount, String currency, String type, String receiptUrl) {
+        this.date = date;
+        this.description = description;
+        this.amount = amount;
+        this.currency = currency;
+        this.type = type;
+        this.receiptUrl = receiptUrl;
     }
 
     public LocalDate getDate() {
@@ -68,6 +78,14 @@ public class Transaction implements Serializable {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getReceiptUrl() {
+        return receiptUrl;
+    }
+
+    public void setReceiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
     }
 
 
