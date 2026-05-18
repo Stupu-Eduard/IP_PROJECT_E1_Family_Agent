@@ -99,22 +99,22 @@ public class ReceiptParser {
         if (text == null || text.isBlank()) return text;
         String lower = text.toLowerCase();
         // Common OCR error corrections as a safety net
-        if (lower.matches(".*l1dl.*|.*l1d1.*|.*lid1.*")) return "Lidl";
-        if (lower.matches(".*kauflard.*|.*kauf1and.*|.*kaufl@nd.*")) return "Kaufland";
-        if (lower.matches(".*mega\\s*1mage.*|.*mega\\s*lmage.*|.*mega1mage.*")) return "Mega Image";
-        if (lower.matches(".*carref0ur.*|.*carrefour.*")) return "Carrefour";
-        if (lower.matches(".*peny.*|.*p3nny.*") && !lower.contains("penny market")) {
+        if (lower.contains("l1dl") || lower.contains("l1d1") || lower.contains("lid1")) return "Lidl";
+        if (lower.contains("kauflard") || lower.contains("kauf1and") || lower.contains("kaufl@nd")) return "Kaufland";
+        if (lower.contains("mega 1mage") || lower.contains("mega lmage") || lower.contains("mega1mage")) return "Mega Image";
+        if (lower.contains("carref0ur") || lower.contains("carrefour")) return "Carrefour";
+        if ((lower.contains("peny") || lower.contains("p3nny")) && !lower.contains("penny market")) {
             if (lower.length() <= 6) return "Penny";
         }
-        if (lower.matches(".*auch@n.*|.*auch4n.*")) return "Auchan";
-        if (lower.matches(".*pr0fi.*|.*prof1.*")) return "Profi";
-        if (lower.matches(".*s3lgros.*|.*se1gros.*")) return "Selgros";
-        if (lower.matches(".*c@tena.*|.*cat3na.*")) return "Catena";
-        if (lower.matches(".*sens1b1u.*|.*sensib1u.*")) return "Sensiblu";
-        if (lower.matches(".*d0na.*") && lower.length() <= 5) return "Dona";
-        if (lower.matches(".*p3trom.*|.*petr0m.*")) return "Petrom";
-        if (lower.matches(".*r0mpetr0l.*")) return "Rompetrol";
-        if (lower.matches(".*0mv.*") && text.length() <= 5) return "OMV";
+        if (lower.contains("auch@n") || lower.contains("auch4n")) return "Auchan";
+        if (lower.contains("pr0fi") || lower.contains("prof1")) return "Profi";
+        if (lower.contains("s3lgros") || lower.contains("se1gros")) return "Selgros";
+        if (lower.contains("c@tena") || lower.contains("cat3na")) return "Catena";
+        if (lower.contains("sens1b1u") || lower.contains("sensib1u")) return "Sensiblu";
+        if (lower.contains("d0na") && lower.length() <= 5) return "Dona";
+        if (lower.contains("p3trom") || lower.contains("petr0m")) return "Petrom";
+        if (lower.contains("r0mpetr0l")) return "Rompetrol";
+        if (lower.contains("0mv") && text.length() <= 5) return "OMV";
         return text;
     }
 

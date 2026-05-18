@@ -173,4 +173,73 @@ class QdrantContentRetrieverTest {
         assertEquals(1, results.size());
         verify(qdrantVectorService).searchSimilar(argThat(arg -> arg != null && !arg.toLowerCase().contains("salut")), anyInt(), any(), any());
     }
+
+    @Test
+    void testRetrieveWithQdrantException() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
+                .thenThrow(new RuntimeException("Qdrant connection failed"));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("query"));
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void testRetrieveWithShortQueryThreshold() {
+        EmbeddedExpense pass = EmbeddedExpense.builder()
+                .id(1L)
+                .rawInput("Pass expense")
+                .score(0.23)
+                .build();
+        EmbeddedExpense fail = EmbeddedExpense.builder()
+                .id(2L)
+                .rawInput("Fail expense")
+                .score(0.21)
+                .build();
+
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any())).thenReturn(List.of(pass, fail));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("short query"));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).textSegment().text().contains("Pass expense"));
+    }
+
+    @Test
+    void testRetrieveWithLongQueryThreshold() {
+        EmbeddedExpense pass = EmbeddedExpense.builder()
+                .id(1L)
+                .rawInput("Pass expense")
+                .score(0.36)
+                .build();
+        EmbeddedExpense fail = EmbeddedExpense.builder()
+                .id(2L)
+                .rawInput("Fail expense")
+                .score(0.34)
+                .build();
+
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any())).thenReturn(List.of(pass, fail));
+
+        List<Content> results = contentRetriever.retrieve(Query.from("this is a long query"));
+
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertTrue(results.get(0).textSegment().text().contains("Pass expense"));
+    }
+
+    @Test
+    void testRetrieveWithBlankQuery() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any())).thenReturn(Collections.emptyList());
+
+        List<Content> results = contentRetriever.retrieve(Query.from("salut buna"));
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
 }
