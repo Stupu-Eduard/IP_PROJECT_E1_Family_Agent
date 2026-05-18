@@ -114,7 +114,9 @@ public class AgentChatService {
         cleaned = cleaned.replaceAll("(?m)^>\\s*", "");
 
         // Remove markdown table separators like |---|---|
-        cleaned = cleaned.replaceAll("(?m)^[\\t ]*\\|?[-:|\\t ]+\\|?[\\t ]*$", "");
+        cleaned = java.util.Arrays.stream(cleaned.split("\n", -1))
+                .filter(line -> !isTableSeparatorLine(line))
+                .collect(java.util.stream.Collectors.joining("\n"));
         // Remove table cell pipes, keep inner text
         cleaned = cleaned.replace("|", " ");
 
@@ -141,5 +143,17 @@ public class AgentChatService {
                 .collect(java.util.stream.Collectors.joining("\n"));
 
         return cleaned.trim();
+    }
+
+    private static boolean isTableSeparatorLine(String line) {
+        String stripped = line.strip();
+        if (stripped.isEmpty()) return false;
+        String inner = stripped.startsWith("|") ? stripped.substring(1) : stripped;
+        if (inner.endsWith("|")) inner = inner.substring(0, inner.length() - 1);
+        if (!inner.contains("-")) return false;
+        for (char c : inner.toCharArray()) {
+            if (c != '-' && c != ':' && c != '|' && c != ' ' && c != '\t') return false;
+        }
+        return true;
     }
 }

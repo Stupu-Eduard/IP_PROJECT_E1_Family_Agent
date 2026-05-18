@@ -293,6 +293,48 @@ class OcrControllerTest {
     }
 
     @Test
+    void testProcessReceiptCategoryNotFound_noFallback_returnsNullCategory() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "test".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("OCR text", 0.90));
+
+        ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
+        receipt.setStoreName("Unknown");
+        receipt.setTotalAmount(new BigDecimal("5.00"));
+        receipt.setDate(null);
+        receipt.setCategory("Inexistent");
+        receipt.setItems(List.of());
+
+        when(receiptParser.parseReceipt("OCR text")).thenReturn(receipt);
+
+        when(categoryRepository.findByName("Inexistent")).thenReturn(Optional.empty());
+        when(categoryRepository.findAll()).thenReturn(List.of());
+
+        when(locationRepository.findAll()).thenReturn(List.of());
+        Location location = new Location();
+        location.setStore("Unknown");
+        when(locationRepository.save(any(Location.class))).thenReturn(location);
+
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
+        Expense savedExpense = new Expense();
+        savedExpense.setId(110L);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertNull(response.getBody().category());
+    }
+
+    @Test
     void testProcessReceiptWithFamilyMember() throws Exception {
         User user = new User();
         user.setId(1L);

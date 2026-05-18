@@ -231,6 +231,26 @@ class PdfExportServiceTest {
     }
 
     @Test
+    void generatePdf_truncatesLongDescriptionAndCategory() throws Exception {
+        TestProjection expenseWithLongFields = new TestProjection(
+                4L, BigDecimal.valueOf(99.0), "RON",
+                "Aceasta este o descriere foarte lunga care depaseste limita de caractere",
+                LocalDate.now().minusDays(1).atStartOfDay(),
+                "Categorie cu un nume extrem de lung", "Ana", "manual",
+                null, null, null, null, null, null, null, null
+        );
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of(expenseWithLongFields));
+
+        byte[] pdf = pdfExportService.generatePdf(LocalDate.now().minusDays(6), LocalDate.now(), parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
     void generatePdf_handlesNewlineCharactersGracefully() throws Exception {
         TestProjection expenseWithNewline = new TestProjection(
                 3L, BigDecimal.valueOf(50.0), "RON", "Descriere\ncu newline",
