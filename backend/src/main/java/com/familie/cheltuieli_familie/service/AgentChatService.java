@@ -78,17 +78,67 @@ public class AgentChatService {
     }
 
     /**
-     * Light markdown sanitizer: removes only code fences to prevent UI breakage,
-     * but preserves all other formatting (lists, bold, headers, tables, paragraphs).
+     * Aggressive markdown sanitizer: strips all markdown formatting to produce plain text.
+     * Removes bold, italics, headers, tables, blockquotes, lists, code blocks, smart quotes, etc.
      */
     static String stripMarkdown(String text) {
         if (text == null || text.isBlank()) {
             return text;
         }
         String cleaned = text;
-        // Remove markdown code fences (```json, ```java, etc.)
+
+        // Remove markdown code blocks with optional language tag (multiline)
+        cleaned = cleaned.replaceAll("(?s)```[a-zA-Z]*\\r?\\n.*?```", "");
+        // Remove remaining code fences
         cleaned = cleaned.replaceAll("```[a-zA-Z]*\\s*", "");
         cleaned = cleaned.replace("```", "");
+
+        // Remove inline code backticks
+        cleaned = cleaned.replaceAll("`([^`]*)`", "$1");
+
+        // Remove bold **text** and __text__
+        cleaned = cleaned.replaceAll("\\*\\*([^*]*)\\*\\*", "$1");
+        cleaned = cleaned.replaceAll("__([^_]*)__", "$1");
+
+        // Remove italic *text* and _text_
+        cleaned = cleaned.replaceAll("(?<!\\*)\\*(?!\\*)([^*]*)\\*", "$1");
+        cleaned = cleaned.replaceAll("(?<!_)_(?!_)([^_]*)_", "$1");
+
+        // Remove strikethrough ~~text~~
+        cleaned = cleaned.replaceAll("~~([^~]*)~~", "$1");
+
+        // Remove headers (# ## ### etc.)
+        cleaned = cleaned.replaceAll("(?m)^#{1,6}\\s*", "");
+
+        // Remove blockquote markers at line start
+        cleaned = cleaned.replaceAll("(?m)^>\\s*", "");
+
+        // Remove markdown table separators like |---|---|
+        cleaned = cleaned.replaceAll("(?m)^\\s*\\|?[-:|\\s]+\\|?\\s*$", "");
+        // Remove table cell pipes, keep inner text
+        cleaned = cleaned.replaceAll("\\|", " ");
+
+        // Remove list markers at line start (*, -, + followed by space)
+        cleaned = cleaned.replaceAll("(?m)^\\s*[*+\\-]\\s+", "");
+        // Remove numbered list markers (1. 2. etc.) at line start
+        cleaned = cleaned.replaceAll("(?m)^\\s*\\d+\\.\\s+", "");
+
+        // Normalize smart quotes to standard quotes
+        cleaned = cleaned.replace("\"", "\"");
+        cleaned = cleaned.replace("\"", "\"");
+        cleaned = cleaned.replace("'", "'");
+        cleaned = cleaned.replace("'", "'");
+
+        // Remove horizontal rules
+        cleaned = cleaned.replaceAll("(?m)^\\s*[-_*]{3,}\\s*$", "");
+
+        // Collapse multiple consecutive newlines to max 2
+        cleaned = cleaned.replaceAll("\\n{3,}", "\\n\\n");
+
+        // Trim each line and the whole text
+        cleaned = cleaned.replaceAll("(?m)^\\s+", "");
+        cleaned = cleaned.replaceAll("(?m)\\s+$", "");
+
         return cleaned.trim();
     }
 }
