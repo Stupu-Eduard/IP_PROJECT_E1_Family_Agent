@@ -45,6 +45,13 @@ ai:
     default-group-by: category
     default-series-by: person
 
+rag:
+  retrieval:
+    min-score-threshold: 0.35
+    short-query-threshold: 0.22
+  expansion:
+    min-score-threshold: 0.30
+
 # LangChain4j Config referencing .env values
 langchain4j:
   open-ai:

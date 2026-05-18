@@ -20,7 +20,7 @@ qdrant:
     index-type: keyword
 
 ocr:
-  language: eng
+  language: ron+eng
 
 ai:
   intent-extraction:

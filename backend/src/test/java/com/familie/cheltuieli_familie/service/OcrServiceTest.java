@@ -2,7 +2,9 @@ package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.exception.AiServiceException;
 import net.sourceforge.tess4j.ITesseract;
+import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import net.sourceforge.tess4j.Word;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -20,6 +22,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +39,9 @@ class OcrServiceTest {
     @Mock
     private ITesseract tesseract;
 
+    @Mock
+    private OCRPreProcessor ocrPreProcessor;
+
     @TempDir
     Path tempDir;
 
@@ -48,10 +54,8 @@ class OcrServiceTest {
 
     @Test
     void testInit() {
-        // init() is already called by Spring context; here we verify the tesseract mock was configured via setUp
-        // No exception means init logic works with ReflectionTestUtils fields set
         assertDoesNotThrow(() -> {
-            OcrService service = new OcrService();
+            OcrService service = new OcrService(mock(OCRPreProcessor.class));
             ReflectionTestUtils.setField(service, "tessDataPath", "/usr/share/tesseract-ocr/4.00/tessdata");
             ReflectionTestUtils.setField(service, "ocrLanguage", "ron+eng");
             service.init();
@@ -59,20 +63,24 @@ class OcrServiceTest {
     }
 
     @Test
-    void testExtractTextFromImageSuccess() throws TesseractException {
+    void testExtractTextFromImageSuccess() throws Exception {
         File imageFile = tempDir.resolve("test.png").toFile();
-        when(tesseract.doOCR(imageFile)).thenReturn("Extracted text");
+        BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+        when(ocrPreProcessor.processImage(imageFile, null)).thenReturn(dummyImage);
+        when(tesseract.doOCR(dummyImage)).thenReturn("Extracted text");
 
-        String result = ocrService.extractTextFromImage(imageFile);
+        OcrService.OcrResult result = ocrService.extractTextFromImage(imageFile);
 
-        assertEquals("Extracted text", result);
-        verify(tesseract).doOCR(imageFile);
+        assertEquals("Extracted text", result.text());
+        verify(tesseract).doOCR(dummyImage);
     }
 
     @Test
-    void testExtractTextFromImageThrowsAiServiceException() throws TesseractException {
+    void testExtractTextFromImageThrowsAiServiceException() throws Exception {
         File imageFile = tempDir.resolve("test.png").toFile();
-        when(tesseract.doOCR(imageFile)).thenThrow(new TesseractException("OCR error"));
+        BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+        when(ocrPreProcessor.processImage(imageFile, null)).thenReturn(dummyImage);
+        when(tesseract.doOCR(dummyImage)).thenThrow(new TesseractException("OCR error"));
 
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> ocrService.extractTextFromImage(imageFile));
@@ -202,5 +210,97 @@ class OcrServiceTest {
         AiServiceException ex = assertThrows(AiServiceException.class,
                 () -> ocrService.extractTextFromPdf(nonExistent));
         assertTrue(ex.getMessage().contains("Failed to process PDF"));
+    }
+
+    @Test
+    void testExtractTextFromPdfDirectTextBlank() throws Exception {
+        File pdfFile = tempDir.resolve("blank_direct.pdf").toFile();
+        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(pdfFile)) {
+            fos.write("%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >> endobj\n4 0 obj << /Length 44 >> stream\nBT /F1 12 Tf 100 700 Td (Text) Tj ET\nendstream endobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\n0000000214 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n310\n%%EOF".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+
+        try (MockedConstruction<PDFTextStripper> mockedStripper = mockConstruction(PDFTextStripper.class,
+                (mock, context) -> when(mock.getText(any(PDDocument.class))).thenReturn("   "));
+             MockedConstruction<PDFRenderer> mockedRenderer = mockConstruction(PDFRenderer.class,
+                     (mock, context) -> when(mock.renderImageWithDPI(anyInt(), eq(300f))).thenReturn(new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)))) {
+
+            when(tesseract.doOCR(any(BufferedImage.class))).thenReturn("OCR fallback after blank direct text");
+
+            String result = ocrService.extractTextFromPdf(pdfFile);
+            assertNotNull(result);
+            assertTrue(result.contains("OCR fallback"));
+        }
+    }
+
+    @Test
+    void testComputeConfidenceWithWords() throws Exception {
+        File imageFile = tempDir.resolve("test_conf.png").toFile();
+        BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+
+        Tesseract tesseractMock = mock(Tesseract.class);
+        OcrService service = new OcrService(ocrPreProcessor);
+        ReflectionTestUtils.setField(service, "tessDataPath", "/usr/share/tesseract-ocr/4.00/tessdata");
+        ReflectionTestUtils.setField(service, "ocrLanguage", "ron+eng");
+        ReflectionTestUtils.setField(service, "tesseract", tesseractMock);
+
+        Word word1 = mock(Word.class);
+        Word word2 = mock(Word.class);
+        when(word1.getConfidence()).thenReturn(80.0f);
+        when(word2.getConfidence()).thenReturn(90.0f);
+        when(tesseractMock.getWords(dummyImage, 3)).thenReturn(List.of(word1, word2));
+        when(ocrPreProcessor.processImage(imageFile, null)).thenReturn(dummyImage);
+        when(tesseractMock.doOCR(dummyImage)).thenReturn("extracted");
+
+        OcrService.OcrResult result = service.extractTextFromImage(imageFile);
+        assertEquals("extracted", result.text());
+        assertEquals(0.85, result.confidence(), 0.001);
+    }
+
+    @Test
+    void testComputeConfidenceEmptyWords() throws Exception {
+        File imageFile = tempDir.resolve("test_conf_empty.png").toFile();
+        BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+
+        Tesseract tesseractMock = mock(Tesseract.class);
+        OcrService service = new OcrService(ocrPreProcessor);
+        ReflectionTestUtils.setField(service, "tessDataPath", "/usr/share/tesseract-ocr/4.00/tessdata");
+        ReflectionTestUtils.setField(service, "ocrLanguage", "ron+eng");
+        ReflectionTestUtils.setField(service, "tesseract", tesseractMock);
+
+        when(tesseractMock.getWords(dummyImage, 3)).thenReturn(List.of());
+        when(ocrPreProcessor.processImage(imageFile, null)).thenReturn(dummyImage);
+        when(tesseractMock.doOCR(dummyImage)).thenReturn("extracted");
+
+        OcrService.OcrResult result = service.extractTextFromImage(imageFile);
+        assertEquals(0.0, result.confidence(), 0.001);
+    }
+
+    @Test
+    void testComputeConfidenceException() throws Exception {
+        File imageFile = tempDir.resolve("test_conf_ex.png").toFile();
+        BufferedImage dummyImage = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+
+        Tesseract tesseractMock = mock(Tesseract.class);
+        OcrService service = new OcrService(ocrPreProcessor);
+        ReflectionTestUtils.setField(service, "tessDataPath", "/usr/share/tesseract-ocr/4.00/tessdata");
+        ReflectionTestUtils.setField(service, "ocrLanguage", "ron+eng");
+        ReflectionTestUtils.setField(service, "tesseract", tesseractMock);
+
+        when(tesseractMock.getWords(dummyImage, 3)).thenThrow(new RuntimeException("Tess error"));
+        when(ocrPreProcessor.processImage(imageFile, null)).thenReturn(dummyImage);
+        when(tesseractMock.doOCR(dummyImage)).thenReturn("extracted");
+
+        OcrService.OcrResult result = service.extractTextFromImage(imageFile);
+        assertEquals(0.0, result.confidence(), 0.001);
+    }
+
+    @Test
+    void testExtractTextFromImagePreprocessingIOException() throws Exception {
+        File imageFile = tempDir.resolve("test_preprocess_fail.png").toFile();
+        when(ocrPreProcessor.processImage(imageFile, null)).thenThrow(new IOException("Preprocess failed"));
+
+        AiServiceException ex = assertThrows(AiServiceException.class,
+                () -> ocrService.extractTextFromImage(imageFile));
+        assertTrue(ex.getMessage().contains("Failed to preprocess image for OCR"));
     }
 }

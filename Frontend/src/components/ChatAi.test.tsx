@@ -116,28 +116,51 @@ describe('ChatAI Component', () => {
         expect(sendBtn).toHaveStyle({ background: 'var(--color-ink)' })
     })
 
-    it('8. Previne trimiterea formularului în timp ce botul scrie (isTyping)', async () => {
-        vi.mocked(api.post).mockResolvedValueOnce({
-            data: { type: 'text', text: 'Răspuns de la AI.' },
-        })
+    it('8. Permite trimiterea unui mesaj nou în timp ce botul scrie și anulează cererea anterioară', async () => {
+        let resolveFirst: (val: unknown) => void = () => {}
+        const firstPromise = new Promise(resolve => { resolveFirst = resolve })
+
+        vi.mocked(api.post)
+            .mockReturnValueOnce(firstPromise as never)
+            .mockResolvedValueOnce({
+                data: { type: 'text', text: 'Răspuns la mesajul 2.' },
+            })
 
         render(<ChatAI />)
         fireEvent.click(screen.getByRole('button', { name: /deschide asistentul ai/i }))
 
-        const input = screen.getByRole('textbox')
+        const input = screen.getByRole('textbox') as HTMLInputElement
         const form = input.closest('form')!
 
+        // Send first message
         fireEvent.change(input, { target: { value: 'Mesaj 1' } })
         fireEvent.submit(form)
 
+        // Bot is typing
+        expect(screen.getByPlaceholderText('Agentul scrie...')).toBeInTheDocument()
+
+        // Send second message while typing
         fireEvent.change(input, { target: { value: 'Mesaj 2' } })
-        fireEvent.submit(form)
-
-        expect(screen.queryByText('Mesaj 2')).not.toBeInTheDocument()
-
-        await waitFor(() => {
-            expect(screen.getByPlaceholderText('Întreabă ceva...')).toBeInTheDocument()
+        await act(async () => {
+            fireEvent.submit(form)
         })
+
+        // Both user messages should be present
+        expect(screen.getByText('Mesaj 1')).toBeInTheDocument()
+        expect(screen.getByText('Mesaj 2')).toBeInTheDocument()
+
+        // Resolve the first (now stale) request — its response should be ignored
+        await act(async () => {
+            resolveFirst({ data: { type: 'text', text: 'Răspuns la mesajul 1.' } })
+        })
+
+        // Wait for second response
+        await waitFor(() => {
+            expect(screen.getByText('Răspuns la mesajul 2.')).toBeInTheDocument()
+        })
+
+        // First response should NOT appear because it was superseded
+        expect(screen.queryByText('Răspuns la mesajul 1.')).not.toBeInTheDocument()
     })
 
     it('9. Afișează mesaj de eroare când API-ul eșuează', async () => {

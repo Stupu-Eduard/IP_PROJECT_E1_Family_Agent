@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class RagRetrievalService {
 
     private final QdrantVectorService qdrantVectorService;
     private final LlmRouterService llmRouterService;
+    private final SecurityService securityService;
 
     /**
      * Performs a RAG query: asks the LLM via Router.
@@ -26,7 +28,9 @@ public class RagRetrievalService {
      */
     public String askWithContext(String query) {
         log.info("Performing RAG query: {}", query);
-        return llmRouterService.routeAndChat(query);
+        String context = retrieveContext(query, 10);
+        String augmentedQuery = "Context din sistemul RAG:\n" + context + "\n\nÎntrebare utilizator: " + query;
+        return llmRouterService.routeAndChat(augmentedQuery);
     }
 
     /**
@@ -38,7 +42,8 @@ public class RagRetrievalService {
      */
     public String retrieveContext(String query, int topK) {
         log.info("Retrieving context for query: {}", query);
-        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(query, topK);
+        Long[] scope = securityService.resolveScope();
+        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(query, topK, scope[0], scope[1]);
 
         if (results.isEmpty()) {
             return "Nu s-au găsit cheltuieli relevante în baza de date.";

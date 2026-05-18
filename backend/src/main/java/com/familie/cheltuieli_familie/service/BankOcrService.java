@@ -6,6 +6,7 @@ import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,12 @@ public class BankOcrService {
     private final BankingDictionaryCorrector corrector;
     private static final Logger logger = LoggerFactory.getLogger(BankOcrService.class);
 
+    @Value("${tesseract.datapath:/usr/share/tesseract-ocr/5/tessdata/}")
+    private String tesseractDatapath = "/usr/share/tesseract-ocr/5/tessdata/";
+
+    @Value("${ocr.language:ron}")
+    private String ocrLanguage = "ron";
+
     public BankOcrService(OCRPreProcessor preProcessor, BankingDictionaryCorrector corrector) {
         this.preProcessor = preProcessor;
         this.corrector = corrector;
@@ -32,8 +39,8 @@ public class BankOcrService {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             ITesseract tesseract = new Tesseract();
 
-            tesseract.setDatapath("/usr/share/tesseract-ocr/5/tessdata/");
-            tesseract.setLanguage("ron");
+            tesseract.setDatapath(tesseractDatapath);
+            tesseract.setLanguage(ocrLanguage);
 
             StringBuilder result = new StringBuilder();
 

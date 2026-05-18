@@ -3,6 +3,8 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
 import com.familie.cheltuieli_familie.model.ChartQueryResult;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -22,13 +26,22 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ChartQueryExecutorTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private SecurityService securityService;
+
     @InjectMocks
     private ChartQueryExecutor chartQueryExecutor;
+
+    @BeforeEach
+    void setUp() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+    }
 
     @SuppressWarnings("unchecked")
     @Test
@@ -275,34 +288,117 @@ class ChartQueryExecutorTest {
     }
 
     @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldApplyCountAggregation() {
+    @ParameterizedTest
+    @CsvSource({
+            "count, COUNT(e.amount)",
+            "avg, AVG(e.amount)",
+            "sum, SUM(e.amount)"
+    })
+    void execute_shouldApplyAggregation(String aggregation, String expectedSql) {
         ChartQueryIntent intent = ChartQueryIntent.builder()
                 .groupBy("category")
-                .aggregation("count")
+                .aggregation(aggregation)
                 .build();
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("5"))));
+                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("100"))));
 
         chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("COUNT(e.amount)"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains(expectedSql), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    void execute_shouldApplyAvgAggregation() {
+    void execute_shouldApplyFamilyScope() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{1L, null});
+
         ChartQueryIntent intent = ChartQueryIntent.builder()
                 .groupBy("category")
-                .aggregation("avg")
+                .aggregation("sum")
                 .build();
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("50"))));
+                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("100"))));
 
-        chartQueryExecutor.execute(intent, null, null);
+        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("AVG(e.amount)"), any(RowMapper.class), any(Object[].class));
+        assertNotNull(result);
+        verify(jdbcTemplate).query(contains("e.family_id = ?"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void execute_shouldApplyNoScope() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, null});
+
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .groupBy("category")
+                .aggregation("sum")
+                .build();
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("100"))));
+
+        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
+
+        assertNotNull(result);
+        verify(jdbcTemplate).query(contains("WHERE 1=1"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void execute_shouldBuildQueryWithYearSeries() {
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .groupBy("category")
+                .seriesBy("year")
+                .aggregation("sum")
+                .build();
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(Map.of("label", "food", "series", "2024", "total", new BigDecimal("100"))));
+
+        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getRows().size());
+        assertEquals(List.of("2024"), result.getSeriesNames());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void execute_shouldBuildQueryWithMonthSeries() {
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .groupBy("person")
+                .seriesBy("month")
+                .aggregation("sum")
+                .build();
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(Map.of("label", "Teodor", "series", "2024-01", "total", new BigDecimal("100"))));
+
+        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getRows().size());
+        assertEquals(List.of("2024-01"), result.getSeriesNames());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void execute_shouldHandleNullFilters() {
+        ChartQueryIntent intent = ChartQueryIntent.builder()
+                .groupBy("category")
+                .aggregation("sum")
+                .filters(null)
+                .build();
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("100"))));
+
+        ChartQueryResult result = chartQueryExecutor.execute(intent, null, null);
+
+        assertNotNull(result);
+        assertEquals(1, result.getRows().size());
     }
 }
