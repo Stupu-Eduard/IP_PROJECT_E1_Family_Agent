@@ -88,13 +88,22 @@ public class OcrController {
             }
 
             Category category = resolveCategory(receipt.getCategory());
-            Location location = resolveLocation(receipt.getStoreName());
-            String cloudinaryUrl = uploadReceipt(file, user);
-            Expense saved = saveExpense(receipt, category, location, user, cloudinaryUrl, ocrText);
-            saveExpenseItems(saved, receipt.getItems(), category);
-            publishSyncEvent(saved, ocrText);
+            
+            log.info("OCR parsed: amount={} category={} store={} date={} items={}",
+                    receipt.getTotalAmount(),
+                    category != null ? category.getName() : null,
+                    receipt.getStoreName(),
+                    receipt.getDate(),
+                    receipt.getItems().size());
 
-            return ResponseEntity.ok(buildResponse(saved, receipt, category, confidence));
+            return ResponseEntity.ok(new OcrResponseDTO(
+                    receipt.getTotalAmount(),
+                    category != null ? category.getName() : null,
+                    receipt.getDate(),
+                    receipt.getStoreName(),
+                    confidence,
+                    mapItems(receipt.getItems())
+            ));
 
         } finally {
             Files.deleteIfExists(tempFilePath);
