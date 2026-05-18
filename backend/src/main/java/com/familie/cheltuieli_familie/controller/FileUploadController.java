@@ -28,8 +28,6 @@ public class FileUploadController {
     private final PdfExtractionService pdfExtractionService;
     private final ExtractionService extractionService;
 
-    private final CloudinaryService cloudinaryService;
-
     @PostMapping("/pdf")
     public ResponseEntity<List<ExtractionResponse>> uploadPdf(@RequestParam("file") MultipartFile file) throws IOException {
         log.info("Received PDF upload: {}", file.getOriginalFilename());
@@ -48,16 +46,8 @@ public class FileUploadController {
 
     @PostMapping("/image")
     public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file) {
-        try {
-            log.info("Received image upload for Cloudinary storage: {}", file.getOriginalFilename());
-            String folder = "uploads/" + java.time.LocalDate.now().toString().substring(0, 7);
-            String publicId = "upload_" + System.currentTimeMillis();
-            String url = cloudinaryService.uploadMultipartFile(file, folder, publicId);
-            return ResponseEntity.ok(url);
-        } catch (Exception e) {
-            log.error("Cloudinary upload failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload image to Cloudinary: " + e.getMessage());
-        }
+        log.warn("OCR upload attempted by M5 team is not yet integrated. Filename: {}", file.getOriginalFilename());
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body("OCR module is under development by the M5 team. Please use PDF upload instead.");
     }
 }
