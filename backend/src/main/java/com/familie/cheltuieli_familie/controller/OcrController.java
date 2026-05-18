@@ -227,18 +227,6 @@ public class OcrController {
         eventPublisher.publishEvent(new ExpenseSyncEvent(this, entity));
     }
 
-    private OcrResponseDTO buildResponse(Expense saved, ReceiptParser.ParsedReceipt receipt, Category category, double confidence) {
-        return new OcrResponseDTO(
-                saved.getAmount(),
-                category != null ? category.getName() : null,
-                receipt.getDate(),
-                receipt.getStoreName(),
-                confidence,
-                saved.getReceiptUrl(),
-                mapItems(receipt.getItems())
-        );
-    }
-
     private List<OcrItemDTO> mapItems(List<ReceiptParser.ReceiptItem> items) {
         if (items == null || items.isEmpty()) return Collections.emptyList();
         return items.stream()

@@ -58,6 +58,31 @@ class TransactionTest {
     }
 
     @Test
+    void constructorWithSixArgumentsShouldSetReceiptUrl() {
+        Transaction transaction = new Transaction(
+                LocalDate.of(2025, 3, 10),
+                "Lidl",
+                100.5,
+                "RON",
+                "EXPENSE",
+                "https://cloudinary.com/receipt.jpg"
+        );
+
+        assertEquals("https://cloudinary.com/receipt.jpg", transaction.getReceiptUrl());
+        assertEquals(LocalDate.of(2025, 3, 10), transaction.getDate());
+        assertEquals(100.5, transaction.getAmount());
+    }
+
+    @Test
+    void setReceiptUrlShouldUpdateValue() {
+        Transaction transaction = new Transaction();
+        transaction.setReceiptUrl("https://example.com/img.jpg");
+        assertEquals("https://example.com/img.jpg", transaction.getReceiptUrl());
+        transaction.setReceiptUrl(null);
+        assertNull(transaction.getReceiptUrl());
+    }
+
+    @Test
     void toStringShouldContainTransactionData() {
         Transaction transaction = new Transaction(
                 LocalDate.of(2025, 3, 10),

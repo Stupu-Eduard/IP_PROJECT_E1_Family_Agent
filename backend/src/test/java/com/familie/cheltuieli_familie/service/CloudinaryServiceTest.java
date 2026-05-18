@@ -85,6 +85,20 @@ class CloudinaryServiceTest {
     }
 
     @Test
+    void testUploadFileUnexpectedException() throws IOException {
+        File file = mock(File.class);
+        when(file.length()).thenReturn(1024L);
+
+        when(uploader.upload(any(File.class), anyMap())).thenThrow(new RuntimeException("Unexpected error"));
+
+        ExternalServiceException exception = assertThrows(ExternalServiceException.class,
+                () -> cloudinaryService.uploadFile(file, "receipts/2026-05", "receipt.jpg"));
+
+        assertTrue(exception.getMessage().contains("Unexpected error during Cloudinary upload"));
+        assertTrue(exception.getCause() instanceof RuntimeException);
+    }
+
+    @Test
     void testSanitizePublicId() {
         String result = ReflectionTestUtils.invokeMethod(cloudinaryService, "sanitizePublicId", "my-file@name#1.jpg");
 
