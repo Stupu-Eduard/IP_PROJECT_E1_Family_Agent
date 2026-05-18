@@ -58,6 +58,7 @@ public class FamilyService {
         claims.put("role",     ROLE_PARENT);
         claims.put("name",     requester.getName());
         claims.put("familyId", savedFamily.getId());
+        claims.put("familyName", savedFamily.getName());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
         return Map.of("token", newToken, "role", ROLE_PARENT, "familyId", savedFamily.getId());

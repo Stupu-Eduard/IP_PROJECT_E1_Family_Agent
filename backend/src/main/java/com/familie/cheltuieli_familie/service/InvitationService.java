@@ -104,6 +104,7 @@ public class InvitationService {
         claims.put("role",     role);
         claims.put("name",     user.getName());
         claims.put("familyId", inv.getFamily().getId());
+        claims.put("familyName", inv.getFamily().getName());
         String newToken = jwtUtil.generateToken(user.getEmail(), claims);
 
         return Map.of("token", newToken, "role", role);

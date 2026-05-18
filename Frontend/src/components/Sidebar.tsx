@@ -49,6 +49,7 @@ export default function Sidebar() {
     let userName      = 'Utilizator'
     let userRoleLabel = 'Părinte · Activ'
     let userInitials  = 'U'
+    let familyLabel   = 'Family Agent'
 
     if (token) {
         try {
@@ -63,6 +64,10 @@ export default function Sidebar() {
                 const lastInitial = parts[1] ? `${parts[1][0]}.` : ''
                 userName     = lastInitial ? `${firstName} ${lastInitial}` : firstName
                 userInitials = ((firstName[0] || '') + (parts[1]?.[0] || firstName[1] || '')).toUpperCase()
+            }
+
+            if (payload.familyName) {
+                familyLabel = `Familia ${payload.familyName}`
             }
 
             userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
@@ -96,7 +101,7 @@ export default function Sidebar() {
                 </div>
                 <div>
                     <div className="fa-sidebar-logo-name">Family Agent</div>
-                    <div className="fa-sidebar-logo-sub">Familia Popescu</div>
+                    <div className="fa-sidebar-logo-sub">{familyLabel}</div>
                 </div>
             </div>
 
