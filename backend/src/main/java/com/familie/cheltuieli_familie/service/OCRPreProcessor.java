@@ -233,22 +233,17 @@ public class OCRPreProcessor {
                 break;
         }
 
-        Mat deskewed = deskew(bankCropped);
-        Mat gray = toGrayScale(deskewed);
-        Mat denoised = denoiseImage(gray);
-        Mat enhanced = enhanceContrast(denoised);
-        Mat thresholded = applyOtsuThreshold(enhanced);
-
-        BufferedImage result = matToBufferedImage(thresholded);
+        Mat gray = toGrayScale(bankCropped);
+        // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
+        
+        BufferedImage result = matToBufferedImage(gray);
 
         src.release();
         upscaled.release();
         bankCropped.release();
-        deskewed.release();
         gray.release();
-        denoised.release();
-        enhanced.release();
-        thresholded.release();
+
+        return result;
 
         return result;
     }
