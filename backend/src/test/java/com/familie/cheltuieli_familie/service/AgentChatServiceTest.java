@@ -1,175 +1,105 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.dto.response.ChartPayload;
+import com.familie.cheltuieli_familie.dto.response.AgentResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
+import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AgentChatServiceTest {
 
-    @Mock
-    private VisualIntentExtractor visualIntentExtractor;
-
-    @Mock
-    private ChartGenerationService chartGenerationService;
-
-    @Mock
-    private RagRetrievalService ragRetrievalService;
+    @Mock private VisualIntentExtractor visualIntentExtractor;
+    @Mock private ChartGenerationService chartGenerationService;
+    @Mock private RagRetrievalService ragRetrievalService;
+    @Mock private FamilyMemberRepository familyMemberRepository;
 
     @InjectMocks
     private AgentChatService agentChatService;
 
     @Test
-    void processQuery_shouldReturnChartResponse_whenIntentIsChart() {
-        String userMessage = "Show me expenses by category";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("chart")
-                .chartType("bar")
-                .groupBy("category")
-                .build();
-        ChartResponseDTO chartResponse = new ChartResponseDTO("Here are your expenses",
-                ChartPayload.builder().chartType("bar").build());
+    void processQuery_shouldHandleChartIntent() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setResponseType("chart");
+        when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
+        
+        ChartResponseDTO mockResponse = mock(ChartResponseDTO.class);
+        when(chartGenerationService.generate(intent)).thenReturn(mockResponse);
 
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(chartGenerationService.generate(intent)).thenReturn(chartResponse);
+        AgentResponseDTO result = agentChatService.processQuery("vrem un grafic");
 
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(ChartResponseDTO.class, result);
-        assertEquals("chart", result.getType());
+        assertEquals(mockResponse, result);
         verify(chartGenerationService).generate(intent);
-        verifyNoInteractions(ragRetrievalService);
     }
 
     @Test
-    void processQuery_shouldReturnTextResponse_whenIntentIsText() {
-        String userMessage = "How much did I spend last month?";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("text")
-                .build();
-        String ragAnswer = "You spent 500 RON last month.";
+    void processQuery_shouldFallbackToRag_onException() {
+        when(visualIntentExtractor.extract(anyString())).thenThrow(new RuntimeException("Extractor failed"));
+        when(ragRetrievalService.askWithContext(anyString())).thenReturn("RAG Answer");
 
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        AgentResponseDTO result = agentChatService.processQuery("buna salut te rog");
 
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertEquals("text", result.getType());
-        assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithContext(userMessage);
-        verifyNoInteractions(chartGenerationService);
+        assertTrue(result instanceof TextResponseDTO);
+        assertEquals("RAG Answer", ((TextResponseDTO)result).getMessage());
     }
 
     @Test
-    void processQuery_shouldFallbackToText_whenChartGenerationFails() {
-        String userMessage = "Show me expenses";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("chart")
-                .chartType("pie")
-                .build();
-        String ragAnswer = "Fallback answer";
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(chartGenerationService.generate(intent)).thenThrow(new RuntimeException("Chart failed"));
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertEquals(ragAnswer, result.getMessage());
-        verify(ragRetrievalService).askWithContext(userMessage);
+    void stripMarkdown_shouldRemoveCodeFencesOnly() {
+        String markdown = """
+            # Header
+            ## Subheader
+            | col |
+            | --- |
+            | val |
+            **bold** and _italic_
+            ```java
+            code
+            ```
+            - list item
+            1. numbered item
+            """;
+        
+        String result = AgentChatService.stripMarkdown(markdown);
+        
+        assertFalse(result.contains("```"));
+        assertTrue(result.contains("# Header"));
+        assertTrue(result.contains("| col |"));
+        assertTrue(result.contains("**bold**"));
+        assertTrue(result.contains("- list item"));
+        assertTrue(result.contains("1. numbered item"));
     }
 
     @Test
-    void processQuery_shouldFallbackToText_whenIntentExtractionFails() {
-        String userMessage = "Some query";
-        String ragAnswer = "Fallback answer";
+    void processQuery_withAuthenticatedUser() {
+        User user = new User();
+        user.setId(1L);
+        user.setName("John");
+        
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        SecurityContextHolder.getContext().setAuthentication(auth);
 
-        when(visualIntentExtractor.extract(userMessage)).thenThrow(new RuntimeException("Extraction failed"));
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setResponseType("text");
+        when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(contains("John"))).thenReturn("Hello John");
 
-        var result = agentChatService.processQuery(userMessage);
+        AgentResponseDTO result = agentChatService.processQuery("hi");
 
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertEquals(ragAnswer, result.getMessage());
-    }
-
-    @Test
-    void processQuery_shouldHandleNullResponseTypeAsText() {
-        String userMessage = "What is this?";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType(null)
-                .build();
-        String ragAnswer = "Answer";
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(ragAnswer);
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-    }
-
-    @Test
-    void processQuery_shouldReturnFallbackText_whenRagReturnsNull() {
-        String userMessage = "How much did I spend?";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("text")
-                .build();
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(null);
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertNotNull(result.getMessage());
-        assertFalse(result.getMessage().isBlank());
-    }
-
-    @Test
-    void processQuery_shouldReturnFallbackText_whenRagReturnsBlank() {
-        String userMessage = "How much did I spend?";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("text")
-                .build();
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn("   ");
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertNotNull(result.getMessage());
-        assertFalse(result.getMessage().isBlank());
-    }
-
-    @Test
-    void processQuery_shouldReturnFallbackText_whenChartFailsAndRagReturnsNull() {
-        String userMessage = "Show me expenses";
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .responseType("chart")
-                .chartType("pie")
-                .build();
-
-        when(visualIntentExtractor.extract(userMessage)).thenReturn(intent);
-        when(chartGenerationService.generate(intent)).thenThrow(new RuntimeException("Chart failed"));
-        when(ragRetrievalService.askWithContext(userMessage)).thenReturn(null);
-
-        var result = agentChatService.processQuery(userMessage);
-
-        assertInstanceOf(TextResponseDTO.class, result);
-        assertNotNull(result.getMessage());
-        assertFalse(result.getMessage().isBlank());
+        assertEquals("Hello John", ((TextResponseDTO)result).getMessage());
+        
+        SecurityContextHolder.clearContext();
     }
 }

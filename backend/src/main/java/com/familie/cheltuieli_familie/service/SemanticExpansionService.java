@@ -23,6 +23,9 @@ public class SemanticExpansionService {
      *
      * Example: "mall shopping" → ["shopping", "haine", "brand-uri"]
      */
+    @org.springframework.beans.factory.annotation.Value("${rag.expansion.min-score-threshold:0.30}")
+    private double minScoreThreshold;
+
     public List<String> expandCategories(String fuzzyCategory) {
         if (fuzzyCategory == null || fuzzyCategory.isBlank()) {
             return Collections.emptyList();
@@ -31,6 +34,7 @@ public class SemanticExpansionService {
         try {
             List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyCategory, DEFAULT_TOP_K);
             List<String> categories = results.stream()
+                    .filter(r -> r.getScore() >= minScoreThreshold)
                     .map(EmbeddedExpense::getCategory)
                     .filter(Objects::nonNull)
                     .filter(c -> !c.isBlank())
@@ -59,6 +63,7 @@ public class SemanticExpansionService {
         try {
             List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyLocation, DEFAULT_TOP_K);
             List<String> locations = results.stream()
+                    .filter(r -> r.getScore() >= minScoreThreshold)
                     .map(EmbeddedExpense::getLocation)
                     .filter(Objects::nonNull)
                     .filter(l -> !l.isBlank())

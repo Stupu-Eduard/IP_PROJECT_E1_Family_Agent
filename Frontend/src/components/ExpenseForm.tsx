@@ -28,12 +28,13 @@ const ExpenseForm: React.FC = () => {
   const isManualMode = searchParams.get('mode') === 'manual';
   const notifyExpenseAdded = useExpenseStore((s) => s.notifyExpenseAdded);
 
-  const [amount,     setAmount]     = useState<number | ''>('');
-  const [category,   setCategory]   = useState('');
-  const [date,       setDate]       = useState(new Date().toISOString().split('T')[0]);
-  const [storeName,  setStoreName]  = useState('');
-  const [city,       setCity]       = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [amount,      setAmount]      = useState<number | ''>('');
+  const [category,    setCategory]    = useState('');
+  const [date,        setDate]        = useState(new Date().toISOString().split('T')[0]);
+  const [storeName,   setStoreName]   = useState('');
+  const [city,        setCity]        = useState('');
+  const [description, setDescription] = useState('');
+  const [categories,  setCategories]  = useState<string[]>([]);
 
   const [loading,     setLoading]     = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -49,6 +50,7 @@ const ExpenseForm: React.FC = () => {
     setIsAnalyzing(true);
     setOcrError(null);
     setError('');
+    setSuccess(false);
     try {
       const data = await processReceiptOCR(file);
       if (data.amount)   setAmount(data.amount);
@@ -57,8 +59,21 @@ const ExpenseForm: React.FC = () => {
         const formattedDate = data.date.includes('T') ? data.date.split('T')[0] : data.date;
         setDate(formattedDate);
       }
+      if (data.locationName) setStoreName(data.locationName);
+      if (data.items && data.items.length > 0) {
+        const desc = data.items
+          .map(item => {
+            const qty = item.quantity && item.quantity !== 1 ? ` x${item.quantity}` : '';
+            const price = item.unitPrice ? ` - ${item.unitPrice} RON` : '';
+            return `${item.name}${qty}${price}`;
+          })
+          .join('\n');
+        setDescription(desc);
+      }
+
+      // OCR completează câmpurile — userul poate corecta înainte de a salva manual.
     } catch {
-      setOcrError('Nu am putut citi automat toate datele. Te rugăm să le completezi manual.');
+      setOcrError('Nu am putut citi automat bonul. Te rugăm să introduci datele manual.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -74,7 +89,7 @@ const ExpenseForm: React.FC = () => {
     }
     setLoading(true);
     try {
-      await createExpense({ amount: Number(amount), categoryName: category, date, description: undefined, storeName: storeName || undefined, city: city || undefined });
+      await createExpense({ amount: Number(amount), categoryName: category, date, description: description || undefined, storeName: storeName || undefined, city: city || undefined });
       notifyExpenseAdded();
       setSuccess(true);
       setAmount('');
@@ -82,6 +97,7 @@ const ExpenseForm: React.FC = () => {
       setDate(new Date().toISOString().split('T')[0]);
       setStoreName('');
       setCity('');
+      setDescription('');
       setOcrError(null);
       setTimeout(() => navigate('/expenses'), 1500);
     } catch (err: any) {
@@ -314,6 +330,22 @@ const ExpenseForm: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="description" className="label" style={{ display: 'block', marginBottom: 8 }}>
+                  Detalii produse <span style={{ color: 'var(--color-muted)', fontWeight: 400 }}>(opțional)</span>
+                </label>
+                <textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="input"
+                    placeholder="Ex: Inel aur x1 - 150 RON&#10;Colier argint x2 - 80 RON"
+                    rows={3}
+                    disabled={isInputDisabled}
+                    style={{ opacity: isInputDisabled ? 0.6 : 1, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
               <button
                   type="submit"
                   disabled={isInputDisabled}
@@ -337,7 +369,7 @@ const ExpenseForm: React.FC = () => {
             }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🔐</div>
               <div style={{ fontSize: 11.5, color: 'var(--color-muted)', lineHeight: 1.5 }}>
-                Procesare locală + criptată. Bonurile nu sunt stocate fără confirmarea ta.
+                Bonurile scanate sunt salvate automat în baza de date. Poți edita detaliile înainte de a salva manual.
               </div>
             </div>
           </div>

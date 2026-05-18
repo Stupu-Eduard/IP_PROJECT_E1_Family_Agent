@@ -53,7 +53,8 @@ export default function Sidebar() {
     let userRole      = 'Parent'
     let userName      = ''
     let userRoleLabel = 'Părinte · Activ'
-    let userInitials  = 'FA'
+    let userInitials  = 'U'
+    let familyLabel   = 'Family Agent'
 
     if (token) {
         try {
@@ -72,10 +73,11 @@ export default function Sidebar() {
                     .join('')
             }
 
-            userRoleLabel =
-                userRole === 'Child'     ? 'Copil · Activ'
-                    : userRole === 'Co-Parent' ? 'Co-Părinte · Activ'
-                        :                            'Părinte · Activ'
+            if (payload.familyName) {
+                familyLabel = `Familia ${payload.familyName}`
+            }
+
+            userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
         } catch {}
     }
 

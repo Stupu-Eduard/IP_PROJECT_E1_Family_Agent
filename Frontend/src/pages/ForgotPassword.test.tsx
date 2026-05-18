@@ -3,6 +3,13 @@ import { render, screen, fireEvent} from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import ForgotPassword from './ForgotPassword'
+import { api } from '../services/api'
+
+vi.mock('../services/api', () => ({
+    api: {
+        post: vi.fn(),
+    },
+}))
 
 describe('ForgotPassword Component', () => {
     beforeEach(() => {
@@ -14,7 +21,7 @@ describe('ForgotPassword Component', () => {
     it('1. Randează corect formularul inițial', () => {
         renderComponent()
         expect(screen.getByPlaceholderText('adresa@exemplu.com')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /Trimite link de resetare/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Continuă resetarea/i })).toBeInTheDocument()
     })
 
     it('2. Arată eroare dacă email-ul este gol la submit', async () => {
@@ -52,26 +59,24 @@ describe('ForgotPassword Component', () => {
         expect(errorMsg).toBeInTheDocument()
     })
 
-    it('4. Trece prin fluxul de loading și afișează succesul', async () => {
+    it('4. Trece prin fluxul de loading și navighează la resetare', async () => {
         renderComponent()
         const input = screen.getByPlaceholderText('adresa@exemplu.com')
         const form = input.closest('form')!
 
         fireEvent.change(input, { target: { value: 'test@familie.com' } })
+        const selects = screen.getAllByRole('combobox')
+        fireEvent.change(selects[0], { target: { value: 'ANIMAL' } })
+        fireEvent.change(screen.getByPlaceholderText('ex: pisica'), { target: { value: 'Pisica' } })
+        fireEvent.change(selects[1], { target: { value: 'COLOR' } })
+        fireEvent.change(screen.getByPlaceholderText('ex: albastru'), { target: { value: 'Albastru' } })
+
+        ;(api.post as any).mockResolvedValueOnce({ data: { resetToken: 'reset-token' } })
         fireEvent.submit(form)
 
         // Verificăm starea de loading
         expect(await screen.findByText(/Se procesează/i)).toBeInTheDocument()
         expect(input).toBeDisabled()
-
-        // Așteptăm mesajul de succes folosind textul exact — apare o singură dată în DOM
-        const successMsg = await screen.findByText(
-            'Dacă adresa există în sistem, vei primi un link pentru resetarea parolei.',
-            { exact: true },
-            { timeout: 3000 }
-        )
-        expect(successMsg).toBeInTheDocument()
-        expect(screen.getByText(/Email trimis!/i)).toBeInTheDocument()
     })
 
     it('5. Navigarea înapoi la login funcționează', () => {

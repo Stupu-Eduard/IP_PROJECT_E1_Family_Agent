@@ -14,7 +14,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/invitations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "https://family-agent.me"})
 public class InvitationController {
 
     private final InvitationService invitationService;

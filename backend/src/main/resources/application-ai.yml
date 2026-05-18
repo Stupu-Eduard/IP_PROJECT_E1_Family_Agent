@@ -13,6 +13,20 @@ qdrant:
   host: qdrant
   port: 6334
   collection-name: expenses
+  collection:
+    vector-size: 2048
+    distance: Cosine
+    index-type: keyword
+
+ocr:
+  language: ron+eng
+
+ai:
+  intent-extraction:
+    max-retries: 3
+    retry-delays-ms: 2000,4000
+    default-group-by: category
+    default-series-by: person
 
 # LangChain4j Config referencing .env values
 langchain4j:

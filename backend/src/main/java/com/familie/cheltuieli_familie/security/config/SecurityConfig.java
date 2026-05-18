@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.security.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,6 +30,9 @@ public class SecurityConfig {
     private final com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
     private static final String ROLE_PARENT = "PARENT";
     private static final String ROLE_CHILD = "CHILD";
+
+    @Value("#{'${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://family-agent.me,https://www.family-agent.me}'.split(',')}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -76,6 +80,7 @@ public class SecurityConfig {
                         // RBAC - Parintele are acces exclusiv la setarile sale si la alerte
                         .requestMatchers("/api/v1/parent/**").hasRole(ROLE_PARENT)
                         .requestMatchers("/api/v1/alerts/**").hasRole(ROLE_PARENT)
+                        .requestMatchers("/api/geofencing/**").hasRole(ROLE_PARENT)
 
                         // Copilul si Parintele pot trimite date de locatie
                         .requestMatchers("/api/v1/child/location/sync").hasAnyRole(ROLE_PARENT, ROLE_CHILD)
@@ -97,25 +102,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // REPARATIE SECURITY HOTSPOT: Inlocuim wildcard-ul "*" cu originile specifice frontend-ului
-        // In productie, acestea ar trebui sa vina din fisierele de configurare (.yml)
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173", // Vite (Frontend implicit)
-                "http://localhost:3000", // React standard
-                "https://family-agent.me",
-                "https://api.family-agent.me",
-                "http://localhost:4173" // vite preview
-        ));
+        // Originile sunt configurate in application.yml pentru a evita IP-uri hardcodate.
+        configuration.setAllowedOrigins(allowedOrigins);
 
         // Permite metodele HTTP clasice si pe cele speciale pentru WebSockets
-        // PATCH adaugat pentru suportul schimbarii rolului din FamilyController
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
 
-        // Permite orice headere trimise de frontend
-        configuration.setAllowedHeaders(List.of("*"));
+
+        // Permite headerele necesare
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        
+        // Expunem headerul Authorization pentru ca frontendul sa poata citi tokenul daca e cazul
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Link", "X-Total-Count"));
 
         // Crucial pentru WebSockets si SSE ca sa isi mentina conexiunea deschisa
         configuration.setAllowCredentials(true);
+        
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // Aplica aceste reguli pe absolut toate rutele aplicației

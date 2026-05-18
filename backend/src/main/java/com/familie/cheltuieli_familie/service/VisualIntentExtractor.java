@@ -66,18 +66,21 @@ public class VisualIntentExtractor {
             1. Analizează întrebarea și returnează DOAR un obiect JSON.
             2. Nu adăuga câmpuri care nu există în tabel.
             3. Nu presupune existența unor coloane precum "budget", "income", "savings".
+            4. Dacă utilizatorul menționează o sumă (ex: "280 de ron", "150 RON"), extrage valoarea în filters.amount.
+            5. Dacă utilizatorul menționează un cuvânt cheie despre cheltuială (ex: "benzină", "mâncare", "film"), extrage în filters.description.
+            6. Dacă utilizatorul întreabă despre o cheltuială specifică, un membru al familiei, sau o sumă, responseType TREBUIE să fie "data_query", NU "conversation".
 
             Câmpuri JSON obligatorii:
             - responseType: "conversation" | "data_query" | "chart"
-              - "conversation" = salutări, small talk, întrebări generale fără legătură cu datele
-              - "data_query" = întrebări despre cheltuieli, analize, sume, comparări (necesită RAG)
+              - "conversation" = DOAR salutări, small talk, întrebări generale fără legătură cu datele
+              - "data_query" = întrebări despre cheltuieli, analize, sume, comparări, detalii despre o cheltuială (necesită RAG)
               - "chart" = cereri de grafic sau vizualizare
             - chartType: "bar" | "pie" | "line" (doar dacă responseType="chart")
             - aggregation: "sum" | "count" | "avg"
             - groupBy: "person" | "category" | "month" | "year" | "location"
             - seriesBy: "person" | "category" | null
             - title: titlu în română
-            - filters: { category, person, dateRange, location }
+            - filters: { category, person, dateRange, location, amount, description }
 
             Pentru dateRange, folosește: "last_3_months", "this_month", "this_year",
             sau un obiect { from: "YYYY-MM-DD", to: "YYYY-MM-DD" }.
@@ -180,10 +183,12 @@ public class VisualIntentExtractor {
         }
 
         return ChartFilters.builder()
-                .category(nullIfBlank(filtersNode.path(defaultGroupBy).asText(null)))
-                .person(nullIfBlank(filtersNode.path(defaultSeriesBy).asText(null)))
+                .category(nullIfBlank(filtersNode.path("category").asText(null)))
+                .person(nullIfBlank(filtersNode.path("person").asText(null)))
                 .dateRange(nullIfBlank(filtersNode.path("dateRange").asText(null)))
                 .location(nullIfBlank(filtersNode.path("location").asText(null)))
+                .amount(nullIfBlank(filtersNode.path("amount").asText(null)))
+                .description(nullIfBlank(filtersNode.path("description").asText(null)))
                 .build();
     }
 
@@ -192,13 +197,6 @@ public class VisualIntentExtractor {
     }
 
     String stripMarkdownFences(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        if (trimmed.startsWith("```")) {
-            trimmed = trimmed.replaceFirst("```json\\s*", "").replaceFirst("```\\s*", "");
-            int lastFence = trimmed.lastIndexOf("```");
-            if (lastFence >= 0) trimmed = trimmed.substring(0, lastFence).trim();
-        }
-        return trimmed;
+        return com.familie.cheltuieli_familie.util.MarkdownUtil.stripMarkdownFences(raw);
     }
 }

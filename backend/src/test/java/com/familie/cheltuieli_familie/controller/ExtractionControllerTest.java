@@ -8,16 +8,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -74,5 +77,23 @@ class ExtractionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"rawText\": \"\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testProcessDocumentWithBankParameter() throws Exception {
+        com.familie.cheltuieli_familie.model.Transaction tx = new com.familie.cheltuieli_familie.model.Transaction(
+                java.time.LocalDate.now(), "Lidl", 100.50, "RON", "EXPENSE"
+        );
+        when(extractionPipelineService.processDocument(any(File.class), eq("ING")))
+                .thenReturn(List.of(tx));
+
+        MockMultipartFile dummyFile = new MockMultipartFile("file", "test.pdf", "application/pdf", new byte[0]);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/v1/extract/process")
+                        .file(dummyFile)
+                        .param("bank", "ING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].description").value("Lidl"));
     }
 }

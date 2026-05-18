@@ -12,6 +12,9 @@ const registerSchema = yup.object().shape({
     email:           yup.string().required('Email obligatoriu.').email('Email invalid.'),
     password:        yup.string().required('Parola este obligatorie.').min(8, 'Minim 8 caractere.'),
     confirmPassword: yup.string().required('Confirmă parola.').oneOf([yup.ref('password')], 'Parolele nu coincid.'),
+    favoriteAnimal:  yup.string().required('Animalul preferat este obligatoriu.'),
+    favoriteColor:   yup.string().required('Culoarea preferată este obligatorie.'),
+    childhoodStreet: yup.string().required('Strada copilăriei este obligatorie.'),
 });
 
 // ── Password strength helper ───────────────────────────────────────────────
@@ -52,6 +55,9 @@ export default function RegisterForm() {
     const [email,           setEmail]           = useState('');
     const [password,        setPassword]        = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [favoriteAnimal,  setFavoriteAnimal]  = useState('');
+    const [favoriteColor,   setFavoriteColor]   = useState('');
+    const [childhoodStreet, setChildhoodStreet] = useState('');
     const [role,            setRole]            = useState<'Parent' | 'Child'>('Parent');
     const [error,           setError]           = useState('');
     const [isLoading,       setIsLoading]       = useState(false);
@@ -70,9 +76,17 @@ export default function RegisterForm() {
         e.preventDefault();
         setError('');
         try {
-            await registerSchema.validate({ name, email, password, confirmPassword });
+            await registerSchema.validate({
+                name,
+                email,
+                password,
+                confirmPassword,
+                favoriteAnimal,
+                favoriteColor,
+                childhoodStreet,
+            });
             setIsLoading(true);
-            const payload: RegisterDTO = { name, email, password, role };
+            const payload: RegisterDTO = { name, email, password, favoriteAnimal, favoriteColor, childhoodStreet, role };
             const response = await api.post<{ token: string }>('/api/v1/auth/register', payload);
             if (response.data.token) {
                 login(response.data.token);
@@ -230,6 +244,40 @@ export default function RegisterForm() {
                                 type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="••••••••" disabled={isLoading}
                                 style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0, letterSpacing: '0.1em' }}
+                            />
+                        </div>
+
+                        <div className="label" style={{ fontSize: 10, margin: '16px 0 6px' }}>
+                            ÎNTREBĂRI DE SECURITATE
+                        </div>
+
+                        {/* Animal preferat */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>CARE ESTE ANIMALUL TĂU PREFERAT?</div>
+                            <input
+                                type="text" value={favoriteAnimal} onChange={(e) => setFavoriteAnimal(e.target.value)}
+                                placeholder="ex: pisica" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
+                        {/* Culoare preferată */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>CARE ESTE CULOAREA TA PREFERATĂ?</div>
+                            <input
+                                type="text" value={favoriteColor} onChange={(e) => setFavoriteColor(e.target.value)}
+                                placeholder="ex: albastru" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
+                            />
+                        </div>
+
+                        {/* Strada copilăriei */}
+                        <div style={{ borderBottom: '1px solid var(--color-border)', padding: '16px 0' }}>
+                            <div className="label" style={{ fontSize: 10, marginBottom: 6 }}>PE CE STRADĂ AI LOCUIT ÎN COPILĂRIE?</div>
+                            <input
+                                type="text" value={childhoodStreet} onChange={(e) => setChildhoodStreet(e.target.value)}
+                                placeholder="ex: Strada Lalelelor" disabled={isLoading}
+                                style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 18, color: 'var(--color-ink)', padding: 0 }}
                             />
                         </div>
 

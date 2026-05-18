@@ -2,17 +2,23 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.LoginRequest;
 import com.familie.cheltuieli_familie.dto.RegisterRequest;
+import com.familie.cheltuieli_familie.dto.ForgotPasswordRequest;
+import com.familie.cheltuieli_familie.dto.ResetPasswordRequest;
+import com.familie.cheltuieli_familie.dto.SecurityQuestion;
 import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
+import com.familie.cheltuieli_familie.model.Answer;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
+import com.familie.cheltuieli_familie.repository.AnswerRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -35,6 +41,10 @@ class AuthControllerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private AnswerRepository answerRepository;
+
 
     @Mock
     private FamilyMemberRepository familyMemberRepository;
@@ -122,6 +132,73 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_CandRoleEsteChild_CaptureazaClaimRoleCaChild() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("child-claim@example.com");
+        request.setPassword("pw");
+
+        User user = new User();
+        user.setId(20L);
+        user.setName("Child Claim");
+        user.setEmail("child-claim@example.com");
+        user.setPasswordH("pw");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("child");
+        member.setFamily(null);
+
+        when(userRepository.findByEmail("child-claim@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("pw", "pw")).thenReturn(true);
+        when(familyMemberRepository.findByUserId(20L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("child-claim@example.com"), any())).thenReturn("tok-child");
+
+        ResponseEntity<Object> result = authController.login(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("child-claim@example.com"), captor.capture());
+        Map<String, Object> claims = captor.getValue();
+        assertEquals("Child", claims.get("role"));
+    }
+
+    @Test
+    void login_CandMembruAreFamilieDarFaraFamilyId_NuAdaugaFamilyIdInTokenClaims() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("parent@familie.com");
+        request.setPassword("parola");
+
+        User user = new User();
+        user.setId(11L);
+        user.setName("Parent User");
+        user.setEmail("parent@familie.com");
+        user.setPasswordH("parola");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("Parent");
+        member.setFamily(null);
+
+        when(userRepository.findByEmail("parent@familie.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("parola", "parola")).thenReturn(true);
+        when(familyMemberRepository.findByUserId(11L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("parent@familie.com"), any())).thenReturn("parent-token");
+
+        ResponseEntity<Object> result = authController.login(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Parent", body.get("role"));
+
+        ArgumentCaptor<Map<String, Object>> claimsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("parent@familie.com"), claimsCaptor.capture());
+        Map<String, Object> claims = claimsCaptor.getValue();
+        assertEquals(11L, claims.get("userId"));
+        assertEquals("Parent", claims.get("role"));
+        assertEquals("Parent User", claims.get("name"));
+        assertFalse(claims.containsKey("familyId"));
+    }
+
+    @Test
     void login_CandUserInexistent_ReturneazaUnauthorized() {
         LoginRequest request = new LoginRequest();
         request.setEmail("none@example.com");
@@ -160,6 +237,9 @@ class AuthControllerTest {
         request.setName("Nou User");
         request.setEmail("new@example.com");
         request.setPassword("password123");
+        request.setFavoriteAnimal("cat");
+        request.setFavoriteColor("blue");
+        request.setChildhoodStreet("Oak Street");
 
         Family savedFamily = new Family();
         savedFamily.setId(1L);
@@ -185,6 +265,9 @@ class AuthControllerTest {
         // GIVEN
         RegisterRequest request = new RegisterRequest();
         request.setEmail("existent@example.com");
+        request.setFavoriteAnimal("cat");
+        request.setFavoriteColor("blue");
+        request.setChildhoodStreet("Oak Street");
 
         when(userRepository.findByEmail("existent@example.com")).thenReturn(Optional.of(new User()));
 
@@ -229,6 +312,9 @@ class AuthControllerTest {
         request.setEmail("copil@example.com");
         request.setPassword("pass123");
         request.setRole("Child");
+        request.setFavoriteAnimal("dog");
+        request.setFavoriteColor("green");
+        request.setChildhoodStreet("Maple Ave");
 
         when(userRepository.findByEmail("copil@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("pass123")).thenReturn("encoded-child-pass");
@@ -241,6 +327,176 @@ class AuthControllerTest {
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertEquals("Child", body.get("role"));
         assertEquals("child-token", body.get("token"));
+    }
+
+    @Test
+    void forgotPassword_CandRaspunsurileSuntCorecte_ReturneazaVerificareReusita() {
+        User user = new User();
+        user.setId(3L);
+        user.setEmail("reset@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("reset@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("reset@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(3L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("cat", "encoded-cat")).thenReturn(true);
+        when(passwordEncoder.matches("blue", "encoded-blue")).thenReturn(true);
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Verificare reușită.", body.get("message"));
+    }
+
+    @Test
+    void forgotPassword_CandIntrebarileSuntIdentice_ReturneazaBadRequest() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("reset@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.ANIMAL);
+        request.setAnswer2("cat");
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void resetPassword_CandRaspunsurileSuntCorecte_ActualizeazaParola() {
+        User user = new User();
+        user.setId(4L);
+        user.setEmail("reset2@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-dog");
+        answers.setColor("encoded-green");
+        answers.setStreet("encoded-road");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("reset2@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("dog");
+        request.setQuestion2(SecurityQuestion.STREET);
+        request.setAnswer2("road");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("reset2@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(4L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("dog", "encoded-dog")).thenReturn(true);
+        when(passwordEncoder.matches("road", "encoded-road")).thenReturn(true);
+        when(passwordEncoder.encode("NewPassword123!")).thenReturn("encoded-new-pass");
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        verify(userRepository).save(argThat(savedUser -> "encoded-new-pass".equals(savedUser.getPasswordH())));
+    }
+
+    @Test
+    void resetPassword_CandRaspunsurileSuntGresite_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("reset3@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("reset3@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("wrong");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("reset3@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(5L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("wrong", "encoded-cat")).thenReturn(false);
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void resetPassword_CandNuExistaRaspunsuri_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(6L);
+        user.setEmail("missing-answers@example.com");
+
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("missing-answers@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+        request.setNewPassword("NewPassword123!");
+
+        when(userRepository.findByEmail("missing-answers@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(6L)).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.resetPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void forgotPassword_CandUtilizatorulNuExista_ReturneazaBadRequest() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("unknown@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1("cat");
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+    }
+
+    @Test
+    void forgotPassword_CandUnRaspunsEsteNull_ReturneazaBadRequest() {
+        User user = new User();
+        user.setId(7L);
+        user.setEmail("null-answer@example.com");
+
+        Answer answers = new Answer();
+        answers.setAnimal("encoded-cat");
+        answers.setColor("encoded-blue");
+        answers.setStreet("encoded-street");
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("null-answer@example.com");
+        request.setQuestion1(SecurityQuestion.ANIMAL);
+        request.setAnswer1(null);
+        request.setQuestion2(SecurityQuestion.COLOR);
+        request.setAnswer2("blue");
+
+        when(userRepository.findByEmail("null-answer@example.com")).thenReturn(Optional.of(user));
+        when(answerRepository.findByUserId(7L)).thenReturn(Optional.of(answers));
+        when(passwordEncoder.matches("blue", "encoded-blue")).thenReturn(true);
+
+        ResponseEntity<Object> result = authController.forgotPassword(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
     }
 
     @Test
@@ -288,6 +544,60 @@ class AuthControllerTest {
         assertEquals(HttpStatus.OK, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertEquals("Parent", body.get("role"));
+    }
+
+    @Test
+    void refresh_CandRolEsteCopil_SiNuExistaFamilyId_NormalizeazaRolul() {
+        User user = new User();
+        user.setId(3L);
+        user.setName("Copil Refresh");
+        user.setEmail("copil-refresh@example.com");
+
+        FamilyMember member = new FamilyMember();
+        member.setRole("child");
+        member.setFamily(null);
+
+        org.springframework.security.core.Authentication auth =
+                mock(org.springframework.security.core.Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+        when(familyMemberRepository.findByUserId(3L)).thenReturn(List.of(member));
+        when(jwtUtil.generateToken(eq("copil-refresh@example.com"), any())).thenReturn("child-refresh-token");
+
+        ResponseEntity<Object> result = authController.refresh(auth);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        Map<String, Object> body = (Map<String, Object>) result.getBody();
+        assertEquals("Child", body.get("role"));
+
+        ArgumentCaptor<Map<String, Object>> claimsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(jwtUtil).generateToken(eq("copil-refresh@example.com"), claimsCaptor.capture());
+        Map<String, Object> claims = claimsCaptor.getValue();
+        assertEquals("Child", claims.get("role"));
+        assertFalse(claims.containsKey("familyId"));
+    }
+
+    @Test
+    void logout_CandHeaderNuEsteBearer_ReturneazaBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Basic abc123");
+
+        ResponseEntity<Object> result = authController.logout(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verifyNoInteractions(blacklistService);
+    }
+
+    @Test
+    void logout_CandJtiLipseste_ReturneazaBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer token-fara-jti");
+        when(jwtUtil.extractJti("token-fara-jti")).thenReturn(null);
+        when(jwtUtil.extractExpiration("token-fara-jti")).thenReturn(new Date(System.currentTimeMillis() + 10000));
+
+        ResponseEntity<Object> result = authController.logout(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        verify(blacklistService, never()).revokeToken(any(), any());
     }
 
     @Test

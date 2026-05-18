@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,43 +16,21 @@ public class RagRetrievalService {
 
     private final QdrantVectorService qdrantVectorService;
     private final LlmRouterService llmRouterService;
+    private final SecurityService securityService;
 
     /**
-     * Performs a RAG query: retrieves context from vector store and asks the LLM via Router.
-     * The retrieved context is injected into the prompt for the LLM to use.
+     * Performs a RAG query: asks the LLM via Router.
+     * The LLM has access to both Qdrant retrieval (via RetrievalAugmentor)
+     * and relational DB tools (via ExpenseTools), so we pass the raw query.
      *
      * @param query The user query.
-     * @return The LLM's answer based on the retrieved context.
+     * @return The LLM's answer based on retrieved context and/or DB tools.
      */
     public String askWithContext(String query) {
         log.info("Performing RAG query: {}", query);
-
-        // Retrieve relevant context from Qdrant
         String context = retrieveContext(query, 10);
-        log.info("Retrieved context for query (length={}): {}", context.length(),
-                context.substring(0, Math.min(200, context.length())));
-
-        // Build augmented query with context
-        String augmentedQuery = buildAugmentedQuery(query, context);
-
+        String augmentedQuery = "Context din sistemul RAG:\n" + context + "\n\nÎntrebare utilizator: " + query;
         return llmRouterService.routeAndChat(augmentedQuery);
-    }
-
-    private String buildAugmentedQuery(String query, String context) {
-        if (context == null || context.isBlank() ||
-                context.equals("Nu s-au găsit cheltuieli relevante în baza de date.")) {
-            log.warn("No relevant context found for query: {}", query);
-            return query + "\n\n[NOTA: Nu există date relevante în istoric pentru această întrebare.]";
-        }
-
-        return String.format("""
-            Context din baza de date (cheltuieli relevante):
-            %s
-
-            Întrebare utilizator: %s
-
-            Răspunde folosind contextul de mai sus. Dacă informația nu este în context, spune că nu ai date suficiente.
-            """, context, query);
     }
 
     /**
@@ -63,7 +42,8 @@ public class RagRetrievalService {
      */
     public String retrieveContext(String query, int topK) {
         log.info("Retrieving context for query: {}", query);
-        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(query, topK);
+        Long[] scope = securityService.resolveScope();
+        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(query, topK, scope[0], scope[1]);
 
         if (results.isEmpty()) {
             return "Nu s-au găsit cheltuieli relevante în baza de date.";

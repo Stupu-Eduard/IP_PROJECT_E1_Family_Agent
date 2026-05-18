@@ -83,6 +83,8 @@ public class QdrantConfig {
             createPayloadIndex("person", indexType);
             createPayloadIndex("category", indexType);
             createPayloadIndex("location", indexType);
+            createPayloadIndex("family_id", indexType);
+            createPayloadIndex("user_id", indexType);
             
         } catch (Exception e) {
             log.error("Failed to create Qdrant collection: {}", e.getMessage());

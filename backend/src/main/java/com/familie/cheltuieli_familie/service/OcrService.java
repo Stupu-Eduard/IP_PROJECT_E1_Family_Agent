@@ -6,6 +6,7 @@ import net.sourceforge.tess4j.TesseractException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,10 +15,12 @@ import org.springframework.stereotype.Service;
 
 import com.familie.cheltuieli_familie.exception.AiServiceException;
 import jakarta.annotation.PostConstruct;
+import net.sourceforge.tess4j.Word;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class OcrService {
@@ -27,10 +30,15 @@ public class OcrService {
     @Value("${tesseract.datapath}")
     private String tessDataPath;
 
-    @Value("${ocr.language:eng}")
+    @Value("${ocr.language:ron+eng}")
     private String ocrLanguage;
 
     private final ITesseract tesseract = new Tesseract();
+    private final OCRPreProcessor ocrPreProcessor;
+
+    public OcrService(OCRPreProcessor ocrPreProcessor) {
+        this.ocrPreProcessor = ocrPreProcessor;
+    }
 
     @PostConstruct
     public void init() {
@@ -39,27 +47,88 @@ public class OcrService {
     }
 
     public String extractTextFromPdf(File pdfFile) {
-
         try (PDDocument document = Loader.loadPDF(pdfFile)) {
+            // First try direct text extraction (for digital PDFs like bank statements)
+            String directText = extractTextDirectly(document);
+            if (directText != null && !directText.isBlank() && directText.trim().length() > 50) {
+                log.info("Extracted {} characters directly from digital PDF: {}", directText.length(), pdfFile.getName());
+                return directText;
+            }
 
+            // Fall back to OCR for scanned/image-based PDFs
+            log.info("Direct text extraction yielded little content, falling back to OCR for: {}", pdfFile.getName());
+            return extractTextWithOcr(document);
+
+        } catch (IOException e) {
+            log.error("Failed to load PDF: {}", pdfFile.getName(), e);
+            throw new AiServiceException("Failed to process PDF", e);
+        }
+    }
+
+    private String extractTextDirectly(PDDocument document) {
+        try {
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);
+            return stripper.getText(document);
+        } catch (IOException e) {
+            log.warn("Direct text extraction failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String extractTextWithOcr(PDDocument document) {
+        try {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             StringBuilder result = new StringBuilder();
 
             for (int page = 0; page < document.getNumberOfPages(); page++) {
-
                 BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
-
                 String pageText = tesseract.doOCR(image);
                 result.append(pageText).append("\n");
-
-                log.info("Processed page {}", page);
+                log.info("OCR processed page {}", page);
             }
-
             return result.toString();
-
         } catch (IOException | TesseractException e) {
             log.error("OCR failed", e);
             throw new AiServiceException("Failed to process PDF for OCR", e);
         }
+    }
+
+    public OcrResult extractTextFromImage(File imageFile) {
+        try {
+            BufferedImage preprocessed = ocrPreProcessor.processImage(imageFile, null);
+            String text = tesseract.doOCR(preprocessed);
+            double confidence = computeConfidence(preprocessed);
+            log.info("OCR extracted {} characters (confidence={}%) from image: {}",
+                    text.length(), confidence * 100, imageFile.getName());
+            return new OcrResult(text, confidence);
+        } catch (IOException e) {
+            log.error("Image preprocessing failed for: {}", imageFile.getName(), e);
+            throw new AiServiceException("Failed to preprocess image for OCR", e);
+        } catch (TesseractException e) {
+            log.error("OCR failed for image: {}", imageFile.getName(), e);
+            throw new AiServiceException("Failed to process image for OCR", e);
+        }
+    }
+
+    private double computeConfidence(BufferedImage image) {
+        try {
+            List<Word> words = ((Tesseract) tesseract).getWords(image, 3); // RIL_WORD
+            if (words.isEmpty()) {
+                return 0.0;
+            }
+            double total = 0;
+            for (Word word : words) {
+                total += word.getConfidence();
+            }
+            double avg = total / words.size();
+            return Math.min(avg / 100.0, 1.0);
+        } catch (Exception e) {
+            log.warn("Could not compute OCR confidence: {}", e.getMessage());
+            return 0.0;
+        }
+    }
+
+    public record OcrResult(String text, double confidence) {
     }
 }

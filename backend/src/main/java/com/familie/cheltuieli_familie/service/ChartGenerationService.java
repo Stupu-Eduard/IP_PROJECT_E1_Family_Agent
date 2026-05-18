@@ -75,13 +75,16 @@ public class ChartGenerationService {
             for (Map<String, Object> row : sorted) {
                 String name = String.valueOf(row.get("name"));
                 BigDecimal value = getValue(row, dataKey);
-                sb.append(String.format(" %s: %s RON;", name, value));
+                if (value != null) {
+                    sb.append(String.format(" %s: %s RON;", name, value));
+                }
             }
         } else {
             // For multi-series, summarize each series total
             for (String series : result.getSeriesNames()) {
                 BigDecimal total = result.getRows().stream()
                         .map(row -> getValue(row, series))
+                        .filter(v -> v != null)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 sb.append(String.format(" %s: %s RON total;", series, total));
             }
@@ -98,6 +101,6 @@ public class ChartGenerationService {
         if (value instanceof Number n) {
             return BigDecimal.valueOf(n.doubleValue());
         }
-        return BigDecimal.ZERO;
+        return null;
     }
 }

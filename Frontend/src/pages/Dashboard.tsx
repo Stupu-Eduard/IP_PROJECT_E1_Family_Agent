@@ -418,8 +418,15 @@ export default function Dashboard() {
                                 <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-muted-2)', display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Lat: {loc.lat.toFixed(4)}</span>
                                     <span>Lng: {loc.lng.toFixed(4)}</span>
-                                    <span style={{ color: loc.isRestricted ? '#E24B4A' : 'var(--color-primary)', fontWeight: 500 }}>
-                                        {loc.isRestricted ? '⚠ ZONĂ RESTRICȚIONATĂ!' : '✓ Zonă Sigură'}
+                                    <span style={{
+                                        color: loc.isRestricted || loc.isOutsideGeofence ? '#E24B4A' : 'var(--color-primary)',
+                                        fontWeight: 500
+                                    }}>
+                                        {loc.isRestricted
+                                            ? '⚠ ZONĂ RESTRICȚIONATĂ!'
+                                            : loc.isOutsideGeofence
+                                                ? '⚠ În afara zonei de siguranță!'
+                                                : '✓ Zonă Sigură'}
                                     </span>
                                 </div>
                             </div>

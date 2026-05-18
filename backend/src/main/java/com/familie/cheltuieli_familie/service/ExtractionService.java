@@ -77,19 +77,8 @@ public class ExtractionService {
         String validateOcr(@UserMessage String rawOcrText);
     }
 
-    /**
-     * Strips markdown code fences (```json ... ```) that some LLMs wrap around JSON output.
-     */
     private String stripMarkdownFences(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        // Remove leading ```json or ``` then trailing ```
-        if (trimmed.startsWith("```")) {
-            trimmed = trimmed.replaceFirst("```json\\s*", "").replaceFirst("```\\s*", "");
-            int lastFence = trimmed.lastIndexOf("```");
-            if (lastFence >= 0) trimmed = trimmed.substring(0, lastFence).trim();
-        }
-        return trimmed;
+        return com.familie.cheltuieli_familie.util.MarkdownUtil.stripMarkdownFences(raw);
     }
 
     private String callExtractionWithRetry(String rawText) {

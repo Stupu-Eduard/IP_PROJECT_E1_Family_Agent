@@ -65,6 +65,9 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password1!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password1!' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: pisica/i), { target: { value: 'Pisica' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: albastru/i), { target: { value: 'Albastru' } })
+        fireEvent.change(screen.getByPlaceholderText(/Strada Lalelelor/i), { target: { value: 'Strada Lalelelor' } })
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
         await waitForError('Numele este obligatoriu.')
     })
@@ -76,6 +79,9 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password1!' } })
         fireEvent.change(passFields[1], { target: { value: 'altceva111' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: pisica/i), { target: { value: 'Pisica' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: albastru/i), { target: { value: 'Albastru' } })
+        fireEvent.change(screen.getByPlaceholderText(/Strada Lalelelor/i), { target: { value: 'Strada Lalelelor' } })
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
         await waitForError('Parolele nu coincid.')
     })
@@ -101,6 +107,9 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: pisica/i), { target: { value: 'Pisica' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: albastru/i), { target: { value: 'Albastru' } })
+        fireEvent.change(screen.getByPlaceholderText(/Strada Lalelelor/i), { target: { value: 'Strada Lalelelor' } })
 
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
 
@@ -123,6 +132,9 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: pisica/i), { target: { value: 'Pisica' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: albastru/i), { target: { value: 'Albastru' } })
+        fireEvent.change(screen.getByPlaceholderText(/Strada Lalelelor/i), { target: { value: 'Strada Lalelelor' } })
 
         fireEvent.submit(screen.getByRole('button', { name: /Creează contul/i }))
 
@@ -137,6 +149,9 @@ describe('RegisterForm - 100% Coverage & Zero Errors', () => {
         const passFields = screen.getAllByPlaceholderText(/••••••••/i)
         fireEvent.change(passFields[0], { target: { value: 'Password123!' } })
         fireEvent.change(passFields[1], { target: { value: 'Password123!' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: pisica/i), { target: { value: 'Pisica' } })
+        fireEvent.change(screen.getByPlaceholderText(/ex: albastru/i), { target: { value: 'Albastru' } })
+        fireEvent.change(screen.getByPlaceholderText(/Strada Lalelelor/i), { target: { value: 'Strada Lalelelor' } })
 
         // mockLogin aruncă un string (non-Error) → ramura `else setError('Eroare neașteptată...')`
         mockLogin.mockImplementationOnce(() => { throw 'Crash non-Error' })

@@ -39,6 +39,8 @@ public class FamilyService {
     private final FamilyRepository       familyRepository;
     private final UserRepository         userRepository;
     private final JwtUtil                jwtUtil;
+    private final com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
+    private final com.familie.cheltuieli_familie.repository.BudgetRepository budgetRepository;
 
     // ── Creare familie ────────────────────────────────────────────────────────
 
@@ -58,6 +60,7 @@ public class FamilyService {
         member.setUser(requester);
         member.setRole(ROLE_PARENT);
         familyMemberRepository.save(member);
+        expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
         log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
@@ -66,6 +69,7 @@ public class FamilyService {
         claims.put("role",     ROLE_PARENT);
         claims.put("name",     requester.getName());
         claims.put("familyId", savedFamily.getId());
+        claims.put("familyName", savedFamily.getName());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
         return Map.of("token", newToken, "role", ROLE_PARENT, "familyId", savedFamily.getId());
@@ -101,6 +105,8 @@ public class FamilyService {
         Family family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Familia nu există."));
 
+        expenseRepository.clearFamilyFromExpenses(familyId);
+        budgetRepository.clearFamilyFromBudgets(familyId);
         familyMemberRepository.deleteAll(allMembers);
         familyRepository.delete(family);
         log.info("Familie ștearsă: id={} de către {}", familyId, requester.getEmail());

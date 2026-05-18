@@ -19,7 +19,6 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/v1/budgets")
-@CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 public class BudgetController {
 
     private final BudgetRepository budgetRepository;

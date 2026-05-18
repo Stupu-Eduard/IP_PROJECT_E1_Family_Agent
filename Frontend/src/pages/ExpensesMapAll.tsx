@@ -18,10 +18,11 @@ async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: n
   }
 }
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GoogleMap, Marker, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
-import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter } from 'lucide-react';
+import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
+import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } from 'lucide-react';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+import { saveGeofenceZone, getMyGeofenceZone, deleteGeofenceZone, type LatLng } from '../services/geofencing';
 
 type MapExpense = {
   id: number
@@ -59,6 +60,36 @@ const mapApiExpenseToMapExpense = (expense: any): MapExpense => {
 export default function ExpensesMapAll() {
   const navigate = useNavigate();
   const location = useLocation();
+  const token = useAuthStore((state) => state.token);
+
+  // --- STATE PENTRU LOCAȚIE LIVE (THE PIPE) ---
+  const [liveLocation, setLiveLocation] = useState<{ lat: number, lng: number, isRestricted?: boolean, isOutsideGeofence?: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    console.log('📡 HARTA LIVE: Se inițializează fluxul live prin THE PIPE...');
+
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
+    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
+
+    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
+
+    socket.onopen = () => console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.lat && data.lng) {
+          console.log('📍 HARTA LIVE: Poziție nouă primită:', data);
+          setLiveLocation({ lat: data.lat, lng: data.lng, isRestricted: data.isRestricted, isOutsideGeofence: data.isOutsideGeofence });
+        }
+      } catch (e) {
+        console.error('❌ HARTA LIVE: Eroare date WebSocket', e);
+      }
+    };
+
+    return () => socket.close();
+  }, [token]);
+  // --------------------------------------------
 
   const locationState = (location.state || {}) as any;
   const hasInjectedExpenses = Object.prototype.hasOwnProperty.call(locationState, 'expenses');
@@ -130,9 +161,17 @@ export default function ExpensesMapAll() {
     };
   }, [hasInjectedExpenses]);
 
-  // polygon drawing state
+  // polygon drawing state (expense filter)
   const polygonRef = useRef<any>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
+
+  // safe zone state
+  const drawingModeRef = useRef<'expense' | 'safezone'>('expense');
+  const safeZoneDrawnRef = useRef<any>(null);
+  const [safeZoneDrawing, setSafeZoneDrawing] = useState(false);
+  const [savedSafeZone, setSavedSafeZone] = useState<LatLng[] | null>(null);
+  const [pendingSafeZoneCoords, setPendingSafeZoneCoords] = useState<LatLng[] | null>(null);
+  const [safeZoneSaving, setSafeZoneSaving] = useState(false);
 
   // selected expense / place details for left panel
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
@@ -149,10 +188,15 @@ export default function ExpensesMapAll() {
   });
 
   useEffect(() => {
+    getMyGeofenceZone()
+      .then((zone) => { if (zone) setSavedSafeZone(zone.coordinates) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     return () => {
       try {
         if (polygonRef.current) {
-          // detach listeners if any
           const poly: any = polygonRef.current;
           if (poly.__listeners) {
             poly.__listeners.forEach((l: any) => l.remove?.());
@@ -160,6 +204,10 @@ export default function ExpensesMapAll() {
           }
           poly.setMap(null);
           polygonRef.current = null;
+        }
+        if (safeZoneDrawnRef.current) {
+          safeZoneDrawnRef.current.setMap(null);
+          safeZoneDrawnRef.current = null;
         }
       } catch {
         // ignore
@@ -294,19 +342,22 @@ export default function ExpensesMapAll() {
             <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9A8A7C] pointer-events-none" size={16} />
           </div>
 
-          <div className="flex items-center gap-3 md:justify-start col-span-1">
-            <button
-              onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
-              className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
-              title="Resetează filtrele"
-            >
-              <Filter size={16} /><span>Resetează Filtre</span>
-            </button>
+          <button
+            onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); setSelectedPerson(''); }}
+            className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
+          >
+            <Filter size={16} /><span>Resetează Filtre</span>
+          </button>
 
+          <div className="flex items-center gap-2 flex-wrap col-span-1 md:col-span-5">
             <button
-              onClick={() => setDrawingEnabled((s) => !s)}
+              onClick={() => {
+                drawingModeRef.current = 'expense';
+                setDrawingEnabled((s) => !s);
+                setSafeZoneDrawing(false);
+              }}
               className={`h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors ${drawingEnabled ? 'ring-2 ring-[#C4B9AC]' : ''} whitespace-nowrap`}
-              title="Desenează poligon"
+              title="Desenează poligon pentru filtrare cheltuieli"
             >
               <span>Deseneaza</span>
             </button>
@@ -320,10 +371,75 @@ export default function ExpensesMapAll() {
                 }
               }}
               className="h-10 px-3 bg-white border border-[#EDE9E3] rounded-[10px] text-[13px] font-medium text-[#2D2926] flex items-center justify-center gap-2 hover:border-[#C4B9AC] transition-colors whitespace-nowrap"
-              title="Șterge poligon"
+              title="Șterge poligon filtrare"
             >
               Sterge
             </button>
+
+            <button
+              onClick={() => {
+                drawingModeRef.current = 'safezone';
+                setSafeZoneDrawing((s) => !s);
+                setDrawingEnabled(false);
+                setPendingSafeZoneCoords(null);
+                if (safeZoneDrawnRef.current) {
+                  safeZoneDrawnRef.current.setMap(null);
+                  safeZoneDrawnRef.current = null;
+                }
+              }}
+              className={`h-10 px-3 border rounded-[10px] text-[13px] font-medium flex items-center justify-center gap-2 transition-colors whitespace-nowrap ${
+                safeZoneDrawing
+                  ? 'bg-green-600 border-green-600 text-white'
+                  : 'bg-white border-[#EDE9E3] text-[#2D2926] hover:border-green-400'
+              }`}
+              title="Desenează zona de siguranță"
+            >
+              <Shield size={15} />
+              <span>Zona Siguranta</span>
+            </button>
+
+            {pendingSafeZoneCoords && (
+              <button
+                disabled={safeZoneSaving}
+                onClick={async () => {
+                  setSafeZoneSaving(true);
+                  try {
+                    await saveGeofenceZone(pendingSafeZoneCoords);
+                    setSavedSafeZone(pendingSafeZoneCoords);
+                    setPendingSafeZoneCoords(null);
+                    if (safeZoneDrawnRef.current) {
+                      safeZoneDrawnRef.current.setMap(null);
+                      safeZoneDrawnRef.current = null;
+                    }
+                  } catch {
+                    // ignore
+                  } finally {
+                    setSafeZoneSaving(false);
+                  }
+                }}
+                className="h-10 px-3 bg-green-600 border border-green-600 text-white rounded-[10px] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-green-700 transition-colors whitespace-nowrap disabled:opacity-60"
+              >
+                {safeZoneSaving ? 'Se salvează...' : 'Salveaza Zona'}
+              </button>
+            )}
+
+            {savedSafeZone && !pendingSafeZoneCoords && (
+              <button
+                onClick={async () => {
+                  try {
+                    await deleteGeofenceZone();
+                    setSavedSafeZone(null);
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="h-10 px-3 bg-white border border-red-200 text-red-500 rounded-[10px] text-[13px] font-medium flex items-center justify-center gap-2 hover:border-red-400 transition-colors whitespace-nowrap"
+                title="Șterge zona de siguranță"
+              >
+                <ShieldOff size={15} />
+                <span>Sterge Zona</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -337,6 +453,27 @@ export default function ExpensesMapAll() {
         {isLoadingExpenses && !hasInjectedExpenses && (
           <div className="mb-4 bg-white border border-[#EDE9E3] rounded-[14px] p-4 shadow-sm text-[13px] text-[#9A8A7C]">
             Se încarcă cheltuielile pentru hartă...
+          </div>
+        )}
+
+        {liveLocation && savedSafeZone && (
+          liveLocation.isOutsideGeofence ? (
+            <div className="mb-4 flex items-center gap-3 bg-red-50 border border-red-200 rounded-[14px] px-5 py-3 text-[13px] text-red-700 font-medium">
+              <Shield size={16} className="text-red-500 shrink-0" />
+              <span>Copilul a ieșit din zona de siguranță!</span>
+            </div>
+          ) : (
+            <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-[14px] px-5 py-3 text-[13px] text-green-700 font-medium">
+              <Shield size={16} className="text-green-600 shrink-0" />
+              <span>Copilul se află în zona de siguranță.</span>
+            </div>
+          )
+        )}
+
+        {safeZoneDrawing && (
+          <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-[14px] px-5 py-3 text-[13px] text-green-700">
+            <Shield size={16} className="text-green-600 shrink-0" />
+            <span>Desenează poligonul pe hartă pentru a defini zona de siguranță, apoi apasă <strong>Salveaza Zona</strong>.</span>
           </div>
         )}
 
@@ -400,25 +537,60 @@ export default function ExpensesMapAll() {
                   options={{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }}
                 >
                   <DrawingManager
-                    drawingMode={drawingEnabled && (window as any).google ? (window as any).google.maps.drawing.OverlayType.POLYGON : null}
+                    drawingMode={(drawingEnabled || safeZoneDrawing) && (window as any).google ? (window as any).google.maps.drawing.OverlayType.POLYGON : null}
                     onPolygonComplete={(poly: any) => {
-                      // remove previous polygon
-                      if (polygonRef.current) {
-                        try { if (polygonRef.current.__listeners) { polygonRef.current.__listeners.forEach((l: any) => l.remove?.()); } } catch {}
-                        polygonRef.current.setMap(null);
+                      if (drawingModeRef.current === 'safezone') {
+                        if (safeZoneDrawnRef.current) {
+                          safeZoneDrawnRef.current.setMap(null);
+                        }
+                        poly.setEditable(true);
+                        safeZoneDrawnRef.current = poly;
+                        const coords: LatLng[] = poly.getPath().getArray().map((p: any) => ({ lat: p.lat(), lng: p.lng() }));
+                        setPendingSafeZoneCoords(coords);
+                        setSafeZoneDrawing(false);
+                      } else {
+                        if (polygonRef.current) {
+                          try { if (polygonRef.current.__listeners) { polygonRef.current.__listeners.forEach((l: any) => l.remove?.()); } } catch {}
+                          polygonRef.current.setMap(null);
+                        }
+                        poly.setEditable(true);
+                        polygonRef.current = poly;
+                        const updatePath = () => poly.getPath().getArray().map((p: any) => ({ lat: p.lat(), lng: p.lng() }));
+                        const insertListener = poly.getPath().addListener('insert_at', updatePath);
+                        const setListener = poly.getPath().addListener('set_at', updatePath);
+                        const removeListener = poly.getPath().addListener('remove_at', updatePath);
+                        poly.__listeners = [insertListener, setListener, removeListener];
+                        updatePath();
+                        setDrawingEnabled(false);
                       }
-                      poly.setEditable(true);
-                      polygonRef.current = poly;
-                      const updatePath = () => poly.getPath().getArray().map((p: any) => ({ lat: p.lat(), lng: p.lng() }));
-                      const insertListener = poly.getPath().addListener('insert_at', updatePath);
-                      const setListener = poly.getPath().addListener('set_at', updatePath);
-                      const removeListener = poly.getPath().addListener('remove_at', updatePath);
-                      poly.__listeners = [insertListener, setListener, removeListener];
-                      updatePath();
-                      setDrawingEnabled(false);
                     }}
-                    options={{ drawingControl: false, polygonOptions: { fillColor: '#FF0000', fillOpacity: 0.08, strokeWeight: 2 } }}
+                    options={{
+                      drawingControl: false,
+                      polygonOptions: drawingModeRef.current === 'safezone'
+                        ? { fillColor: '#00C853', fillOpacity: 0.12, strokeColor: '#00C853', strokeWeight: 2 }
+                        : { fillColor: '#FF0000', fillOpacity: 0.08, strokeWeight: 2 },
+                    }}
                   />
+
+                  {savedSafeZone && savedSafeZone.length > 0 && !pendingSafeZoneCoords && (
+                    <Polygon
+                      paths={savedSafeZone}
+                      options={{ fillColor: '#00C853', fillOpacity: 0.08, strokeColor: '#00C853', strokeWeight: 2 }}
+                    />
+                  )}
+
+                  {/* --- MARKER LOCAȚIE LIVE (COPIL) --- */}
+                  {liveLocation && (
+                    <Marker
+                      position={{ lat: liveLocation.lat, lng: liveLocation.lng }}
+                      icon={{
+                        url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                        scaledSize: new (window as any).google.maps.Size(40, 40)
+                      }}
+                      title="Locație Live Copil"
+                      zIndex={1000}
+                    />
+                  )}
 
                   <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
                     {(clusterer: any) => (
