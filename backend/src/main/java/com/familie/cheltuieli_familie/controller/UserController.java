@@ -2,12 +2,15 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
+import com.familie.cheltuieli_familie.repository.ExpenseRepository;
+import com.familie.cheltuieli_familie.repository.FamilyInvitationRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.repository.UserRepository;
 import com.familie.cheltuieli_familie.security.service.TokenBlacklistService;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -27,8 +30,10 @@ import java.util.Map;
 @CrossOrigin(origins = {"https://family-agent.me", "http://localhost:5173"})
 public class UserController {
 
+    private final ExpenseRepository       expenseRepository;
     private final UserRepository          userRepository;
     private final FamilyMemberRepository  familyMemberRepository;
+    private final FamilyInvitationRepository familyInvitationRepository;
     private final FamilyRepository        familyRepository;
     private final TokenBlacklistService   blacklistService;
     private final JwtUtil                 jwtUtil;
@@ -125,6 +130,7 @@ public class UserController {
      * Un Parent nu poate șterge contul dacă este singurul administrator
      * dintr-o familie cu alți membri — trebuie să transfere rolul sau să șteargă mai întâi familia.
      */
+    @Transactional
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteOwnAccount(
             Authentication auth,
@@ -170,6 +176,12 @@ public class UserController {
                 blacklistService.revokeToken(jwtUtil.extractJti(oldToken), jwtUtil.extractExpiration(oldToken));
             } catch (Exception ignored) {}
         }
+
+        // Stergem invitatiile trimise de acest user (invited_by)
+        familyInvitationRepository.deleteByInvitedById(user.getId());
+
+        // Decuplăm cheltuielile — user_id devine NULL (nu pierdem datele)
+        expenseRepository.clearUserFromExpenses(user.getId());
 
         userRepository.delete(user);
         log.info("Cont șters: {}", user.getEmail());

@@ -24,6 +24,7 @@ export default function ProfileSettingsModal({ open, onClose }: Props) {
 
     /* ── Profil ─────────────────────────────────────────────────────────────── */
     const [name, setName] = useState('');
+    const [initialName, setInitialName] = useState('');
     const [email, setEmail] = useState('');
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export default function ProfileSettingsModal({ open, onClose }: Props) {
 
         if (payload) {
             setName(payload.name ?? '');
+            setInitialName(payload.name ?? '');
             setEmail(payload.sub ?? payload.email ?? '');
         }
         setTimeout(() => firstInputRef.current?.focus(), 100);
@@ -57,6 +59,14 @@ export default function ProfileSettingsModal({ open, onClose }: Props) {
         const trimmed = name.trim();
         if (!trimmed) {
             setSaveError('Numele nu poate fi gol.');
+            return;
+        }
+        if (trimmed.length < 2) {
+            setSaveError('Numele trebuie să aibă cel puțin 2 caractere.');
+            return;
+        }
+        if (trimmed.length > 64) {
+            setSaveError('Numele nu poate depăși 64 de caractere.');
             return;
         }
         setSaving(true);
@@ -98,6 +108,8 @@ export default function ProfileSettingsModal({ open, onClose }: Props) {
             setDeleting(false);
         }
     };
+
+    const isDirty = name.trim() !== initialName.trim();
 
     if (!open) return null;
 
@@ -210,7 +222,7 @@ export default function ProfileSettingsModal({ open, onClose }: Props) {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={saving}
+                                    disabled={saving || !isDirty}
                                     className="px-5 py-2 rounded-[10px] bg-[#2D2926] text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
                                 >
                                     {saving ? (

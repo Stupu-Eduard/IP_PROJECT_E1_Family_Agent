@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.repository;
 
 import com.familie.cheltuieli_familie.model.Expense;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,15 @@ import java.util.List;
 
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
+
+    /**
+     * Decuplează cheltuielile unui user șters — user_id devine NULL.
+     * Apelat în UserController.deleteOwnAccount() înainte de userRepository.delete().
+     */
+    @Modifying
+    @Query("UPDATE Expense e SET e.user = null WHERE e.user.id = :userId")
+    void clearUserFromExpenses(@Param("userId") Long userId);
+
 
     interface ExpenseWithLocationProjection {
         Long getId();

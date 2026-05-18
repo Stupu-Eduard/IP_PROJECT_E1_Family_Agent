@@ -15,4 +15,7 @@ public interface FamilyInvitationRepository extends JpaRepository<FamilyInvitati
     Optional<FamilyInvitation> findByFamilyIdAndInviteeEmail(Long familyId, String email);
 
     boolean existsByFamilyIdAndInviteeEmailAndStatus(Long familyId, String email, String status);
+
+    /** Șterge invitațiile trimise de un user (invited_by). Apelat la ștergerea contului. */
+    void deleteByInvitedById(Long invitedById);
 }
