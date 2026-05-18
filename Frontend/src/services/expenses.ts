@@ -21,6 +21,7 @@ export interface ApiExpenseListDto {
   person: string | null
   location: ApiLocationDto | null
   sourceType: string | null
+  receiptUrl: string | null
 }
 
 export type ExpenseFilters = {
@@ -46,6 +47,7 @@ export interface CreateExpenseDto {
   date: string  // YYYY-MM-DD
   storeName?: string
   city?: string
+  receiptUrl?: string
 }
 
 export async function createExpense(payload: CreateExpenseDto): Promise<ApiExpenseListDto> {
