@@ -85,7 +85,7 @@ class AdminResyncControllerTest {
 
         var result = adminResyncController.resyncQdrant(null);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         ResyncStatusDto body = result.getBody();
         assertNotNull(body);
         assertEquals(10, body.processedCount());
@@ -100,7 +100,7 @@ class AdminResyncControllerTest {
 
         var result = adminResyncController.resyncQdrant(3L);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         ResyncStatusDto body = result.getBody();
         assertNotNull(body);
         assertEquals(5, body.processedCount());
@@ -115,7 +115,7 @@ class AdminResyncControllerTest {
 
         var result = adminResyncController.resyncQdrant(null);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         ResyncStatusDto body = result.getBody();
         assertNotNull(body);
         assertEquals(0, body.processedCount());

@@ -71,7 +71,7 @@ class RagQueryControllerTest {
 
         var result = ragQueryController.ragQuery(new RagRequest("question"), auth);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         verify(ragRetrievalService).askWithContext(contains("[IDENTITATE_AUTENTIFICATA: nume='Bob', user_id=2]"));
     }
 
@@ -81,8 +81,8 @@ class RagQueryControllerTest {
 
         var result = ragQueryController.ragQuery(new RagRequest("question"), null);
 
-        assertEquals(200, result.getStatusCodeValue());
-        verify(ragRetrievalService).askWithContext(eq("question"));
+        assertEquals(200, result.getStatusCode().value());
+        verify(ragRetrievalService).askWithContext("question");
     }
 
     @Test
@@ -93,8 +93,8 @@ class RagQueryControllerTest {
 
         var result = ragQueryController.ragQuery(new RagRequest("question"), auth);
 
-        assertEquals(200, result.getStatusCodeValue());
-        verify(ragRetrievalService).askWithContext(eq("question"));
+        assertEquals(200, result.getStatusCode().value());
+        verify(ragRetrievalService).askWithContext("question");
     }
 
     @Test

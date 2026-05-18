@@ -51,16 +51,9 @@ public class SearchQueryCorrector {
     private Set<String> loadDictionary() {
         Set<String> dict = new HashSet<>();
         try {
-            List<String> categories = jdbcTemplate.queryForList(
-                    "SELECT DISTINCT name FROM categories WHERE name IS NOT NULL", String.class);
-            List<String> locations = jdbcTemplate.queryForList(
-                    "SELECT DISTINCT store FROM locations WHERE store IS NOT NULL", String.class);
-            List<String> persons = jdbcTemplate.queryForList(
-                    "SELECT DISTINCT name FROM users WHERE name IS NOT NULL", String.class);
-
-            dict.addAll(categories);
-            dict.addAll(locations);
-            dict.addAll(persons);
+            addColumnValues(dict, "SELECT DISTINCT name FROM categories WHERE name IS NOT NULL");
+            addColumnValues(dict, "SELECT DISTINCT store FROM locations WHERE store IS NOT NULL");
+            addColumnValues(dict, "SELECT DISTINCT name FROM users WHERE name IS NOT NULL");
 
             // Also add common expense-related Romanian words
             dict.addAll(Set.of(
@@ -81,6 +74,10 @@ public class SearchQueryCorrector {
             log.warn("Failed to load expense dictionary for query correction: {}", e.getMessage());
         }
         return dict;
+    }
+
+    private void addColumnValues(Set<String> dict, String sql) {
+        dict.addAll(jdbcTemplate.queryForList(sql, String.class));
     }
 
     private String correctWord(String word, Set<String> dictionary) {

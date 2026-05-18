@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Service
 @Slf4j
@@ -95,26 +96,44 @@ public class ReceiptParser {
         return normalized;
     }
 
-    private String normalizeStoreName(String text) {
-        if (text == null || text.isBlank()) return text;
-        String lower = text.toLowerCase();
-        // Common OCR error corrections as a safety net
-        if (lower.contains("l1dl") || lower.contains("l1d1") || lower.contains("lid1")) return "Lidl";
-        if (lower.contains("kauflard") || lower.contains("kauf1and") || lower.contains("kaufl@nd")) return "Kaufland";
-        if (lower.contains("mega 1mage") || lower.contains("mega lmage") || lower.contains("mega1mage")) return "Mega Image";
-        if (lower.contains("carref0ur") || lower.contains("carrefour")) return "Carrefour";
-        if ((lower.contains("peny") || lower.contains("p3nny")) && !lower.contains("penny market")) {
-            if (lower.length() <= 6) return "Penny";
+    private record OcrRule(String replacement, Predicate<String> condition) {}
+
+    private static final List<OcrRule> OCR_RULES = List.of(
+            new OcrRule("Lidl", s -> containsAny(s, "l1dl", "l1d1", "lid1")),
+            new OcrRule("Kaufland", s -> containsAny(s, "kauflard", "kauf1and", "kaufl@nd")),
+            new OcrRule("Mega Image", s -> containsAny(s, "mega 1mage", "mega lmage", "mega1mage")),
+            new OcrRule("Carrefour", s -> containsAny(s, "carref0ur", "carrefour")),
+            new OcrRule("Penny", s -> (s.contains("peny") || s.contains("p3nny")) && !s.contains("penny market") && s.length() <= 6),
+            new OcrRule("Auchan", s -> containsAny(s, "auch@n", "auch4n")),
+            new OcrRule("Profi", s -> containsAny(s, "pr0fi", "prof1")),
+            new OcrRule("Selgros", s -> containsAny(s, "s3lgros", "se1gros")),
+            new OcrRule("Catena", s -> containsAny(s, "c@tena", "cat3na")),
+            new OcrRule("Sensiblu", s -> containsAny(s, "sens1b1u", "sensib1u")),
+            new OcrRule("Dona", s -> s.contains("d0na") && s.length() <= 5),
+            new OcrRule("Petrom", s -> containsAny(s, "p3trom", "petr0m")),
+            new OcrRule("Rompetrol", s -> s.contains("r0mpetr0l")),
+            new OcrRule("OMV", s -> s.contains("0mv") && s.length() <= 5)
+    );
+
+    private static boolean containsAny(String text, String... patterns) {
+        for (String pattern : patterns) {
+            if (text.contains(pattern)) {
+                return true;
+            }
         }
-        if (lower.contains("auch@n") || lower.contains("auch4n")) return "Auchan";
-        if (lower.contains("pr0fi") || lower.contains("prof1")) return "Profi";
-        if (lower.contains("s3lgros") || lower.contains("se1gros")) return "Selgros";
-        if (lower.contains("c@tena") || lower.contains("cat3na")) return "Catena";
-        if (lower.contains("sens1b1u") || lower.contains("sensib1u")) return "Sensiblu";
-        if (lower.contains("d0na") && lower.length() <= 5) return "Dona";
-        if (lower.contains("p3trom") || lower.contains("petr0m")) return "Petrom";
-        if (lower.contains("r0mpetr0l")) return "Rompetrol";
-        if (lower.contains("0mv") && text.length() <= 5) return "OMV";
+        return false;
+    }
+
+    private String normalizeStoreName(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        String lower = text.toLowerCase();
+        for (OcrRule rule : OCR_RULES) {
+            if (rule.condition().test(lower)) {
+                return rule.replacement();
+            }
+        }
         return text;
     }
 

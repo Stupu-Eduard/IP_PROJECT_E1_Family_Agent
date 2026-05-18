@@ -598,7 +598,7 @@ class QdrantVectorServiceTest {
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
-                "query", 5, "Food", null, null, null, 1L, null);
+                "query", 5, new QdrantVectorService.SearchFilter("Food", null, null, null, 1L, null));
 
         assertNotNull(results);
         assertEquals(1, results.size());
@@ -627,7 +627,7 @@ class QdrantVectorServiceTest {
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
-                "query", 5, "Food", null, null, null, null, 1L);
+                "query", 5, new QdrantVectorService.SearchFilter("Food", null, null, null, null, 1L));
 
         assertNotNull(results);
         assertEquals(1, results.size());
@@ -656,7 +656,7 @@ class QdrantVectorServiceTest {
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
-                "query", 5, "Food", null, null, null, 1L, 2L);
+                "query", 5, new QdrantVectorService.SearchFilter("Food", null, null, null, 1L, 2L));
 
         assertNotNull(results);
         assertEquals(1, results.size());
@@ -685,7 +685,7 @@ class QdrantVectorServiceTest {
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
-                "query", 5, "Food", null, null, null, null, null);
+                "query", 5, new QdrantVectorService.SearchFilter("Food", null, null, null, null, null));
 
         assertNotNull(results);
         assertEquals(1, results.size());

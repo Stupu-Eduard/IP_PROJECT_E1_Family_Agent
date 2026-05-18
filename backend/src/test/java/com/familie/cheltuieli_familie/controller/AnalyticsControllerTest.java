@@ -76,7 +76,7 @@ class AnalyticsControllerTest {
 
         var result = analyticsController.query("hello", auth);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         verify(analyticsAssistant).chat(contains("[IDENTITATE_AUTENTIFICATA: nume='Test', user_id=1]"), anyString());
     }
 
@@ -86,7 +86,7 @@ class AnalyticsControllerTest {
 
         var result = analyticsController.query("hello", null);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         verify(analyticsAssistant).chat(eq("hello"), anyString());
     }
 
@@ -98,7 +98,7 @@ class AnalyticsControllerTest {
 
         var result = analyticsController.query("hello", auth);
 
-        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(200, result.getStatusCode().value());
         verify(analyticsAssistant).chat(eq("hello"), anyString());
     }
 

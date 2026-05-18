@@ -29,27 +29,32 @@ public class BankStatementLlmParser {
         }
 
         try {
-            BankExtractor extractor = AiServices.builder(BankExtractor.class)
-                    .chatLanguageModel(chatLanguageModel)
-                    .build();
-
-            String json = extractor.extract(ocrText);
-            log.info("LLM bank statement extraction raw JSON: {}", json);
-
-            json = stripMarkdownFences(json);
-
-            ParsedTransaction[] transactions = objectMapper.readValue(json, ParsedTransaction[].class);
-            if (transactions == null || transactions.length == 0) {
-                log.warn("LLM extraction returned no transactions");
-                return List.of();
-            }
-
-            return List.of(transactions);
-
+            String json = extractJson(ocrText);
+            return parseTransactions(json);
         } catch (Exception e) {
             log.error("Failed to parse bank statement with LLM: {}", e.getMessage(), e);
             return List.of();
         }
+    }
+
+    private String extractJson(String ocrText) {
+        BankExtractor extractor = AiServices.builder(BankExtractor.class)
+                .chatLanguageModel(chatLanguageModel)
+                .build();
+
+        String json = extractor.extract(ocrText);
+        log.info("LLM bank statement extraction raw JSON: {}", json);
+
+        return stripMarkdownFences(json);
+    }
+
+    private List<ParsedTransaction> parseTransactions(String json) throws Exception {
+        ParsedTransaction[] transactions = objectMapper.readValue(json, ParsedTransaction[].class);
+        if (transactions == null || transactions.length == 0) {
+            log.warn("LLM extraction returned no transactions");
+            return List.of();
+        }
+        return List.of(transactions);
     }
 
     private String stripMarkdownFences(String raw) {

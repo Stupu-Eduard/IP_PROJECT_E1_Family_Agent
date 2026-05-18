@@ -16,11 +16,30 @@ public class ExpenseMapper {
         ExpenseEntity entity = new ExpenseEntity();
         entity.setId(expense.getId());
         entity.setAmount(expense.getAmount());
-        entity.setCategory(expense.getCategory() != null ? expense.getCategory().getName() : null);
-        entity.setLocation(expense.getLocation() != null ? expense.getLocation().getStore() : null);
-        entity.setPerson(expense.getUser() != null ? expense.getUser().getName() : null);
+        entity.setCategory(mapCategoryName(expense));
+        entity.setLocation(mapLocationName(expense));
+        entity.setPerson(mapPersonName(expense));
         entity.setDate(expense.getExpenseDate() != null ? expense.getExpenseDate().toLocalDate() : null);
+        entity.setRawInput(buildRawInput(expense));
+        entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
+        entity.setFamilyId(mapFamilyId(expense));
+        entity.setUserId(mapUserId(expense));
+        return entity;
+    }
 
+    private String mapCategoryName(Expense expense) {
+        return expense.getCategory() != null ? expense.getCategory().getName() : null;
+    }
+
+    private String mapLocationName(Expense expense) {
+        return expense.getLocation() != null ? expense.getLocation().getStore() : null;
+    }
+
+    private String mapPersonName(Expense expense) {
+        return expense.getUser() != null ? expense.getUser().getName() : null;
+    }
+
+    private String buildRawInput(Expense expense) {
         String rawInput = expense.getRawInput();
         if (rawInput == null || rawInput.isBlank()) {
             String source = expense.getSourceType() != null ? expense.getSourceType() : "manual";
@@ -32,11 +51,15 @@ public class ExpenseMapper {
                     expense.getLocation() != null ? expense.getLocation().getStore() : "Fără locație",
                     expense.getUser() != null ? expense.getUser().getName() : "Necunoscut");
         }
-        entity.setRawInput(rawInput);
-        entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
-        entity.setFamilyId(expense.getFamily() != null ? expense.getFamily().getId() : null);
-        entity.setUserId(expense.getUser() != null ? expense.getUser().getId() : null);
-        return entity;
+        return rawInput;
+    }
+
+    private Long mapFamilyId(Expense expense) {
+        return expense.getFamily() != null ? expense.getFamily().getId() : null;
+    }
+
+    private Long mapUserId(Expense expense) {
+        return expense.getUser() != null ? expense.getUser().getId() : null;
     }
 
     public ExpenseListDto toDto(ExpenseRepository.ExpenseWithLocationProjection row) {

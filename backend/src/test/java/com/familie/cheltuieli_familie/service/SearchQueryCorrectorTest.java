@@ -1,6 +1,8 @@
 package com.familie.cheltuieli_familie.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -24,31 +26,18 @@ class SearchQueryCorrectorTest {
     @InjectMocks
     private SearchQueryCorrector corrector;
 
-    @Test
-    void shouldCorrectTypoInQuery() {
+    @ParameterizedTest
+    @CsvSource({
+            "mancarre, mancare",
+            "mancarre benzina, mancare benzina",
+            "mancare, mancare"
+    })
+    void shouldCorrectQuery(String input, String expected) {
         when(jdbcTemplate.queryForList(anyString(), eq(String.class)))
                 .thenReturn(Collections.emptyList());
 
-        String corrected = corrector.correctQuery("mancarre");
-        assertEquals("mancare", corrected);
-    }
-
-    @Test
-    void shouldCorrectMultipleTypos() {
-        when(jdbcTemplate.queryForList(anyString(), eq(String.class)))
-                .thenReturn(Collections.emptyList());
-
-        String corrected = corrector.correctQuery("mancarre benzina");
-        assertEquals("mancare benzina", corrected);
-    }
-
-    @Test
-    void shouldLeaveCorrectWordsUnchanged() {
-        when(jdbcTemplate.queryForList(anyString(), eq(String.class)))
-                .thenReturn(Collections.emptyList());
-
-        String corrected = corrector.correctQuery("mancare");
-        assertEquals("mancare", corrected);
+        String corrected = corrector.correctQuery(input);
+        assertEquals(expected, corrected);
     }
 
     @Test

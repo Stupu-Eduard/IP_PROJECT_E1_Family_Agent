@@ -51,11 +51,23 @@ public class ExpenseSearchController {
         List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(correctedQuery, request.getTopK(), scope[0], scope[1]);
 
         // 3. Semantic expansion fallback if too few results
+        applySemanticExpansion(correctedQuery, results, scope, request.getTopK());
+
+        // 4. SQL keyword fallback if still too few results
+        applySqlFallback(correctedQuery, results, request.getTopK());
+
+        // Sort by score descending and limit
+        results = deduplicateAndSortResults(results, request.getTopK());
+
+        return ResponseEntity.ok(results);
+    }
+
+    private void applySemanticExpansion(String correctedQuery, List<EmbeddedExpense> results, Long[] scope, int topK) {
         if (results.size() < MIN_RESULTS_THRESHOLD) {
             List<String> expandedCategories = semanticExpansionService.expandCategories(correctedQuery);
             for (String cat : expandedCategories) {
                 if (results.size() >= MIN_RESULTS_THRESHOLD) break;
-                List<EmbeddedExpense> catResults = qdrantVectorService.searchSimilar(cat, request.getTopK(), scope[0], scope[1]);
+                List<EmbeddedExpense> catResults = qdrantVectorService.searchSimilar(cat, topK, scope[0], scope[1]);
                 for (EmbeddedExpense r : catResults) {
                     if (results.stream().noneMatch(e -> Objects.equals(e.getId(), r.getId()))) {
                         results.add(r);
@@ -63,25 +75,26 @@ public class ExpenseSearchController {
                 }
             }
         }
+    }
 
-        // 4. SQL keyword fallback if still too few results
+    private void applySqlFallback(String correctedQuery, List<EmbeddedExpense> results, int topK) {
         if (results.size() < MIN_RESULTS_THRESHOLD) {
-            List<EmbeddedExpense> keywordResults = searchByKeyword(correctedQuery, request.getTopK());
+            List<EmbeddedExpense> keywordResults = searchByKeyword(correctedQuery, topK);
             for (EmbeddedExpense r : keywordResults) {
                 if (results.stream().noneMatch(e -> Objects.equals(e.getId(), r.getId()))) {
                     results.add(r);
                 }
             }
         }
+    }
 
-        // Sort by score descending
-        results = new ArrayList<>(results);
-        results.sort(Comparator.comparingDouble(EmbeddedExpense::getScore).reversed());
-        if (results.size() > request.getTopK()) {
-            results = results.subList(0, request.getTopK());
+    private List<EmbeddedExpense> deduplicateAndSortResults(List<EmbeddedExpense> results, int topK) {
+        List<EmbeddedExpense> sorted = new ArrayList<>(results);
+        sorted.sort(Comparator.comparingDouble(EmbeddedExpense::getScore).reversed());
+        if (sorted.size() > topK) {
+            return sorted.subList(0, topK);
         }
-
-        return ResponseEntity.ok(results);
+        return sorted;
     }
 
     @PostMapping("/filter")
@@ -92,12 +105,14 @@ public class ExpenseSearchController {
         List<EmbeddedExpense> results = qdrantVectorService.searchWithFilter(
                 correctedQuery,
                 request.getTopK(),
-                request.getCategory(),
-                request.getPerson(),
-                request.getFrom(),
-                request.getTo(),
-                scope[0],
-                scope[1]
+                new QdrantVectorService.SearchFilter(
+                        request.getCategory(),
+                        request.getPerson(),
+                        request.getFrom(),
+                        request.getTo(),
+                        scope[0],
+                        scope[1]
+                )
         );
         return ResponseEntity.ok(results);
     }

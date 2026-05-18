@@ -282,99 +282,27 @@ class ReceiptParserTest {
         assertNull(result.getStoreName());
     }
 
-    @Test
-    void parseReceipt_shouldHandleBlankStoreName() {
-        String mockJson = """
+    @ParameterizedTest
+    @CsvSource({
+            "'', ''",
+            "Unknown Shop, Unknown Shop",
+            "penny market, penny market",
+            "mypenyz, mypenyz",
+            "xd0nax, xd0nax",
+            "xxx0mv, xxx0mv"
+    })
+    void parseReceipt_shouldNotNormalizeOrPreserveStoreName(String storeName, String expected) {
+        String mockJson = String.format("""
             {
-              "storeName": "",
+              "storeName": "%s",
               "totalAmount": 10.0,
               "date": "01/01/2026",
               "category": "Test"
             }
-            """;
+            """, storeName);
         when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
         ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
         assertNotNull(result);
-        assertEquals("", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNotNormalizeUnknownStore() {
-        String mockJson = """
-            {
-              "storeName": "Unknown Shop",
-              "totalAmount": 10.0,
-              "date": "01/01/2026",
-              "category": "Test"
-            }
-            """;
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
-        assertNotNull(result);
-        assertEquals("Unknown Shop", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNotNormalizePennyMarket() {
-        String mockJson = """
-            {
-              "storeName": "penny market",
-              "totalAmount": 10.0,
-              "date": "01/01/2026",
-              "category": "Test"
-            }
-            """;
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
-        assertNotNull(result);
-        assertEquals("penny market", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNotNormalizePenyWhenTooLong() {
-        String mockJson = """
-            {
-              "storeName": "mypenyz",
-              "totalAmount": 10.0,
-              "date": "01/01/2026",
-              "category": "Test"
-            }
-            """;
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
-        assertNotNull(result);
-        assertEquals("mypenyz", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNotNormalizeD0naWhenTooLong() {
-        String mockJson = """
-            {
-              "storeName": "xd0nax",
-              "totalAmount": 10.0,
-              "date": "01/01/2026",
-              "category": "Test"
-            }
-            """;
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
-        assertNotNull(result);
-        assertEquals("xd0nax", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNotNormalizeOmvWhenTooLong() {
-        String mockJson = """
-            {
-              "storeName": "xxx0mv",
-              "totalAmount": 10.0,
-              "date": "01/01/2026",
-              "category": "Test"
-            }
-            """;
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJson)));
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("text");
-        assertNotNull(result);
-        assertEquals("xxx0mv", result.getStoreName());
+        assertEquals(expected, result.getStoreName());
     }
 }

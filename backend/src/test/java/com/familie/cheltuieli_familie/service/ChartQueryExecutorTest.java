@@ -288,43 +288,16 @@ class ChartQueryExecutorTest {
     }
 
     @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldApplyCountAggregation() {
+    @ParameterizedTest
+    @CsvSource({
+            "count, COUNT(e.amount)",
+            "avg, AVG(e.amount)",
+            "sum, SUM(e.amount)"
+    })
+    void execute_shouldApplyAggregation(String aggregation, String expectedSql) {
         ChartQueryIntent intent = ChartQueryIntent.builder()
                 .groupBy("category")
-                .aggregation("count")
-                .build();
-
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("5"))));
-
-        chartQueryExecutor.execute(intent, null, null);
-
-        verify(jdbcTemplate).query(contains("COUNT(e.amount)"), any(RowMapper.class), any(Object[].class));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldApplyAvgAggregation() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .groupBy("category")
-                .aggregation("avg")
-                .build();
-
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(Map.of("label", "food", "total", new BigDecimal("50"))));
-
-        chartQueryExecutor.execute(intent, null, null);
-
-        verify(jdbcTemplate).query(contains("AVG(e.amount)"), any(RowMapper.class), any(Object[].class));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    void execute_shouldApplySumAggregation() {
-        ChartQueryIntent intent = ChartQueryIntent.builder()
-                .groupBy("category")
-                .aggregation("sum")
+                .aggregation(aggregation)
                 .build();
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
@@ -332,7 +305,7 @@ class ChartQueryExecutorTest {
 
         chartQueryExecutor.execute(intent, null, null);
 
-        verify(jdbcTemplate).query(contains("SUM(e.amount)"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains(expectedSql), any(RowMapper.class), any(Object[].class));
     }
 
     @SuppressWarnings("unchecked")

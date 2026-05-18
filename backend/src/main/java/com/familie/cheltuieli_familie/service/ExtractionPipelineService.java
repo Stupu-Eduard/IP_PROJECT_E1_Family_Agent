@@ -88,16 +88,10 @@ public class ExtractionPipelineService {
     }
 
     private boolean hasGoodCoverage(List<Transaction> transactions, String rawText) {
-        if (transactions == null || transactions.isEmpty()) {
-            return false;
-        }
         // Heuristic: if text is substantial (>500 chars) but we parsed very few transactions,
         // coverage is likely poor — fall back to LLM for better extraction.
         int textLen = rawText != null ? rawText.length() : 0;
-        if (textLen > 500 && transactions.size() < 3) {
-            return false;
-        }
-        return true;
+        return transactions != null && !transactions.isEmpty() && !(textLen > 500 && transactions.size() < 3);
     }
 
     private List<Transaction> fallbackToLlm(String ocrText) {
@@ -126,6 +120,7 @@ public class ExtractionPipelineService {
             try {
                 return LocalDate.parse(dateStr, formatter);
             } catch (Exception ignored) {
+                // Date format did not match, try next formatter.
             }
         }
         return null;

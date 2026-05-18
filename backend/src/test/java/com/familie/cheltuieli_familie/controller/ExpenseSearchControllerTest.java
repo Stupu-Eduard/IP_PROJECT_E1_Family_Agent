@@ -238,7 +238,7 @@ class ExpenseSearchControllerTest {
                 .build();
 
         when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
-        when(qdrantVectorService.searchWithFilter(anyString(), anyInt(), any(), any(), any(), any(), any(), any()))
+        when(qdrantVectorService.searchWithFilter(anyString(), anyInt(), any(QdrantVectorService.SearchFilter.class)))
                 .thenReturn(List.of(result));
 
         mockMvc.perform(post("/v1/search/filter")
@@ -252,7 +252,7 @@ class ExpenseSearchControllerTest {
     void testFilteredSearch_withNullFilters() throws Exception {
         when(searchQueryCorrector.correctQuery("test")).thenReturn("test");
         when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
-        when(qdrantVectorService.searchWithFilter("test", 15, null, null, null, null, null, 1L))
+        when(qdrantVectorService.searchWithFilter(eq("test"), eq(15), eq(new QdrantVectorService.SearchFilter(null, null, null, null, null, 1L))))
                 .thenReturn(List.of());
 
         mockMvc.perform(post("/v1/search/filter")
@@ -267,7 +267,7 @@ class ExpenseSearchControllerTest {
         when(searchQueryCorrector.correctQuery("test")).thenReturn("test");
         when(securityService.resolveScope()).thenReturn(new Long[]{10L, null});
         EmbeddedExpense result = EmbeddedExpense.builder().id(5L).category("Food").build();
-        when(qdrantVectorService.searchWithFilter("test", 15, "Food", "Alice", null, null, 10L, null))
+        when(qdrantVectorService.searchWithFilter(eq("test"), eq(15), eq(new QdrantVectorService.SearchFilter("Food", "Alice", null, null, 10L, null))))
                 .thenReturn(List.of(result));
 
         mockMvc.perform(post("/v1/search/filter")
@@ -282,7 +282,7 @@ class ExpenseSearchControllerTest {
         when(searchQueryCorrector.correctQuery("test")).thenReturn("test");
         when(securityService.resolveScope()).thenReturn(new Long[]{null, 2L});
         EmbeddedExpense result = EmbeddedExpense.builder().id(6L).category("Transport").build();
-        when(qdrantVectorService.searchWithFilter("test", 15, null, null, null, null, null, 2L))
+        when(qdrantVectorService.searchWithFilter(eq("test"), eq(15), eq(new QdrantVectorService.SearchFilter(null, null, null, null, null, 2L))))
                 .thenReturn(List.of(result));
 
         mockMvc.perform(post("/v1/search/filter")
@@ -297,7 +297,7 @@ class ExpenseSearchControllerTest {
         when(searchQueryCorrector.correctQuery("range")).thenReturn("range");
         when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
         EmbeddedExpense result = EmbeddedExpense.builder().id(7L).build();
-        when(qdrantVectorService.searchWithFilter("range", 15, null, null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), null, 1L))
+        when(qdrantVectorService.searchWithFilter(eq("range"), eq(15), eq(new QdrantVectorService.SearchFilter(null, null, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), null, 1L))))
                 .thenReturn(List.of(result));
 
         mockMvc.perform(post("/v1/search/filter")
