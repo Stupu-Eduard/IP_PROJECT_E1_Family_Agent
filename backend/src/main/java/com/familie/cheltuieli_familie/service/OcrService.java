@@ -15,10 +15,12 @@ import org.springframework.stereotype.Service;
 
 import com.familie.cheltuieli_familie.exception.AiServiceException;
 import jakarta.annotation.PostConstruct;
+import net.sourceforge.tess4j.Word;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class OcrService {
@@ -32,6 +34,11 @@ public class OcrService {
     private String ocrLanguage;
 
     private final ITesseract tesseract = new Tesseract();
+    private final OCRPreProcessor ocrPreProcessor;
+
+    public OcrService(OCRPreProcessor ocrPreProcessor) {
+        this.ocrPreProcessor = ocrPreProcessor;
+    }
 
     @PostConstruct
     public void init() {
@@ -87,14 +94,41 @@ public class OcrService {
         }
     }
 
-    public String extractTextFromImage(File imageFile) {
+    public OcrResult extractTextFromImage(File imageFile) {
         try {
-            String text = tesseract.doOCR(imageFile);
-            log.info("OCR extracted {} characters from image: {}", text.length(), imageFile.getName());
-            return text;
+            BufferedImage preprocessed = ocrPreProcessor.processImage(imageFile, null);
+            String text = tesseract.doOCR(preprocessed);
+            double confidence = computeConfidence(preprocessed);
+            log.info("OCR extracted {} characters (confidence={}%) from image: {}",
+                    text.length(), String.format("%.1f", confidence * 100), imageFile.getName());
+            return new OcrResult(text, confidence);
+        } catch (IOException e) {
+            log.error("Image preprocessing failed for: {}", imageFile.getName(), e);
+            throw new AiServiceException("Failed to preprocess image for OCR", e);
         } catch (TesseractException e) {
             log.error("OCR failed for image: {}", imageFile.getName(), e);
             throw new AiServiceException("Failed to process image for OCR", e);
         }
+    }
+
+    private double computeConfidence(BufferedImage image) {
+        try {
+            List<Word> words = ((Tesseract) tesseract).getWords(image, 3); // RIL_WORD
+            if (words.isEmpty()) {
+                return 0.0;
+            }
+            double total = 0;
+            for (Word word : words) {
+                total += word.getConfidence();
+            }
+            double avg = total / words.size();
+            return Math.min(avg / 100.0, 1.0);
+        } catch (Exception e) {
+            log.warn("Could not compute OCR confidence: {}", e.getMessage());
+            return 0.0;
+        }
+    }
+
+    public record OcrResult(String text, double confidence) {
     }
 }

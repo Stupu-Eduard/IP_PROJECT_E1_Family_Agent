@@ -3,6 +3,8 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.model.ChartFilters;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
 import com.familie.cheltuieli_familie.model.ChartQueryResult;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -22,13 +26,22 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ChartQueryExecutorTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private SecurityService securityService;
+
     @InjectMocks
     private ChartQueryExecutor chartQueryExecutor;
+
+    @BeforeEach
+    void setUp() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+    }
 
     @SuppressWarnings("unchecked")
     @Test

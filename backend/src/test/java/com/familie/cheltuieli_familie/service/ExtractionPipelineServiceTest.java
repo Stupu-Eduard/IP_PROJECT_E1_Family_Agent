@@ -19,12 +19,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-text-pdf-", ".pdf");
@@ -63,12 +65,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-image-pdf-", ".pdf");
@@ -98,12 +102,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-failing-pdf-", ".pdf");
@@ -125,12 +131,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-text-pdf-", ".pdf");
@@ -160,12 +168,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-image-pdf-", ".pdf");
@@ -195,12 +205,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-image-pdf-", ".pdf");
@@ -231,12 +243,14 @@ class ExtractionPipelineServiceTest {
         BankStatementParser parser = new BankStatementParser();
         BankOcrService bankOcrService = mock(BankOcrService.class);
         OcrService ocrService = mock(OcrService.class);
+        BankStatementLlmParser llmParser = mock(BankStatementLlmParser.class);
 
         ExtractionPipelineService service = new ExtractionPipelineService(
                 textExtractor,
                 parser,
                 bankOcrService,
-                ocrService
+                ocrService,
+                llmParser
         );
 
         File fakePdf = File.createTempFile("fake-failing-pdf-", ".pdf");

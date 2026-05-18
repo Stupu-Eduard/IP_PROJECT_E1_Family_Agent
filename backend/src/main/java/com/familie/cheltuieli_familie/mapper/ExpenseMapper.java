@@ -34,6 +34,8 @@ public class ExpenseMapper {
         }
         entity.setRawInput(rawInput);
         entity.setCreatedAt(expense.getCreatedAt() != null ? expense.getCreatedAt() : LocalDateTime.now());
+        entity.setFamilyId(expense.getFamily() != null ? expense.getFamily().getId() : null);
+        entity.setUserId(expense.getUser() != null ? expense.getUser().getId() : null);
         return entity;
     }
 

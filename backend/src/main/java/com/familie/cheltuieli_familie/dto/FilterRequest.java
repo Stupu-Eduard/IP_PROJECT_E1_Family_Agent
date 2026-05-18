@@ -14,7 +14,7 @@ public class FilterRequest {
 
     @NotBlank(message = "Query is required and cannot be empty")
     private String query;
-    private int topK = 5;
+    private int topK = 15;
     private String category;
     private String person;
     private LocalDate from;

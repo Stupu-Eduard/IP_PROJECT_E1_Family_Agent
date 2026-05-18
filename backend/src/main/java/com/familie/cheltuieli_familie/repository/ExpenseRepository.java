@@ -191,4 +191,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     @Modifying
     @Query("UPDATE Expense e SET e.family.id = :familyId WHERE e.user.id = :userId AND e.family IS NULL")
     void linkUserExpensesToFamily(@Param("userId") Long userId, @Param("familyId") Long familyId);
+
+    @Query("SELECT e FROM Expense e WHERE e.family.id = :familyId")
+    List<Expense> findAllByFamilyId(@Param("familyId") Long familyId);
 }

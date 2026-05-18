@@ -35,6 +35,8 @@ public class QdrantVectorService {
     private static final String KEY_AMOUNT = "amount";
     private static final String KEY_ID = "expense_id";
     private static final String KEY_RAW_INPUT = "raw_input";
+    private static final String KEY_FAMILY_ID = "family_id";
+    private static final String KEY_USER_ID = "user_id";
     private static final String QDRANT_RESULT = "result";
     private static final String MATCH = "match";
     private static final String VALUE = "value";
@@ -74,6 +76,8 @@ public class QdrantVectorService {
         if (expense.getPerson() != null) metadata.put(KEY_PERSON, expense.getPerson());
         if (expense.getLocation() != null) metadata.put(KEY_LOCATION, expense.getLocation());
         if (expense.getDate() != null) metadata.put(KEY_DATE, expense.getDate().toString());
+        if (expense.getFamilyId() != null) metadata.put(KEY_FAMILY_ID, expense.getFamilyId());
+        if (expense.getUserId() != null) metadata.put(KEY_USER_ID, expense.getUserId());
 
         try {
             Document document = Document.from(textToEmbed, metadata);
@@ -91,13 +95,24 @@ public class QdrantVectorService {
     }
 
     public List<EmbeddedExpense> searchSimilar(String query, int topK) {
-        return searchWithFilter(query, topK, null, null, null, null);
+        return searchWithFilter(query, topK, null, null, null, null, null, null);
+    }
+
+    public List<EmbeddedExpense> searchSimilar(String query, int topK, Long familyId, Long userId) {
+        return searchWithFilter(query, topK, null, null, null, null, familyId, userId);
     }
 
     public List<EmbeddedExpense> searchWithFilter(
             String query, int topK, String category, String person, LocalDate from, LocalDate to) {
+        return searchWithFilter(query, topK, category, person, from, to, null, null);
+    }
 
-        log.info("Searching vector store for query: '{}', topK: {}, category: {}, person: {}", query, topK, category, person);
+    public List<EmbeddedExpense> searchWithFilter(
+            String query, int topK, String category, String person, LocalDate from, LocalDate to,
+            Long familyId, Long userId) {
+
+        log.info("Searching vector store for query: '{}', topK: {}, category: {}, person: {}, familyId: {}, userId: {}",
+                query, topK, category, person, familyId, userId);
         
         Embedding queryEmbedding = embeddingModel.embed(query).content();
         
@@ -109,13 +124,28 @@ public class QdrantVectorService {
         body.put("with_payload", true);
 
         // Build filter
-        Map<String, Object> filter = buildQdrantFilter(category, person, from, to);
+        Map<String, Object> filter = buildQdrantFilter(category, person, from, to, familyId, userId);
         if (!filter.isEmpty()) {
             body.put("filter", filter);
         }
 
         List<Map<String, Object>> results = executeQdrantSearch(body);
         if (results != null) {
+            if (!results.isEmpty()) {
+                double minScore = results.stream()
+                        .mapToDouble(r -> ((Number) r.get("score")).doubleValue())
+                        .min().orElse(0.0);
+                double maxScore = results.stream()
+                        .mapToDouble(r -> ((Number) r.get("score")).doubleValue())
+                        .max().orElse(0.0);
+                double avgScore = results.stream()
+                        .mapToDouble(r -> ((Number) r.get("score")).doubleValue())
+                        .average().orElse(0.0);
+                log.info("Qdrant returned {} results, score range: {:.4f} - {:.4f}, avg: {:.4f}",
+                        results.size(), minScore, maxScore, avgScore);
+            } else {
+                log.info("Qdrant returned 0 results for query: '{}'", query);
+            }
             return results.stream()
                     .map(this::mapRestResultToEmbeddedExpense)
                     .toList();
@@ -123,7 +153,8 @@ public class QdrantVectorService {
         return List.of();
     }
 
-    private Map<String, Object> buildQdrantFilter(String category, String person, LocalDate from, LocalDate to) {
+    private Map<String, Object> buildQdrantFilter(String category, String person, LocalDate from, LocalDate to,
+                                                   Long familyId, Long userId) {
         List<Map<String, Object>> conditions = new ArrayList<>();
 
         if (category != null && !category.isEmpty()) {
@@ -137,6 +168,12 @@ public class QdrantVectorService {
         }
         if (to != null) {
             conditions.add(Map.of("key", KEY_DATE, "range", Map.of("lte", to.toString())));
+        }
+        if (familyId != null) {
+            conditions.add(Map.of("key", KEY_FAMILY_ID, MATCH, Map.of(VALUE, familyId)));
+        }
+        if (userId != null && familyId == null) {
+            conditions.add(Map.of("key", KEY_USER_ID, MATCH, Map.of(VALUE, userId)));
         }
 
         if (conditions.isEmpty()) {

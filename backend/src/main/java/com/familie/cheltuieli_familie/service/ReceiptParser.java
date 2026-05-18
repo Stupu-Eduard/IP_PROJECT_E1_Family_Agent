@@ -90,7 +90,32 @@ public class ReceiptParser {
 
     private String normalizeText(String text) {
         if (text == null) return null;
-        return text.trim();
+        String normalized = text.trim();
+        normalized = normalizeStoreName(normalized);
+        return normalized;
+    }
+
+    private String normalizeStoreName(String text) {
+        if (text == null || text.isBlank()) return text;
+        String lower = text.toLowerCase();
+        // Common OCR error corrections as a safety net
+        if (lower.matches(".*l1dl.*|.*l1d1.*|.*lid1.*")) return "Lidl";
+        if (lower.matches(".*kauflard.*|.*kauf1and.*|.*kaufl@nd.*")) return "Kaufland";
+        if (lower.matches(".*mega\\s*1mage.*|.*mega\\s*lmage.*|.*mega1mage.*")) return "Mega Image";
+        if (lower.matches(".*carref0ur.*|.*carrefour.*")) return "Carrefour";
+        if (lower.matches(".*peny.*|.*p3nny.*") && !lower.contains("penny market")) {
+            if (lower.length() <= 6) return "Penny";
+        }
+        if (lower.matches(".*auch@n.*|.*auch4n.*")) return "Auchan";
+        if (lower.matches(".*pr0fi.*|.*prof1.*")) return "Profi";
+        if (lower.matches(".*s3lgros.*|.*se1gros.*")) return "Selgros";
+        if (lower.matches(".*c@tena.*|.*cat3na.*")) return "Catena";
+        if (lower.matches(".*sens1b1u.*|.*sensib1u.*")) return "Sensiblu";
+        if (lower.matches(".*d0na.*") && lower.length() <= 5) return "Dona";
+        if (lower.matches(".*p3trom.*|.*petr0m.*")) return "Petrom";
+        if (lower.matches(".*r0mpetr0l.*")) return "Rompetrol";
+        if (lower.matches(".*0mv.*") && text.length() <= 5) return "OMV";
+        return text;
     }
 
     private String stripMarkdownFences(String raw) {
@@ -106,24 +131,51 @@ public class ReceiptParser {
 
     public interface ReceiptExtractor {
         @SystemMessage("""
-            Ești un parser inteligent de bonuri fiscale și extrase bancare. Extrage informațiile structurate din textul OCR furnizat.
+            Ești un parser inteligent de bonuri fiscale românești și extrase bancare. Primești text brut provenit din OCR și trebuie să extragi informațiile structurate. Textul OCR poate fi fragmentat, murdar sau conține erori de recunoaștere a caracterelor.
 
-            Reguli:
-            1. Identifică numele magazinului/băncii (storeName) - de obicei în partea de sus a bonului.
-            2. Identifică suma totală (totalAmount) - caută "TOTAL", "SUMĂ", "TOTAL DE PLATĂ".
-            3. Identifică data (date) - în format dd/MM/yyyy sau similar.
+            REGULI GENERALE:
+            1. Identifică numele magazinului/băncii (storeName) - apare de obicei în partea de sus a bonului. Corectează automat erorile OCR comune.
+            2. Identifică suma totală (totalAmount) - caută "TOTAL", "SUMĂ", "TOTAL DE PLATĂ", "PLATĂ", "DE PLATĂ". Ignoră subtotalurile parțiale.
+            3. Identifică data (date) - poate fi în orice format românesc cunoscut (dd/MM/yyyy, dd.MM.yyyy, yyyy-MM-dd, dd-MM-yyyy). Dacă anul are doar 2 cifre, presupune 20xx.
             4. Identifică categoria (category) - inferă din tipul magazinului sau articolelor:
-               - Supermarketuri (Lidl, Kaufland, Mega Image, Carrefour) → "Mâncare"
-               - Benzinării (OMV, Petrom, Rompetrol, Shell) → "Transport"
-               - Farmacii (Catena, Sensiblu, Dona) → "Sănătate"
-               - Restaurante, cafenele → "Divertisment"
-               - Magazine de haine (H&M, Zara, etc.) → "Haine"
-               - Facturi utilități → "Utilități"
+               - Supermarketuri (Lidl, Kaufland, Mega Image, Carrefour, Penny, Auchan, Profi, Selgros) → "Mâncare"
+               - Benzinării (OMV, Petrom, Rompetrol, Shell, Lukoil, MOL) → "Transport"
+               - Farmacii (Catena, Sensiblu, Dona, Help Net, Farmacia Tei) → "Sănătate"
+               - Restaurante, fast-food, cafenele → "Divertisment"
+               - Magazine de haine (H&M, Zara, C&A, Deichmann, CCC) → "Haine"
+               - Facturi utilități (electrică, gaze, apă, internet) → "Utilități"
                - Dacă nu ești sigur, folosește "Diverse"
-            5. Lista de articole (items) este opțională.
+            5. Lista de articole (items) este opțională. Extrage doar dacă este clară.
 
-            Răspunde EXCLUSIV cu un JSON valid, fără markdown, fără explicații suplimentare.
-            Format:
+            CORECȚII OCR OBLIGATORII - normalizează numele magazinului:
+            - "L1dl", "Lidl", "L1d1" → "Lidl"
+            - "Kauflard", "Kaufl@nd", "Kauf1and" → "Kaufland"
+            - "Mega 1mage", "Mega lmage", "Mega1mage" → "Mega Image"
+            - "Carref0ur", "Carrefour", "CarrefOur" → "Carrefour"
+            - "Peny", "Penny", "P3nny" → "Penny"
+            - "Auch@n", "Auchan", "Auch4n" → "Auchan"
+            - "Pr0fi", "Prof1", "Profi" → "Profi"
+            - "S3lgros", "Se1gros", "Selgros" → "Selgros"
+            - "0MV", "OMV" → "OMV"
+            - "P3trom", "Petrom", "Petr0m" → "Petrom"
+            - "R0mpetr0l", "Rompetrol" → "Rompetrol"
+            - "C@tena", "Cat3na", "Catena" → "Catena"
+            - "Sens1b1u", "Sensiblu" → "Sensiblu"
+            - "D0na", "Dona" → "Dona"
+
+            SUBSTITUȚII FRECVENTE DE CARACTERE (aplică-le când interpretezi textul):
+            - Cifra "1" poate fi litera mică "l" sau mare "I" sau "L"
+            - Cifra "0" poate fi litera "O" (mare) sau "o" (mică)
+            - Cifra "5" poate fi litera "S" (mare) sau "s" (mică)
+            - Cifra "8" poate fi litera "B" (mare) sau "b" (mică)
+            - Simbolul "@" poate fi litera "a" sau "A"
+            - Cifra "3" poate fi litera mică "e" sau "E" (contextual)
+            - Cifra "4" poate fi litera "A" sau "h" (contextual)
+            - Litera "m" mică poate fi interpretată greșit ca "rn" sau "n"
+            - Textul de pe bonurile termice poate fi fragmentat, cu rânduri rupte sau spații ciudate - reconstruiește cuvintele logic.
+
+            Răspunde EXCLUSIV cu un JSON valid, fără markdown, fără explicații suplimentare. Nu adăuga text înainte sau după JSON.
+            Format exact:
             {
               "storeName": "string",
               "totalAmount": "number",

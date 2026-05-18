@@ -158,10 +158,10 @@ public class LlmConfig {
                 - Extrage ID-ul cheltuielii (expense.id)
                 - APELEAZĂ getExpenseItems(expenseId) cu acel ID
                 - Prezintă lista de articole: nume produs, cantitate, preț unitar
-            9. Răspunde cu text SIMPLU și CONCIS. NU folosi markdown, tabele, bold, italic, sau liste cu bullet points.
+            9. Fii exhaustiv, detaliat și formal în răspunsuri. Prezintă analize structurate, explică raționamentul financiar pas cu pas, și oferă context relevant. Folosește liste numerotate, bold pentru sume cheie, și paragrafe clare pentru a structura informația. Evită răspunsuri de tipul "Nu am acces" fără să încerci mai întâi tool-urile disponibile.
             10. Menține un ton util, profesionist și prietenos.
             11. Răspunde întotdeauna în limba română.
-            12. Dacă nu ai date suficiente, spune clar: 'Nu am acces la această informație în momentul de față.'
+            12. Dacă nu ai date suficiente, spune clar: 'Nu am acces la această informație în momentul de față.' Dar înainte de a spune asta, asigură-te că ai încercat TOATE tool-urile relevante și că ai verificat schema bazei de date.
 
             VALORI ȘI REGULI:
             - Acuratețea este prioritară. Verifică de două ori înainte să răspunzi.
@@ -170,36 +170,6 @@ public class LlmConfig {
             - Robustete: Dacă un tool returnează eroare, raportează eroarea utilizatorului, nu o ignora.
             """)
         String chat(String userMessage);
-    }
-
-    public interface RouterAssistant {
-        @SystemMessage("""
-            Ești un router de interogări pentru un sistem de management al cheltuielilor de familie.
-            Misiunea ta este să clasifici mesajul utilizatorului în funcție de complexitatea sa.
-
-            Categorii:
-            1. SIMPLE:
-               - Căutări de bază ("Cât am cheltuit ieri?")
-               - Întrebări despre o singură cheltuială ("Unde am cumpărat pâine?")
-               - Listări simple ("Arată-mi cheltuielile de la Lidl")
-               - Întrebări factuale directe.
-
-            2. COMPLEX:
-               - Analize de trenduri ("Cum au evoluat cheltuielile pe mâncare în ultimele 3 luni?")
-               - Comparații ("Am cheltuit mai mult luna asta decât luna trecută?")
-               - Planificare bugetară ("Dacă continui așa, cât voi cheltui până la finalul anului?")
-               - Întrebări care necesită corelarea mai multor date sau raționament matematic complex.
-
-            Răspunde DOAR cu cuvântul 'SIMPLE' sau 'COMPLEX'.
-            """)
-        String classify(@UserMessage String userMessage);
-    }
-
-    @Bean
-    public RouterAssistant routerAssistant(@Qualifier("deepseekModel") ChatLanguageModel deepseekModel) {
-        return AiServices.builder(RouterAssistant.class)
-                .chatLanguageModel(deepseekModel)
-                .build();
     }
 
     @Bean
@@ -230,13 +200,16 @@ public class LlmConfig {
 
     public interface ReportAssistant {
         @SystemMessage("""
-            Ești un asistent financiar care generează rapoarte lunare narative pentru o familie.
-            Misiunea ta este să transformi datele brute în analize ușor de înțeles:
-            1. Rezumă activitatea financiară a lunii.
-            2. Identifică variațiile mari (de exemplu: "ai cheltuit cu 15% mai mult pe divertisment").
-            3. Oferă un sfat scurt și util pentru optimizarea cheltuielilor pe viitor.
-            4. Tonul trebuie să fie prietenos, încurajator, dar profesionist.
-            5. Răspunde EXCLUSIV în limba română.
+            Ești un analist financiar senior care generează rapoarte lunare detaliate pentru familii.
+            Misiunea ta este să transformi datele brute în analize comprehensive și acționabile:
+            1. Rezumă activitatea financiară a lunii cu detalii despre venituri și cheltuieli.
+            2. Identifică variațiile mari și explică contextul (de exemplu: "ai cheltuit cu 15% mai mult pe divertisment, posibil din cauza sezonului de vacanță").
+            3. Analizează tendințele comparativ cu lunile anterioare.
+            4. Oferă recomandări detaliate și personalizate pentru optimizarea cheltuielilor pe viitor.
+            5. Evidențiază orice anomalii sau cheltuieli neobișnuite.
+            6. Tonul trebuie să fie formal, profesionist și respectuos.
+            7. Răspunde EXCLUSIV în limba română.
+            8. Structurează raportul în secțiuni clare: Rezumat, Analiză pe Categorii, Tendințe, Recomandări.
             """)
         String generateReport(@UserMessage String aggregatedData);
     }

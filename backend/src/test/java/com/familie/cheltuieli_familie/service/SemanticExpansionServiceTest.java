@@ -1,11 +1,13 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -23,6 +25,11 @@ class SemanticExpansionServiceTest {
     @InjectMocks
     private SemanticExpansionService semanticExpansionService;
 
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(semanticExpansionService, "minScoreThreshold", 0.30);
+    }
+
     @Test
     void expandCategories_shouldReturnEmpty_whenInputNullOrBlank() {
         assertTrue(semanticExpansionService.expandCategories(null).isEmpty());
@@ -37,7 +44,7 @@ class SemanticExpansionServiceTest {
 
         EmbeddedExpense e2 = new EmbeddedExpense();
         e2.setCategory("Groceries");
-        e2.setScore(0.4); // Below threshold
+        e2.setScore(0.2); // Below threshold
 
         when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
                 .thenReturn(List.of(e1, e2));

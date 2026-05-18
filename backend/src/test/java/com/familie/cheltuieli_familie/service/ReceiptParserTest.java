@@ -127,5 +127,43 @@ class ReceiptParserTest {
         assertEquals("Food", receipt.getCategory());
         assertEquals(1, receipt.getItems().size());
     }
+
+    @Test
+    void parseReceipt_shouldNormalizeOcrStoreNames() {
+        String mockJsonResponse = """
+            {
+              "storeName": "L1dl",
+              "totalAmount": 45.99,
+              "date": "15/05/2026",
+              "category": "Mâncare"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJsonResponse)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("bon l1dl");
+
+        assertNotNull(result);
+        assertEquals("Lidl", result.getStoreName());
+    }
+
+    @Test
+    void parseReceipt_shouldNormalizeKauflardToKaufland() {
+        String mockJsonResponse = """
+            {
+              "storeName": "Kauflard",
+              "totalAmount": 123.45,
+              "date": "01.05.2026",
+              "category": "Mâncare"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(mockJsonResponse)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("bon kauflard");
+
+        assertNotNull(result);
+        assertEquals("Kaufland", result.getStoreName());
+    }
 }
 

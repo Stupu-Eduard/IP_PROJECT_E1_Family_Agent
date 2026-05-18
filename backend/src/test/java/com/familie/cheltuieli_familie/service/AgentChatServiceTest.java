@@ -58,7 +58,7 @@ class AgentChatServiceTest {
     }
 
     @Test
-    void stripMarkdown_shouldRemoveCommonFormatting() {
+    void stripMarkdown_shouldRemoveCodeFencesOnly() {
         String markdown = """
             # Header
             ## Subheader
@@ -75,12 +75,12 @@ class AgentChatServiceTest {
         
         String result = AgentChatService.stripMarkdown(markdown);
         
-        assertFalse(result.contains("#"));
-        assertFalse(result.contains("|"));
         assertFalse(result.contains("```"));
-        assertTrue(result.contains("Header"));
-        assertTrue(result.contains("bold"));
-        assertTrue(result.contains("list item"));
+        assertTrue(result.contains("# Header"));
+        assertTrue(result.contains("| col |"));
+        assertTrue(result.contains("**bold**"));
+        assertTrue(result.contains("- list item"));
+        assertTrue(result.contains("1. numbered item"));
     }
 
     @Test
