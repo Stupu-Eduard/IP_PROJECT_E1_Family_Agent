@@ -373,7 +373,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(11L, BigDecimal.valueOf(20), "RON", null,
                 LocalDateTime.of(2026, 5, 2, 8, 0), "Transport", "Alex", "manual",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(11L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -434,7 +434,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(12L, BigDecimal.valueOf(30), "RON", null,
                 LocalDateTime.of(2026, 5, 3, 9, 0), "Food", "Alex", "manual",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(12L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -584,7 +584,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(4L, BigDecimal.ONE, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0), "Food", null, "manual",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(4L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -619,7 +619,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(5L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0), "Food", null, "manual",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(5L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -660,7 +660,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(6L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0), "Food", null, "manual",
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         when(expenseRepository.findOneWithLocation(6L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
@@ -784,7 +784,7 @@ class ExpenseControllerTest {
 
         Projection row = new Projection(10L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0), "Food", null, "manual",
-                1L, "Updated Store", null, "Cluj", null, null, null);
+                null, 1L, "Updated Store", null, "Cluj", null, null, null);
         when(expenseRepository.findOneWithLocation(10L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
