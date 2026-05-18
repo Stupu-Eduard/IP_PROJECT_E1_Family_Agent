@@ -229,4 +229,23 @@ class PdfExportServiceTest {
         assertNotNull(pdf);
         assertTrue(pdf.length > 0);
     }
+
+    @Test
+    void generatePdf_handlesNewlineCharactersGracefully() throws Exception {
+        TestProjection expenseWithNewline = new TestProjection(
+                3L, BigDecimal.valueOf(50.0), "RON", "Descriere\ncu newline",
+                LocalDate.now().minusDays(1).atStartOfDay(),
+                "Categorie\nNoua", "Persoana\nTest", "manual",
+                null, null, null, null, null, null, null, null
+        );
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of(expenseWithNewline));
+
+        byte[] pdf = pdfExportService.generatePdf(LocalDate.now().minusDays(6), LocalDate.now(), parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
 }
