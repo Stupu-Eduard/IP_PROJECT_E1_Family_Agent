@@ -9,6 +9,7 @@ import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
+import com.familie.cheltuieli_familie.service.ProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,7 @@ class FamilyServiceTest {
     @Mock private JwtUtil jwtUtil;
     @Mock private ExpenseRepository expenseRepository;
     @Mock private BudgetRepository budgetRepository;
+    @Mock private ProfileService profileService;
 
     @InjectMocks
     private FamilyService familyService;
@@ -425,4 +427,114 @@ class FamilyServiceTest {
                 () -> familyService.removeMember(famId, 200L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
+
+    // ── deleteChildAccount ───────────────────────────────────────────────────
+
+    @Test
+    void deleteChildAccount_success_callsProfileServiceDeleteAccount() {
+        User childUser = new User();
+        childUser.setId(2L);
+        childUser.setName("Copil");
+        childUser.setEmail("copil@test.com");
+
+        FamilyMember childMember = new FamilyMember();
+        childMember.setId(200L);
+        childMember.setUser(childUser);
+        childMember.setFamily(family);
+        childMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(childMember));
+
+        familyService.deleteChildAccount(family.getId(), 200L, requester);
+
+        verify(profileService).deleteAccount(childUser);
+    }
+
+    @Test
+    void deleteChildAccount_throwsForbidden_whenRequesterIsChild() {
+        FamilyMember childRequesterMembership = new FamilyMember();
+        childRequesterMembership.setId(99L);
+        childRequesterMembership.setUser(requester);
+        childRequesterMembership.setFamily(family);
+        childRequesterMembership.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(childRequesterMembership));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(famId, 200L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(profileService, never()).deleteAccount(any());
+    }
+
+    @Test
+    void deleteChildAccount_throwsForbidden_whenTargetIsParent() {
+        User anotherParent = new User();
+        anotherParent.setId(5L);
+        anotherParent.setEmail("parent2@test.com");
+
+        FamilyMember parentMember = new FamilyMember();
+        parentMember.setId(300L);
+        parentMember.setUser(anotherParent);
+        parentMember.setFamily(family);
+        parentMember.setRole("Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(300L)).thenReturn(Optional.of(parentMember));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(famId, 300L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(profileService, never()).deleteAccount(any());
+    }
+
+    @Test
+    void deleteChildAccount_throwsBadRequest_whenRequesterDeletesOwnAccount() {
+        // Membrul tinta este chiar requesterul (child member cu acelasi userId)
+        FamilyMember selfMember = new FamilyMember();
+        selfMember.setId(100L);
+        selfMember.setUser(requester);   // acelasi user
+        selfMember.setFamily(family);
+        selfMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(100L)).thenReturn(Optional.of(selfMember));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(famId, 100L, requester));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(profileService, never()).deleteAccount(any());
+    }
+
+    @Test
+    void deleteChildAccount_throwsForbidden_whenMemberBelongsToDifferentFamily() {
+        Family otherFamily = new Family();
+        otherFamily.setId(99L);
+
+        User childUser = new User();
+        childUser.setId(3L);
+
+        FamilyMember memberOfOtherFamily = new FamilyMember();
+        memberOfOtherFamily.setId(200L);
+        memberOfOtherFamily.setUser(childUser);
+        memberOfOtherFamily.setFamily(otherFamily);
+        memberOfOtherFamily.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(memberOfOtherFamily));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(famId, 200L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
 }
