@@ -58,6 +58,9 @@ export const familyApi = {
   removeMember: (familyId: number, memberId: number) =>
     api.delete(`/api/v1/families/${familyId}/members/${memberId}`),
 
+  deleteChildAccount: (familyId: number, memberId: number) =>
+    api.delete(`/api/v1/families/${familyId}/members/${memberId}/account`),
+
   leaveFamily: (familyId: number) =>
     api.delete(`/api/v1/families/${familyId}/leave`),
 
@@ -80,7 +83,6 @@ export const invitationApi = {
   decline: (id: number) =>
     api.post(`/api/v1/invitations/${id}/decline`),
 }
-
 
 export interface AvatarResponseDTO {
   avatarUrl: string
