@@ -25,4 +25,7 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDate createdAt;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 }
