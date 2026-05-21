@@ -70,7 +70,7 @@ export default function Sidebar() {
             }
 
             if (payload.familyName) {
-                familyLabel = `Familia ${payload.familyName}`
+                familyLabel = payload.familyName
             }
 
             userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
