@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { useAuthStore, AUTH_TOKEN_STORAGE_KEY } from './authStore'
+import { useAuthStore, AUTH_TOKEN_STORAGE_KEY, AVATAR_STORAGE_KEY } from './authStore'
 
 describe('AuthStore - Zustand & Persistență', () => {
     beforeEach(() => {
-        // Clear localStorage by removing all items
         Object.keys(localStorage).forEach(key => {
             localStorage.removeItem(key)
         })
@@ -13,7 +12,6 @@ describe('AuthStore - Zustand & Persistență', () => {
     })
 
     afterEach(() => {
-        // Clean up after each test
         Object.keys(localStorage).forEach(key => {
             localStorage.removeItem(key)
         })
@@ -53,14 +51,52 @@ describe('AuthStore - Zustand & Persistență', () => {
     })
 
     it('5. setToken() - Ramura ELSE: șterge token dacă valoarea este null', () => {
-        // Mai întâi setăm un token
         useAuthStore.getState().setToken('temp-token')
-
-        // Apoi apelăm setToken cu null (pentru a intra pe ramura else)
         useAuthStore.getState().setToken(null)
 
         expect(useAuthStore.getState().token).toBe(null)
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
         expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+    })
+
+    // ─── AVATAR ───────────────────────────────────────────────────────────
+
+    it('6. avatarUrl este null inițial când localStorage e gol', () => {
+        expect(useAuthStore.getState().avatarUrl).toBe(null)
+    })
+
+    it('7. setAvatar(url) salvează URL-ul în state și localStorage', () => {
+        const url = 'https://res.cloudinary.com/demo/avatar.jpg'
+        useAuthStore.getState().setAvatar(url)
+
+        expect(useAuthStore.getState().avatarUrl).toBe(url)
+        expect(localStorage.getItem(AVATAR_STORAGE_KEY)).toBe(url)
+    })
+
+    it('8. setAvatar(null) șterge avatarul din state și localStorage', () => {
+        useAuthStore.getState().setAvatar('https://example.com/avatar.jpg')
+        useAuthStore.getState().setAvatar(null)
+
+        expect(useAuthStore.getState().avatarUrl).toBe(null)
+        expect(localStorage.getItem(AVATAR_STORAGE_KEY)).toBe(null)
+    })
+
+    it('9. logout() șterge și avatarUrl din state și localStorage', () => {
+        useAuthStore.getState().login('test-token')
+        useAuthStore.getState().setAvatar('https://example.com/avatar.jpg')
+
+        useAuthStore.getState().logout()
+
+        expect(useAuthStore.getState().avatarUrl).toBe(null)
+        expect(localStorage.getItem(AVATAR_STORAGE_KEY)).toBe(null)
+        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+    })
+
+    it('10. setAvatar cu ID predefinit (av_f_pink) salvează corect ca string', () => {
+        const avatarId = 'av_f_pink'
+        useAuthStore.getState().setAvatar(avatarId)
+
+        expect(useAuthStore.getState().avatarUrl).toBe(avatarId)
+        expect(localStorage.getItem(AVATAR_STORAGE_KEY)).toBe(avatarId)
     })
 })

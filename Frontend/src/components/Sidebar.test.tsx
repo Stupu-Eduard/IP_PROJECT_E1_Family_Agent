@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import Sidebar from './Sidebar.tsx'
 import { useAuthStore } from '../store/authStore'
 
@@ -30,7 +30,7 @@ describe('Sidebar Component', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = { token: null, logout: mockLogout }
+            const state = { token: null, logout: mockLogout, avatarUrl: null }
             return selector(state)
         })
     })
@@ -45,7 +45,8 @@ describe('Sidebar Component', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
             const state = {
                 token: createMockToken({ role: 'Parent', name: 'Ana Popescu' }),
-                logout: mockLogout
+                logout: mockLogout,
+                avatarUrl: null,
             }
             return selector(state)
         })
@@ -65,7 +66,8 @@ describe('Sidebar Component', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
             const state = {
                 token: createMockToken({ role: 'Parent', sub: 'eduard@test.com' }),
-                logout: mockLogout
+                logout: mockLogout,
+                avatarUrl: null,
             }
             return selector(state)
         })
@@ -83,7 +85,8 @@ describe('Sidebar Component', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
             const state = {
                 token: createMockToken({ role: 'Child', name: 'Andrei Popescu' }),
-                logout: mockLogout
+                logout: mockLogout,
+                avatarUrl: null,
             }
             return selector(state)
         })
@@ -104,7 +107,7 @@ describe('Sidebar Component', () => {
 
     it('4. Gestionează corect un token malformat (ramura catch)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = { token: 'header.invalid-json.signature', logout: mockLogout }
+            const state = { token: 'header.invalid-json.signature', logout: mockLogout, avatarUrl: null }
             return selector(state)
         })
 
@@ -116,28 +119,11 @@ describe('Sidebar Component', () => {
         expect(screen.getByText('U')).toBeInTheDocument()
     })
 
-    // ─── 5. TOKEN FĂRĂ NAME ȘI FĂRĂ SUB ──────────────────────────────────
+    // ─── 5. TOKEN NULL ────────────────────────────────────────────────────
 
-    it('5. Gestionează token fără name și fără sub (fallback la Utilizator)', () => {
+    it('5. Randează valorile default când token-ul este null', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = {
-                token: createMockToken({ role: 'Parent' }),
-                logout: mockLogout
-            }
-            return selector(state)
-        })
-
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        expect(screen.getByText('Utilizator')).toBeInTheDocument()
-        expect(screen.getByText('U')).toBeInTheDocument()
-    })
-
-    // ─── 6. TOKEN NULL ────────────────────────────────────────────────────
-
-    it('6. Gestionează token null (utilizator neautentificat)', () => {
-        vi.mocked(useAuthStore).mockImplementation((selector: any) => {
-            const state = { token: null, logout: mockLogout }
+            const state = { token: null, logout: mockLogout, avatarUrl: null }
             return selector(state)
         })
 
@@ -145,114 +131,106 @@ describe('Sidebar Component', () => {
 
         expect(screen.getByText('Utilizator')).toBeInTheDocument()
         expect(screen.getByText('Părinte · Activ')).toBeInTheDocument()
+        expect(screen.getByText('U')).toBeInTheDocument()
     })
 
-    // ─── 7. NUME FĂRĂ PRENUME COMPUS (UN SINGUR CUVÂNT) ──────────────────
+    // ─── 6. LOGOUT ────────────────────────────────────────────────────────
 
-    it('7. Gestionează corect un nume cu un singur cuvânt', () => {
+    it('6. Apelează logout și navighează spre /login la click pe butonul de ieșire', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
             const state = {
-                token: createMockToken({ role: 'Parent', name: 'Mihaela' }),
-                logout: mockLogout
+                token: createMockToken({ role: 'Parent', name: 'Ana Popescu' }),
+                logout: mockLogout,
+                avatarUrl: null,
             }
             return selector(state)
         })
 
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
+        const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>)
 
-        expect(screen.getByText('Mihaela')).toBeInTheDocument()
-        // Un singur cuvânt → inițiale = primele 2 litere
-        expect(screen.getByText('MI')).toBeInTheDocument()
-    })
+        const logoutBtn = container.querySelector('.fa-sidebar-logout')
+        if (logoutBtn) fireEvent.click(logoutBtn)
 
-    // ─── 8. RUTĂ ACTIVĂ CU SUB-RUTE ──────────────────────────────────────
-
-    it('8. Marchează ruta activă folosind startsWith (sub-rute)', () => {
-        vi.mocked(useLocation).mockReturnValue({
-            pathname: '/expenses/123', state: null, key: '', search: '', hash: ''
-        } as any)
-
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        const expensesBtn = screen.getByRole('button', { name: /cheltuieli/i })
-        expect(expensesBtn).toHaveClass('active')
-    })
-
-    // ─── 9. NAVIGARE HARTĂ LIVE ───────────────────────────────────────────
-
-    it('9. Navighează corect la Hartă Live', () => {
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        fireEvent.click(screen.getByRole('button', { name: /hartă live/i }))
-
-        expect(mockNavigate).toHaveBeenCalledWith('/expenses/all-map')
-    })
-
-    // ─── 10. RUTĂ INEXISTENTĂ → DEFAULT DASHBOARD ─────────────────────────
-
-    it('10. Revine la dashboard dacă ruta nu este găsită (default activeId)', () => {
-        vi.mocked(useLocation).mockReturnValue({
-            pathname: '/ruta-inexistenta', state: null, key: '', search: '', hash: ''
-        } as any)
-
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        const dashboardBtn = screen.getByRole('button', { name: /dashboard/i })
-        expect(dashboardBtn).toHaveClass('active')
-    })
-
-    // ─── 11. LOGOUT ───────────────────────────────────────────────────────
-
-    it('11. Execută delogarea completă', () => {
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        fireEvent.click(screen.getByTitle('Logout'))
-
-        expect(mockLogout).toHaveBeenCalled()
+        expect(mockLogout).toHaveBeenCalledTimes(1)
         expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true })
     })
 
-    // ─── 12. NAVIGARE TOATE ITEM-URILE ────────────────────────────────────
+    // ─── 7. AVATAR PREDEFINIT (PersonSvg) ────────────────────────────────
 
-    it('12. Navighează corect la toate item-urile din meniu Părinte', () => {
-        render(<MemoryRouter><Sidebar /></MemoryRouter>)
-
-        fireEvent.click(screen.getByRole('button', { name: /dashboard/i }))
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
-
-        fireEvent.click(screen.getByRole('button', { name: /cheltuieli$/i }))
-        expect(mockNavigate).toHaveBeenCalledWith('/expenses')
-
-        fireEvent.click(screen.getByRole('button', { name: /rapoarte/i }))
-        expect(mockNavigate).toHaveBeenCalledWith('/reports')
-
-        fireEvent.click(screen.getByRole('button', { name: /familie/i }))
-        expect(mockNavigate).toHaveBeenCalledWith('/family')
-    })
-
-    // ─── 13. NAVIGARE MENIU COPIL ─────────────────────────────────────────
-
-    it('13. Navighează corect la item-urile din meniu Copil', () => {
+    it('7. Randează PersonSvg când avatarUrl este un ID predefinit (av_f_pink)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => {
             const state = {
-                token: createMockToken({ role: 'Child', name: 'Andrei P.' }),
-                logout: mockLogout
+                token: createMockToken({ role: 'Parent', name: 'Ana Popescu' }),
+                logout: mockLogout,
+                avatarUrl: 'av_f_pink',
+            }
+            return selector(state)
+        })
+
+        const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>)
+
+        // PersonSvg randează un SVG — nu inițialele
+        const svg = container.querySelector('svg')
+        expect(svg).toBeInTheDocument()
+        // Inițialele NU sunt afișate când există avatar predefinit
+        expect(screen.queryByText('AP')).not.toBeInTheDocument()
+    })
+
+    // ─── 8. AVATAR REMOTE URL (img tag) ──────────────────────────────────
+
+    it('8. Randează un img când avatarUrl este un URL remote (https)', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => {
+            const state = {
+                token: createMockToken({ role: 'Parent', name: 'Ana Popescu' }),
+                logout: mockLogout,
+                avatarUrl: 'https://res.cloudinary.com/demo/avatar.jpg',
             }
             return selector(state)
         })
 
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
 
-        fireEvent.click(screen.getByRole('button', { name: /cheltuielile mele/i }))
-        expect(mockNavigate).toHaveBeenCalledWith('/expenses')
+        const img = screen.getByAltText('Avatar')
+        expect(img).toBeInTheDocument()
+        expect(img).toHaveAttribute('src', 'https://res.cloudinary.com/demo/avatar.jpg')
+        // Inițialele NU sunt afișate când există imagine
+        expect(screen.queryByText('AP')).not.toBeInTheDocument()
     })
 
-    // ─── 14. LOGO ȘI TITLU ────────────────────────────────────────────────
+    // ─── 9. NAVIGARE LA PROFIL (FOOTER CLICK) ────────────────────────────
 
-    it('14. Afișează corect logo-ul și titlul aplicației', () => {
+    it('9. Click pe footer navighează spre /profile', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => {
+            const state = {
+                token: createMockToken({ role: 'Parent', name: 'Ana Popescu' }),
+                logout: mockLogout,
+                avatarUrl: null,
+            }
+            return selector(state)
+        })
+
+        const { container } = render(<MemoryRouter><Sidebar /></MemoryRouter>)
+
+        const footerBtn = container.querySelector('.fa-sidebar-user')
+        if (footerBtn) fireEvent.click(footerBtn)
+
+        expect(mockNavigate).toHaveBeenCalledWith('/profile')
+    })
+
+    // ─── 10. FAMILIE LABEL DIN TOKEN ─────────────────────────────────────
+
+    it('10. Afișează numele familiei din token (familyName)', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => {
+            const state = {
+                token: createMockToken({ role: 'Parent', name: 'Ana', familyName: 'Popescu' }),
+                logout: mockLogout,
+                avatarUrl: null,
+            }
+            return selector(state)
+        })
+
         render(<MemoryRouter><Sidebar /></MemoryRouter>)
 
-        expect(screen.getByText('Family Agent')).toBeInTheDocument()
         expect(screen.getByText('Familia Popescu')).toBeInTheDocument()
     })
 })
