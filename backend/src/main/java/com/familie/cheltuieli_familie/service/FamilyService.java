@@ -32,6 +32,7 @@ public class FamilyService {
     private final JwtUtil                jwtUtil;
     private final com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
     private final com.familie.cheltuieli_familie.repository.BudgetRepository budgetRepository;
+    private final ProfileService         profileService;
 
     @Transactional
     public Map<String, Object> createFamily(String name, User requester) {
@@ -154,6 +155,38 @@ public class FamilyService {
         familyMemberRepository.save(member);
         log.info("Rol schimbat: membrul {} → {} de către {}", member.getUser().getEmail(), normalized, requester.getEmail());
         return toDTO(member);
+    }
+
+    @Transactional
+    public void deleteChildAccount(Long familyId, Long memberId, User requester) {
+        // 1. Verificăm că solicitantul e Părinte/Co-Părinte în familie
+        verifyAdultRole(familyId, requester);
+
+        // 2. Găsim membrul țintă
+        FamilyMember member = familyMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+
+        if (!member.getFamily().getId().equals(familyId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
+        }
+
+        // 3. Nu permitem ștergerea unui alt Părinte/Co-Părinte
+        if (isParentRole(member.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Nu poți șterge contul unui alt administrator. Poți șterge doar conturi de copil.");
+        }
+
+        // 4. Nu permitem ștergerea propriului cont pe această rută
+        if (member.getUser().getId().equals(requester.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Folosește /api/v1/profile/account pentru a-ți șterge propriul cont.");
+        }
+
+        User targetUser = member.getUser();
+        log.info("Părinte {} șterge contul copilului {} din familia {}", requester.getEmail(), targetUser.getEmail(), familyId);
+
+        // 5. Ștergem complet contul copilului
+        profileService.deleteAccount(targetUser);
     }
 
     public void removeMember(Long familyId, Long memberId, User requester) {
