@@ -149,7 +149,7 @@ class ProfileServiceTest {
         MultipartFile mockFile = mock(MultipartFile.class);
         when(mockFile.isEmpty()).thenReturn(false);
         when(mockFile.getOriginalFilename()).thenReturn("photo.jpg");
-        doThrow(new IOException("disk full")).when(mockFile).transferTo(any(File.class));
+        doThrow(new IOException("disk full")).when(mockFile).transferTo(any(java.nio.file.Path.class));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> profileService.uploadAvatarFile(mockFile, user));
