@@ -25,4 +25,8 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDate createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    private Family family;
 }

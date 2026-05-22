@@ -103,6 +103,7 @@ public class OcrService {
             double confidence = computeConfidence(preprocessed);
             log.info("OCR extracted {} characters (confidence={}%) from image: {}",
                     text.length(), confidence * 100, imageFile.getName());
+            log.debug("OCR raw text: {}", text);
             return new OcrResult(text, confidence);
         } catch (IOException e) {
             log.error("Image preprocessing failed for: {}", imageFile.getName(), e);

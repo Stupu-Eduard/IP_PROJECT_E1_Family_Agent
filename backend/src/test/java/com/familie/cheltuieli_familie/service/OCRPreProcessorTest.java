@@ -56,7 +56,7 @@ class OCRPreProcessorTest {
             preProcessor.processImage(invalidFile, "default");
         });
 
-        assertTrue(exception.getMessage().contains("Couldn't read the image"));
+        assertTrue(exception.getMessage().contains("nu a fost găsit"));
     }
 
     @Test
@@ -65,7 +65,7 @@ class OCRPreProcessorTest {
             preProcessor.processImage(null, "revolut");
         });
 
-        assertTrue(exception.getMessage().contains("null"));
+        assertTrue(exception.getMessage().contains("nu a fost găsit"));
     }
 
     @Test

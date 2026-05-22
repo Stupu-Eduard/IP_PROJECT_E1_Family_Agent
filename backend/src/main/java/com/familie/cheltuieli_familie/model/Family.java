@@ -21,4 +21,7 @@ public class Family {
 
     @Column(name = "owner_id")
     private Long ownerId;
+
+    @OneToMany(mappedBy = "family", fetch = FetchType.LAZY)
+    private java.util.List<User> members;
 }

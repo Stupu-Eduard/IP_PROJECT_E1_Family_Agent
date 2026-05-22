@@ -119,8 +119,7 @@ public class OCRPreProcessor {
 
         if (file == null || !file.exists()) {
             throw new IllegalArgumentException(
-                    "Couldn't read the image from the file: " +
-                            (file == null ? "null" : file.getName())
+                    "Fișierul imagine nu a fost găsit sau nu poate fi citit."
             );
         }
 
@@ -128,45 +127,48 @@ public class OCRPreProcessor {
 
         if (src.empty()) {
             throw new IllegalArgumentException(
-                    "Couldn't read the image from the file: " +
-                            file.getName()
+                    "Fișierul imagine nu a putut fi procesat. Verifică formatul fișierului."
             );
         }
 
-        Mat upscaled = upscale(src, 3.0);
+        Mat upscaled = null;
+        Mat bankCropped = null;
+        Mat gray = null;
 
-        Mat bankCropped;
-        String bankKey = bank != null ? bank.toLowerCase() : "";
+        try {
+            upscaled = upscale(src, 3.0);
 
-        switch (bankKey) {
-            case "revolut":
-                bankCropped = cropRevolut(upscaled);
-                break;
+            String bankKey = bank != null ? bank.toLowerCase() : "";
 
-            case "bt":
-                bankCropped = cropBT(upscaled);
-                break;
+            switch (bankKey) {
+                case "revolut":
+                    bankCropped = cropRevolut(upscaled);
+                    break;
 
-            case "ing":
-                bankCropped = cropING(upscaled);
-                break;
+                case "bt":
+                    bankCropped = cropBT(upscaled);
+                    break;
 
-            default:
-                bankCropped = upscaled.clone();
-                break;
+                case "ing":
+                    bankCropped = cropING(upscaled);
+                    break;
+
+                default:
+                    bankCropped = upscaled.clone();
+                    break;
+            }
+
+            gray = toGrayScale(bankCropped);
+            // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
+            
+            return matToBufferedImage(gray);
+
+        } finally {
+            if (src != null) src.release();
+            if (upscaled != null) upscaled.release();
+            if (bankCropped != null) bankCropped.release();
+            if (gray != null) gray.release();
         }
-
-        Mat gray = toGrayScale(bankCropped);
-        // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
-        
-        BufferedImage result = matToBufferedImage(gray);
-
-        src.release();
-        upscaled.release();
-        bankCropped.release();
-        gray.release();
-
-        return result;
     }
 
     public List<BufferedImage> processPdf(File pdfFile, String bank) throws IOException {
