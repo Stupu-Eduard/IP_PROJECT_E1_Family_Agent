@@ -42,12 +42,12 @@ class AgentChatServiceTest {
     @Test
     void processQuery_shouldFallbackToRag_onException() {
         when(visualIntentExtractor.extract(anyString())).thenThrow(new RuntimeException("Extractor failed"));
-        when(ragRetrievalService.askWithContext(anyString())).thenReturn("RAG Answer");
 
         AgentResponseDTO result = agentChatService.processQuery("buna salut te rog");
 
         assertTrue(result instanceof TextResponseDTO);
-        assertEquals("RAG Answer", ((TextResponseDTO)result).getMessage());
+        assertEquals("Nu am putut procesa cererea. Încearcă din nou sau reformulează întrebarea.",
+                ((TextResponseDTO)result).getMessage());
     }
 
     @Test

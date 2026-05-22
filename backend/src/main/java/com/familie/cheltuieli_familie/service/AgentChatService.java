@@ -12,13 +12,24 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AgentChatService {
 
+    private static final int MAX_MESSAGE_LENGTH = 2000;
+
     private final VisualIntentExtractor visualIntentExtractor;
     private final ChartGenerationService chartGenerationService;
     private final RagRetrievalService ragRetrievalService;
 
     public AgentResponseDTO processQuery(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return new TextResponseDTO("Mesajul nu poate fi gol.");
+        }
+        if (userMessage.length() > MAX_MESSAGE_LENGTH) {
+            return new TextResponseDTO(
+                    "Mesajul este prea lung. Limita maximă este de " + MAX_MESSAGE_LENGTH + " caractere.");
+        }
+        String sanitized = sanitizeInput(userMessage);
+
         try {
-            ChartQueryIntent intent = visualIntentExtractor.extract(userMessage);
+            ChartQueryIntent intent = visualIntentExtractor.extract(sanitized);
             log.info("Extracted intent: type={}, chartType={}, groupBy={}",
                     intent.getResponseType(), intent.getChartType(), intent.getGroupBy());
 
@@ -26,15 +37,19 @@ public class AgentChatService {
                 return chartGenerationService.generate(intent);
             }
 
-            String textAnswer = ragRetrievalService.askWithContext(userMessage);
+            String textAnswer = ragRetrievalService.askWithContext(sanitized);
             return toTextResponse(textAnswer);
 
         } catch (Exception e) {
-            log.warn("Chart pipeline failed for query '{}', falling back to text RAG: {}",
-                    userMessage, e.getMessage());
-            String textAnswer = ragRetrievalService.askWithContext(userMessage);
-            return toTextResponse(textAnswer);
+            log.warn("Chart pipeline failed for query '{}': {}", sanitized, e.getMessage());
+            return new TextResponseDTO(
+                    "Nu am putut procesa cererea. Încearcă din nou sau reformulează întrebarea.");
         }
+    }
+
+    private String sanitizeInput(String input) {
+        // Remove null bytes and control characters (except newlines and tabs)
+        return input.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "").trim();
     }
 
     private TextResponseDTO toTextResponse(String textAnswer) {

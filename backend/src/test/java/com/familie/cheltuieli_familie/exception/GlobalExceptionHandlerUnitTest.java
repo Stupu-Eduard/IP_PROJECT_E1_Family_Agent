@@ -136,7 +136,7 @@ class GlobalExceptionHandlerUnitTest {
         
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertEquals("Eroare internă: Generic exception", body.get("message"));
+        assertEquals("A apărut o eroare internă. Încearcă din nou mai târziu.", body.get("message"));
         assertEquals(500, body.get("status"));
     }
 }

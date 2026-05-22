@@ -11,19 +11,23 @@ import org.springframework.stereotype.Service;
 public class LlmRouterService {
 
     private final LlmConfig.RagAssistant ragAssistant;
+    private final HallucinationGuard hallucinationGuard;
 
-    public LlmRouterService(LlmConfig.RagAssistant ragAssistant) {
+    public LlmRouterService(LlmConfig.RagAssistant ragAssistant, HallucinationGuard hallucinationGuard) {
         this.ragAssistant = ragAssistant;
+        this.hallucinationGuard = hallucinationGuard;
     }
 
     public String routeAndChat(String userMessage) {
-        // Route directly to RagAssistant which has both RAG retrieval + DB tools
         log.info("Routing query to RagAssistant: {}", userMessage);
 
         String response = ragAssistant.chat(userMessage);
         if (response == null || response.isBlank()) {
             log.error("RagAssistant returned null or blank response for message: {}", userMessage);
+            return response;
         }
-        return response;
+
+        // Validate response for hallucinations
+        return hallucinationGuard.validate(response, userMessage);
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,10 +30,14 @@ class ChatControllerTest {
     private AgentChatService agentChatService;
 
     @MockBean
+    private com.familie.cheltuieli_familie.security.ChatRateLimiter chatRateLimiter;
+
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void testChat_returnsTextResponse() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
         when(agentChatService.processQuery("Cat am cheltuit luna aceasta?"))
                 .thenReturn(new TextResponseDTO("Ai cheltuit 1248 de lei luna aceasta."));
 
@@ -47,6 +52,7 @@ class ChatControllerTest {
 
     @Test
     void testChat_emptyMessage_returnsBadRequest() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
         mockMvc.perform(post("/v1/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\": \"\"}"))
@@ -55,6 +61,7 @@ class ChatControllerTest {
 
     @Test
     void testChat_missingMessage_returnsBadRequest() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
         mockMvc.perform(post("/v1/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))

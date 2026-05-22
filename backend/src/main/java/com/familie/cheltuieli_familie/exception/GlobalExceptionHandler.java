@@ -114,7 +114,7 @@ public class GlobalExceptionHandler {
         log.error("Internal server error", ex);
         Map<String, Object> body = new HashMap<>();
         body.put(TIMESTAMP, LocalDateTime.now());
-        body.put(MESSAGE, "Eroare internă: " + ex.getMessage());
+        body.put(MESSAGE, "A apărut o eroare internă. Încearcă din nou mai târziu.");
         body.put(STATUS, 500);
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
