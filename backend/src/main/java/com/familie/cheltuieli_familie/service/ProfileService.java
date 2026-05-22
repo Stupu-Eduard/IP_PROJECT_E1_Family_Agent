@@ -65,9 +65,14 @@ public class ProfileService {
             // Whitelist extension to prevent path injection (SonarCloud S2083)
             String rawExt = originalName.contains(".")
                     ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase() : "jpg";
+            // Hardcoded literals — taint from getOriginalFilename() does NOT propagate (S2083)
             String ext = switch (rawExt) {
-                case "jpg", "jpeg", "png", "gif", "webp" -> "." + rawExt;
-                default -> ".jpg";
+                case "jpg"  -> ".jpg";
+                case "jpeg" -> ".jpeg";
+                case "png"  -> ".png";
+                case "gif"  -> ".gif";
+                case "webp" -> ".webp";
+                default     -> ".jpg";
             };
 
             tempFile = File.createTempFile("avatar_" + user.getId() + "_", ext);

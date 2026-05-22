@@ -265,11 +265,16 @@ public class OcrController {
         if (filename == null || !filename.contains(".")) {
             return "tmp";
         }
-        // Whitelist extension to prevent path injection (SonarCloud S2083)
+        // Whitelist with hardcoded literals — taint from getOriginalFilename() does NOT propagate
         String raw = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
         return switch (raw) {
-            case "jpg", "jpeg", "png", "webp", "bmp", "pdf" -> raw;
-            default -> "tmp";
+            case "jpg"  -> "jpg";
+            case "jpeg" -> "jpeg";
+            case "png"  -> "png";
+            case "webp" -> "webp";
+            case "bmp"  -> "bmp";
+            case "pdf"  -> "pdf";
+            default     -> "tmp";
         };
     }
 
