@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,12 +23,16 @@ class SemanticExpansionServiceTest {
     @Mock
     private QdrantVectorService qdrantVectorService;
 
+    @Mock
+    private SecurityService securityService;
+
     @InjectMocks
     private SemanticExpansionService semanticExpansionService;
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(semanticExpansionService, "minScoreThreshold", 0.30);
+        lenient().when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
     }
 
     @Test
@@ -46,7 +51,7 @@ class SemanticExpansionServiceTest {
         e2.setCategory("Groceries");
         e2.setScore(0.2); // Below threshold
 
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenReturn(List.of(e1, e2));
 
         List<String> result = semanticExpansionService.expandCategories("something fuzzy");
@@ -57,7 +62,7 @@ class SemanticExpansionServiceTest {
 
     @Test
     void expandCategories_shouldFallback_whenExceptionOccurs() {
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenThrow(new RuntimeException("Qdrant error"));
 
         List<String> result = semanticExpansionService.expandCategories("fuzzy");
@@ -72,7 +77,7 @@ class SemanticExpansionServiceTest {
         e1.setLocation("Mega Image");
         e1.setScore(0.9);
 
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenReturn(List.of(e1));
 
         List<String> result = semanticExpansionService.expandLocations("market");
@@ -83,7 +88,7 @@ class SemanticExpansionServiceTest {
 
     @Test
     void expandLocations_shouldFallback_whenExceptionOccurs() {
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenThrow(new RuntimeException("Qdrant error"));
 
         List<String> result = semanticExpansionService.expandLocations("market");
@@ -94,7 +99,7 @@ class SemanticExpansionServiceTest {
 
     @Test
     void expandCategories_shouldReturnEmpty_whenSearchReturnsNoResults() {
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenReturn(List.of());
 
         List<String> result = semanticExpansionService.expandCategories("nothing");
@@ -107,7 +112,7 @@ class SemanticExpansionServiceTest {
         e1.setCategory("Exact");
         e1.setScore(0.5); // Threshold is 0.5
 
-        when(qdrantVectorService.searchSimilar(anyString(), anyInt()))
+        when(qdrantVectorService.searchSimilar(anyString(), anyInt(), any(), any()))
                 .thenReturn(List.of(e1));
 
         List<String> result = semanticExpansionService.expandCategories("test");

@@ -231,4 +231,12 @@ public class ExpenseAnalyticsService {
             return row;
         }, amount, scopeParam(familyId, userId));
     }
+
+    public List<String> findCategoriesUsedByFamily(Long familyId, Long userId) {
+        log.info("Finding categories used by familyId={}, userId={}", familyId, userId);
+        String sql = (familyId != null)
+            ? "SELECT DISTINCT c.name FROM expenses e LEFT JOIN categories c ON e.category_id = c.id WHERE e.family_id = ? AND c.name IS NOT NULL ORDER BY c.name"
+            : "SELECT DISTINCT c.name FROM expenses e LEFT JOIN categories c ON e.category_id = c.id WHERE e.user_id = ? AND c.name IS NOT NULL ORDER BY c.name";
+        return jdbcTemplate.queryForList(sql, String.class, scopeParam(familyId, userId));
+    }
 }

@@ -175,7 +175,7 @@ public class LlmConfig {
 
     @Bean
     public ChatMemory chatMemory() {
-        return MessageWindowChatMemory.withMaxMessages(10);
+        return MessageWindowChatMemory.withMaxMessages(5);
     }
 
     @Bean

@@ -1,6 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
 import com.familie.cheltuieli_familie.dto.EmbeddedExpense;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,13 +16,14 @@ import java.util.Objects;
 public class SemanticExpansionService {
 
     private final QdrantVectorService qdrantVectorService;
+    private final SecurityService securityService;
     private static final int DEFAULT_TOP_K = 20;
 
     /**
      * Expands a fuzzy category description into concrete category strings
      * by searching Qdrant for semantically similar expenses.
      *
-     * Example: "mall shopping" → ["shopping", "haine", "brand-uri"]
+     * Example: "mall shopping" -> ["shopping", "haine", "brand-uri"]
      */
     @org.springframework.beans.factory.annotation.Value("${rag.expansion.min-score-threshold:0.30}")
     private double minScoreThreshold;
@@ -31,8 +33,12 @@ public class SemanticExpansionService {
             return Collections.emptyList();
         }
 
+        Long[] scope = securityService.resolveScope();
+        Long familyId = scope[0];
+        Long userId = scope[1];
+
         try {
-            List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyCategory, DEFAULT_TOP_K);
+            List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyCategory, DEFAULT_TOP_K, familyId, userId);
             List<String> categories = results.stream()
                     .filter(r -> r.getScore() >= minScoreThreshold)
                     .map(EmbeddedExpense::getCategory)
@@ -41,8 +47,8 @@ public class SemanticExpansionService {
                     .distinct()
                     .toList();
 
-            log.info("Expanded category '{}' into {} concrete categories: {}",
-                    fuzzyCategory, categories.size(), categories);
+            log.info("Expanded category '{}' into {} concrete categories for familyId={}, userId={}: {}",
+                    fuzzyCategory, categories.size(), familyId, userId, categories);
             return categories;
 
         } catch (Exception e) {
@@ -60,8 +66,12 @@ public class SemanticExpansionService {
             return Collections.emptyList();
         }
 
+        Long[] scope = securityService.resolveScope();
+        Long familyId = scope[0];
+        Long userId = scope[1];
+
         try {
-            List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyLocation, DEFAULT_TOP_K);
+            List<EmbeddedExpense> results = qdrantVectorService.searchSimilar(fuzzyLocation, DEFAULT_TOP_K, familyId, userId);
             List<String> locations = results.stream()
                     .filter(r -> r.getScore() >= minScoreThreshold)
                     .map(EmbeddedExpense::getLocation)
@@ -70,8 +80,8 @@ public class SemanticExpansionService {
                     .distinct()
                     .toList();
 
-            log.info("Expanded location '{}' into {} concrete locations: {}",
-                    fuzzyLocation, locations.size(), locations);
+            log.info("Expanded location '{}' into {} concrete locations for familyId={}, userId={}: {}",
+                    fuzzyLocation, locations.size(), familyId, userId, locations);
             return locations;
 
         } catch (Exception e) {
