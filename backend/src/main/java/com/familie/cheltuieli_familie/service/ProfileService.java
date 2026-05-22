@@ -61,24 +61,10 @@ public class ProfileService {
 
         Path tempPath = null;
         try {
-            String originalName = file.getOriginalFilename() != null
-                    ? file.getOriginalFilename() : "avatar";
-            // Whitelist extension to prevent path injection (SonarCloud S2083)
-            String rawExt = originalName.contains(".")
-                    ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase() : "jpg";
-            // Hardcoded literals — taint from getOriginalFilename() does NOT propagate (S2083)
-            String ext = switch (rawExt) {
-                case "jpg"  -> ".jpg";
-                case "jpeg" -> ".jpeg";
-                case "png"  -> ".png";
-                case "gif"  -> ".gif";
-                case "webp" -> ".webp";
-                default     -> ".jpg";
-            };
-
-            // S5443: use Files.createTempFile (NIO2) instead of File.createTempFile —
-            // NIO2 creates files with owner-only permissions, avoiding symlink races.
-            tempPath = Files.createTempFile("avatar_" + user.getId() + "_", ext);
+            // S2083: never derive temp-file path from getOriginalFilename() (user-controlled).
+            // Cloudinary auto-detects image format from file content, so a fixed suffix is sufficient.
+            // S5443: Files.createTempFile (NIO2) creates the file with owner-only permissions.
+            tempPath = Files.createTempFile("avatar_" + user.getId() + "_", ".tmp");
             file.transferTo(tempPath);
 
             String url = cloudinaryService.uploadFile(tempPath.toFile(), "avatars", "user_" + user.getId() + "_avatar");
