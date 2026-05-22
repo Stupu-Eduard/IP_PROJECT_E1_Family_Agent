@@ -76,9 +76,15 @@ export default function ExpensesMapAll() {
     const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
     const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
 
-    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
-
-    socket.onopen = () => console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
+    const socket = new WebSocket(wsUrl + '/locatie');
+    socket.onopen = () => {
+      console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
+      // Send token via message after connection instead of URL
+      const token = useAuthStore.getState().token;
+      if (token) {
+        socket.send(JSON.stringify({ type: 'auth', token }));
+      }
+    };
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);

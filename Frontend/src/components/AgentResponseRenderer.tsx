@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import {
     ResponsiveContainer,
     LineChart, Line,
@@ -349,7 +350,7 @@ const AgentResponseRenderer: React.FC<AgentResponseRendererProps> = ({ response 
             }
             return (
                 <span data-testid="agent-text">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {response.text || response.message || ''}
                     </ReactMarkdown>
                 </span>
