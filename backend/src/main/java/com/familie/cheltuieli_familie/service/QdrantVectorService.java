@@ -95,10 +95,6 @@ public class QdrantVectorService {
         }
     }
 
-    public List<EmbeddedExpense> searchSimilar(String query, int topK) {
-        return searchWithFilter(query, topK, new SearchFilter(null, null, null, null, null, null));
-    }
-
     public List<EmbeddedExpense> searchSimilar(String query, int topK, Long familyId, Long userId) {
         return searchWithFilter(query, topK, new SearchFilter(null, null, null, null, familyId, userId));
     }

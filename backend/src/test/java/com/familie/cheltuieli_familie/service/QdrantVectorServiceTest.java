@@ -143,7 +143,7 @@ class QdrantVectorServiceTest {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenReturn(new ResponseEntity<>(mockResponse, HttpStatus.OK));
 
-        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar("query", 5);
+        List<EmbeddedExpense> results = qdrantVectorService.searchSimilar("query", 5, null, null);
 
         assertNotNull(results);
         assertEquals(1, results.size());

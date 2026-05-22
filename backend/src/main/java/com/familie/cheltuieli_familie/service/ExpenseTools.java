@@ -1,8 +1,9 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
+import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
@@ -35,9 +36,9 @@ public class ExpenseTools {
     private static final String SUFFIX_RON = " RON";
 
     private final ExpenseAnalyticsService analyticsService;
-    private final CategoryRepository categoryRepository;
     private final FamilyMemberRepository familyMemberRepository;
     private final ExpenseItemRepository expenseItemRepository;
+    private final ExpenseJpaRepository expenseJpaRepository;
     private final com.familie.cheltuieli_familie.security.util.SecurityService securityService;
 
     private Long scopeFamilyId() { return securityService.resolveScope()[0]; }
@@ -50,11 +51,11 @@ public class ExpenseTools {
 
     @Tool("List all available expense category names in the system. Use this before querying by category to ensure you use the correct name.")
     public String listCategories() {
-        var categories = categoryRepository.findAll();
-        if (categories.isEmpty()) return "No categories found.";
-        return "Available categories: " + categories.stream()
-                .map(c -> c.getName())
-                .collect(Collectors.joining(", "));
+        Long familyId = scopeFamilyId();
+        Long userId = scopeUserId();
+        var categories = analyticsService.findCategoriesUsedByFamily(familyId, userId);
+        if (categories.isEmpty()) return "Nu am găsit categorii folosite.";
+        return "Categorii folosite în familia ta: " + String.join(", ", categories);
     }
 
     @Tool("List the family members of the authenticated user. Use this before querying by person to ensure you use the correct name.")
@@ -282,6 +283,17 @@ public class ExpenseTools {
     public String getExpenseItems(String expenseIdStr) {
         try {
             Long expenseId = Long.parseLong(expenseIdStr);
+            Long familyId = scopeFamilyId();
+            Long userId = scopeUserId();
+
+            // Security check: verify the expense belongs to the user's family
+            var expenseOpt = expenseJpaRepository.findByIdAndFamilyIdOrUserId(expenseId, familyId, userId);
+            if (expenseOpt.isEmpty()) {
+                log.warn("Unauthorized access attempt to expense items for expenseId={}, familyId={}, userId={}",
+                        expenseId, familyId, userId);
+                return "Nu am găsit cheltuiala cu ID " + expenseId + " în familia ta. Verifică ID-ul și încearcă din nou.";
+            }
+
             var items = expenseItemRepository.findByExpenseId(expenseId);
             if (items.isEmpty()) {
                 return "Nu am găsit articole pentru cheltuiala cu ID " + expenseId + ". Poate fi o cheltuială manuală sau bonul nu a fost scanat încă.";

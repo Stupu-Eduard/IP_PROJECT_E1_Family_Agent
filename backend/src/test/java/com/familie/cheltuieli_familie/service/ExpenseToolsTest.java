@@ -1,9 +1,7 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.security.util.SecurityService;
@@ -27,9 +25,9 @@ import static org.mockito.Mockito.*;
 class ExpenseToolsTest {
 
     @Mock private ExpenseAnalyticsService analyticsService;
-    @Mock private CategoryRepository categoryRepository;
     @Mock private FamilyMemberRepository familyMemberRepository;
     @Mock private ExpenseItemRepository expenseItemRepository;
+    @Mock private com.familie.cheltuieli_familie.repository.ExpenseJpaRepository expenseJpaRepository;
     @Mock private SecurityService securityService;
 
     @InjectMocks
@@ -47,9 +45,9 @@ class ExpenseToolsTest {
 
     @Test
     void listCategories_shouldReturnJoinedNames() {
-        Category c1 = new Category(); c1.setName("Food");
-        Category c2 = new Category(); c2.setName("Car");
-        when(categoryRepository.findAll()).thenReturn(List.of(c1, c2));
+        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
+        when(analyticsService.findCategoriesUsedByFamily(any(), any()))
+                .thenReturn(List.of("Food", "Car"));
 
         String result = expenseTools.listCategories();
         assertTrue(result.contains("Food, Car"));
@@ -224,6 +222,13 @@ class ExpenseToolsTest {
 
     @Test
     void getExpenseItems_shouldReturnJoinedNames() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
+
+        var mockExpense = new com.familie.cheltuieli_familie.model.ExpenseEntity();
+        mockExpense.setId(123L);
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
+                .thenReturn(java.util.Optional.of(mockExpense));
+
         var mockItem = mock(com.familie.cheltuieli_familie.model.ExpenseItem.class);
         when(mockItem.getItemName()).thenReturn("Milk");
         when(mockItem.getQuantity()).thenReturn(new BigDecimal("2"));

@@ -57,9 +57,17 @@ public class AgentChatService {
                 .findFirst()
                 .map(fm -> fm.getFamily() != null ? fm.getFamily().getName() : null)
                 .orElse(null);
+        Long familyId = familyMemberRepository.findByUserId(user.getId())
+                .stream()
+                .findFirst()
+                .map(fm -> fm.getFamily() != null ? fm.getFamily().getId() : null)
+                .orElse(null);
         StringBuilder ctx = new StringBuilder("[IDENTITATE_AUTENTIFICATA: nume='")
                 .append(user.getName())
                 .append("', user_id=").append(user.getId());
+        if (familyId != null) {
+            ctx.append(", family_id=").append(familyId);
+        }
         if (familyName != null) {
             ctx.append(", familia='").append(familyName).append("'");
         }

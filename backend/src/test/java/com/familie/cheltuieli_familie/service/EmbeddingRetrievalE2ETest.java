@@ -104,7 +104,7 @@ class EmbeddingRetrievalE2ETest {
         List<EmbeddedExpense> results = Awaitility.await()
                 .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(100))
-                .until(() -> qdrantVectorService.searchSimilar("mâncare Kaufland", 5), r -> !r.isEmpty());
+                .until(() -> qdrantVectorService.searchSimilar("mâncare Kaufland", 5, null, null), r -> !r.isEmpty());
 
         assertFalse(results.isEmpty(), "Should find the stored expense");
         assertTrue(results.stream().anyMatch(r -> r.getId() != null && r.getId() == uniqueId),
