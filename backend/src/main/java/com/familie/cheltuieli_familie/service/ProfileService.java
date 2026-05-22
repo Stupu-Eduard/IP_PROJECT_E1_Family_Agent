@@ -19,8 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 @Service
@@ -46,7 +47,7 @@ public class ProfileService {
         }
         user.setAvatarUrl(avatarId);
         userRepository.save(user);
-        log.info("Avatar predefinit actualizat pentru {}: {}", user.getEmail(), avatarId);
+        log.info("Avatar predefinit actualizat pentru {}: {}", user.getEmail(), sanitizeForLog(avatarId));
         return new AvatarResponseDTO(avatarId);
     }
 
@@ -58,7 +59,7 @@ public class ProfileService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fișierul este gol.");
         }
 
-        File tempFile = null;
+        Path tempPath = null;
         try {
             String originalName = file.getOriginalFilename() != null
                     ? file.getOriginalFilename() : "avatar";
@@ -75,10 +76,12 @@ public class ProfileService {
                 default     -> ".jpg";
             };
 
-            tempFile = File.createTempFile("avatar_" + user.getId() + "_", ext);
-            file.transferTo(tempFile);
+            // S5443: use Files.createTempFile (NIO2) instead of File.createTempFile —
+            // NIO2 creates files with owner-only permissions, avoiding symlink races.
+            tempPath = Files.createTempFile("avatar_" + user.getId() + "_", ext);
+            file.transferTo(tempPath);
 
-            String url = cloudinaryService.uploadFile(tempFile, "avatars", "user_" + user.getId() + "_avatar");
+            String url = cloudinaryService.uploadFile(tempPath.toFile(), "avatars", "user_" + user.getId() + "_avatar");
 
             user.setAvatarUrl(url);
             userRepository.save(user);
@@ -90,10 +93,11 @@ public class ProfileService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Eroare la procesarea fișierului.");
         } finally {
-            if (tempFile != null && tempFile.exists()) {
-                // Check return value to satisfy S899 (ignoring return value of delete)
-                if (!tempFile.delete()) {
-                    log.warn("Nu s-a putut șterge fișierul temporar: {}", tempFile.getName());
+            if (tempPath != null) {
+                try {
+                    Files.deleteIfExists(tempPath);
+                } catch (IOException ex) {
+                    log.warn("Nu s-a putut șterge fișierul temporar: {}", tempPath.getFileName());
                 }
             }
         }
@@ -142,5 +146,16 @@ public class ProfileService {
         // 5. Ștergem userul
         userRepository.delete(user);
         log.info("Cont șters complet: userId={}", userId);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * S5145 – Log Injection: sanitizează valorile provenite din input extern
+     * înainte de a fi scrise în log, eliminând caracterele CR/LF.
+     */
+    private static String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replace('\n', '_').replace('\r', '_');
     }
 }
