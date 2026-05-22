@@ -2,17 +2,24 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.OcrResponseDTO;
 import com.familie.cheltuieli_familie.model.Category;
+import com.familie.cheltuieli_familie.model.Expense;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
+import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
+import com.familie.cheltuieli_familie.repository.ExpenseRepository;
+import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
+import com.familie.cheltuieli_familie.repository.LocationRepository;
 import com.familie.cheltuieli_familie.service.CloudinaryService;
 import com.familie.cheltuieli_familie.service.OcrService;
 import com.familie.cheltuieli_familie.service.OcrService.OcrResult;
 import com.familie.cheltuieli_familie.service.ReceiptParser;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
@@ -34,9 +41,25 @@ class OcrControllerTest {
     @Mock private ReceiptParser receiptParser;
     @Mock private CategoryRepository categoryRepository;
     @Mock private CloudinaryService cloudinaryService;
+    @Mock private ExpenseRepository expenseRepository;
+    @Mock private ExpenseItemRepository expenseItemRepository;
+    @Mock private LocationRepository locationRepository;
+    @Mock private FamilyMemberRepository familyMemberRepository;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OcrController ocrController;
+
+    @BeforeEach
+    void setUp() {
+        // expenseRepository.save() must return the expense itself so saved.getAmount() works
+        lenient().when(expenseRepository.save(any(Expense.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        // locationRepository.findAll() returns empty list → controller will create+save new Location
+        lenient().when(locationRepository.findAll()).thenReturn(List.of());
+        // locationRepository.save() returns null → location stored on expense will be null (acceptable)
+        lenient().when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     @Test
     void testProcessReceiptUnauthorized() {
