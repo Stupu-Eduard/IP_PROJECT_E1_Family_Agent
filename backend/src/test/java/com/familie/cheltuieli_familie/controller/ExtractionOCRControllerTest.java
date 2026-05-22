@@ -91,4 +91,5 @@ class ExtractionOCRControllerTest {
                         .file(fakePdf))
                 .andExpect(status().isInternalServerError());
     }
+
 }

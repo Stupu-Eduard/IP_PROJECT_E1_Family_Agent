@@ -119,4 +119,5 @@ class ExtractionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].description").value("Lidl"));
     }
+
 }

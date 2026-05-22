@@ -425,4 +425,105 @@ class FamilyServiceTest {
                 () -> familyService.removeMember(famId, 200L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
+
+    @Test
+    void removeMember_throwsForbidden_whenRemovingOwner() {
+        family.setOwnerId(2L);
+
+        User ownerUser = new User();
+        ownerUser.setId(2L);
+        ownerUser.setName("Owner");
+        ownerUser.setEmail("owner@test.com");
+
+        FamilyMember ownerMember = new FamilyMember();
+        ownerMember.setId(200L);
+        ownerMember.setUser(ownerUser);
+        ownerMember.setFamily(family);
+        ownerMember.setRole("Co-Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.removeMember(famId, 200L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Fondatorul"));
+    }
+
+    // ── updateMemberRole owner/normalizeRole coverage ────────────────────────
+
+    @Test
+    void updateMemberRole_throwsForbidden_whenChangingOwnerRole() {
+        family.setOwnerId(2L);
+
+        User ownerUser = new User();
+        ownerUser.setId(2L);
+        ownerUser.setName("Owner");
+        ownerUser.setEmail("owner@test.com");
+
+        FamilyMember ownerMember = new FamilyMember();
+        ownerMember.setId(200L);
+        ownerMember.setUser(ownerUser);
+        ownerMember.setFamily(family);
+        ownerMember.setRole("Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
+
+        Long famId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.updateMemberRole(famId, 200L, "child", requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("fondatorului"));
+    }
+
+    @Test
+    void updateMemberRole_changesChildToAdult() {
+        User targetUser = new User();
+        targetUser.setId(2L);
+        targetUser.setName("Target");
+        targetUser.setEmail("target@test.com");
+
+        FamilyMember targetMember = new FamilyMember();
+        targetMember.setId(200L);
+        targetMember.setUser(targetUser);
+        targetMember.setFamily(family);
+        targetMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.save(any())).thenReturn(targetMember);
+
+        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, "adult", requester);
+
+        assertEquals("Adult", result.getRole());
+    }
+
+    @Test
+    void updateMemberRole_withNullNewRole_treatsAsChild() {
+        User targetUser = new User();
+        targetUser.setId(2L);
+        targetUser.setName("Target");
+        targetUser.setEmail("target@test.com");
+
+        FamilyMember targetMember = new FamilyMember();
+        targetMember.setId(200L);
+        targetMember.setUser(targetUser);
+        targetMember.setFamily(family);
+        targetMember.setRole("Adult");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.save(any())).thenReturn(targetMember);
+
+        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, null, requester);
+
+        assertEquals("Child", result.getRole());
+        verify(familyMemberRepository).save(any());
+    }
 }
