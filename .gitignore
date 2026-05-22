@@ -48,3 +48,7 @@ Thumbs.db
 uploads/
 
 .claude
+
+.env*
+.env.production
+
