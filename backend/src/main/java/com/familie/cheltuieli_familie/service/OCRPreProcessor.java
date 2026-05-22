@@ -31,90 +31,19 @@ public class OCRPreProcessor {
 
     private static synchronized void ensureOpenCvLoaded() {
         if (!openCvLoaded) {
-            OpenCV.loadLocally();
+            try {
+                System.loadLibrary(org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+                logger.info("Loaded system OpenCV library: {}", org.opencv.core.Core.NATIVE_LIBRARY_NAME);
+            } catch (UnsatisfiedLinkError e) {
+                logger.warn("Failed to load system OpenCV, attempting local load as fallback: {}", e.getMessage());
+                OpenCV.loadLocally();
+            }
             openCvLoaded = true;
         }
     }
 
     public OCRPreProcessor() {
         ensureOpenCvLoaded();
-    }
-
-    private Mat enhanceContrast(Mat gray) {
-        Mat enhanced = new Mat();
-        Imgproc.equalizeHist(gray, enhanced);
-        return enhanced;
-    }
-
-    private Mat applyOtsuThreshold(Mat gray) {
-        Mat thresholded = new Mat();
-        Imgproc.threshold(gray, thresholded, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-        return thresholded;
-    }
-
-    private Mat deskew(Mat src) {
-        // Detect skew angle using moments
-        Mat gray = src.clone();
-        if (gray.channels() > 1) {
-            Imgproc.cvtColor(gray, gray, Imgproc.COLOR_BGR2GRAY);
-        }
-
-        Mat binary = new Mat();
-        Imgproc.threshold(gray, binary, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
-
-        java.util.List<org.opencv.core.MatOfPoint> contours = new ArrayList<>();
-        Mat hierarchy = new Mat();
-        Imgproc.findContours(binary, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        if (contours.isEmpty()) {
-            gray.release();
-            binary.release();
-            hierarchy.release();
-            return src.clone();
-        }
-
-        // Use minAreaRect on the largest contour to estimate skew
-        org.opencv.core.RotatedRect maxRect = null;
-        double maxArea = 0;
-        for (org.opencv.core.MatOfPoint contour : contours) {
-            org.opencv.core.RotatedRect rect = Imgproc.minAreaRect(new org.opencv.core.MatOfPoint2f(contour.toArray()));
-            double area = rect.size.width * rect.size.height;
-            if (area > maxArea) {
-                maxArea = area;
-                maxRect = rect;
-            }
-            contour.release();
-        }
-
-        gray.release();
-        binary.release();
-        hierarchy.release();
-
-        if (maxRect == null) {
-            return src.clone();
-        }
-
-        double angle = maxRect.angle;
-        if (maxRect.size.width < maxRect.size.height) {
-            angle = 90 + angle;
-        }
-
-        if (Math.abs(angle) < 0.5) {
-            return src.clone();
-        }
-
-        org.opencv.core.Point center = new org.opencv.core.Point(src.cols() / 2.0, src.rows() / 2.0);
-        Mat rotMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
-        Mat rotated = new Mat();
-        Imgproc.warpAffine(src, rotated, rotMat, src.size(), Imgproc.INTER_CUBIC, org.opencv.core.Core.BORDER_CONSTANT, new org.opencv.core.Scalar(255, 255, 255));
-        rotMat.release();
-        return rotated;
-    }
-
-    private Mat denoiseImage(Mat gray) {
-        Mat denoised = new Mat();
-        Imgproc.medianBlur(gray, denoised, 3);
-        return denoised;
     }
 
     private Mat toGrayScale(Mat src) {
@@ -204,7 +133,7 @@ public class OCRPreProcessor {
             );
         }
 
-        Mat upscaled = upscale(src, 2.0);
+        Mat upscaled = upscale(src, 3.0);
 
         Mat bankCropped;
         String bankKey = bank != null ? bank.toLowerCase() : "";
@@ -227,22 +156,15 @@ public class OCRPreProcessor {
                 break;
         }
 
-        Mat deskewed = deskew(bankCropped);
-        Mat gray = toGrayScale(deskewed);
-        Mat denoised = denoiseImage(gray);
-        Mat enhanced = enhanceContrast(denoised);
-        Mat thresholded = applyOtsuThreshold(enhanced);
-
-        BufferedImage result = matToBufferedImage(thresholded);
+        Mat gray = toGrayScale(bankCropped);
+        // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
+        
+        BufferedImage result = matToBufferedImage(gray);
 
         src.release();
         upscaled.release();
         bankCropped.release();
-        deskewed.release();
         gray.release();
-        denoised.release();
-        enhanced.release();
-        thresholded.release();
 
         return result;
     }

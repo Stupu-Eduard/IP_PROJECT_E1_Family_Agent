@@ -42,6 +42,7 @@ public class FamilyService {
         Family family = new Family();
         family.setName(name != null && !name.isBlank() ? name.trim() : requester.getName() + "'s Family");
         family.setCreatedAt(LocalDate.now());
+        family.setOwnerId(requester.getId());
         Family savedFamily = familyRepository.save(family);
 
         FamilyMember member = new FamilyMember();
@@ -134,6 +135,11 @@ public class FamilyService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nu îți poți schimba propriul rol.");
         }
 
+        Long ownerId = member.getFamily().getOwnerId();
+        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rolul fondatorului familiei nu poate fi modificat.");
+        }
+
         String normalized = normalizeRole(newRole);
         if (normalized.equals(normalizeRole(member.getRole()))) {
             return toDTO(member);
@@ -164,6 +170,11 @@ public class FamilyService {
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
+        }
+
+        Long ownerId = member.getFamily().getOwnerId();
+        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Fondatorul familiei nu poate fi eliminat.");
         }
 
         boolean isLastParent = isParentRole(member.getRole()) &&
@@ -201,12 +212,15 @@ public class FamilyService {
     }
 
     private FamilyMemberDTO toDTO(FamilyMember m) {
+        Long ownerId = m.getFamily().getOwnerId();
+        boolean isOwner = ownerId != null && m.getUser().getId().equals(ownerId);
         return new FamilyMemberDTO(
                 m.getId(),
                 m.getUser().getId(),
                 m.getUser().getName(),
                 m.getUser().getEmail(),
-                normalizeRole(m.getRole())
+                normalizeRole(m.getRole()),
+                isOwner
         );
     }
 
@@ -215,6 +229,7 @@ public class FamilyService {
         return switch (role.toLowerCase()) {
             case "parent"    -> ROLE_PARENT;
             case "co-parent" -> "Co-Parent";
+            case "adult"     -> "Adult";
             default          -> "Child";
         };
     }

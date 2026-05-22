@@ -60,6 +60,15 @@ class OCRPreProcessorTest {
     }
 
     @Test
+    void processImage_ShouldThrowExceptionForNullFile() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            preProcessor.processImage(null, "revolut");
+        });
+
+        assertTrue(exception.getMessage().contains("null"));
+    }
+
+    @Test
     void processPdfShouldReturnProcessedImages() throws Exception {
         List<BufferedImage> results = preProcessor.processPdf(validPdfFile, "revolut");
 

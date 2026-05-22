@@ -86,14 +86,15 @@ public class StorageManager implements StorageService {
     }
 
     private ExpenseOCREntity createExpenseEntity(Transaction transaction) {
-        return new ExpenseOCREntity(
-                BigDecimal.valueOf(transaction.getAmount()),
-                transaction.getDescription(),
-                resolveDate(transaction),
-                resolveCurrency(transaction),
-                resolveType(transaction),
-                SOURCE_TYPE
-        );
+        ExpenseOCREntity expense = new ExpenseOCREntity();
+        expense.setAmount(BigDecimal.valueOf(transaction.getAmount()));
+        expense.setDescription(transaction.getDescription());
+        expense.setDate(resolveDate(transaction));
+        expense.setCurrency(resolveCurrency(transaction));
+        expense.setTransactionType(resolveType(transaction));
+        expense.setSourceType(SOURCE_TYPE);
+        expense.setReceiptUrl(transaction.getReceiptUrl());
+        return expense;
     }
 
     private LocalDateTime resolveDate(Transaction transaction) {

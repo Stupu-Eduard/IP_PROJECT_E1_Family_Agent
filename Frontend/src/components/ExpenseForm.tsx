@@ -34,6 +34,7 @@ const ExpenseForm: React.FC = () => {
   const [storeName,   setStoreName]   = useState('');
   const [city,        setCity]        = useState('');
   const [description, setDescription] = useState('');
+  const [receiptUrl,   setReceiptUrl]  = useState<string | null>(null);
   const [categories,  setCategories]  = useState<string[]>([]);
 
   const [loading,     setLoading]     = useState(false);
@@ -49,6 +50,7 @@ const ExpenseForm: React.FC = () => {
   const handleOcrProcess = async (file: File) => {
     setIsAnalyzing(true);
     setOcrError(null);
+    setReceiptUrl(null);
     setError('');
     setSuccess(false);
     try {
@@ -60,6 +62,7 @@ const ExpenseForm: React.FC = () => {
         setDate(formattedDate);
       }
       if (data.locationName) setStoreName(data.locationName);
+      if (data.receiptUrl)   setReceiptUrl(data.receiptUrl);
       if (data.items && data.items.length > 0) {
         const desc = data.items
           .map(item => {
@@ -89,7 +92,15 @@ const ExpenseForm: React.FC = () => {
     }
     setLoading(true);
     try {
-      await createExpense({ amount: Number(amount), categoryName: category, date, description: description || undefined, storeName: storeName || undefined, city: city || undefined });
+      await createExpense({ 
+        amount: Number(amount), 
+        categoryName: category, 
+        date, 
+        description: description || undefined, 
+        storeName: storeName || undefined, 
+        city: city || undefined,
+        receiptUrl: receiptUrl || undefined 
+      });
       notifyExpenseAdded();
       setSuccess(true);
       setAmount('');
@@ -98,6 +109,7 @@ const ExpenseForm: React.FC = () => {
       setStoreName('');
       setCity('');
       setDescription('');
+      setReceiptUrl(null);
       setOcrError(null);
       setTimeout(() => navigate('/expenses'), 1500);
     } catch (err: any) {

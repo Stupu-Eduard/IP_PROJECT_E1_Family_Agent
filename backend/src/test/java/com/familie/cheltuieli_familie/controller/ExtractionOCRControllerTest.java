@@ -40,6 +40,9 @@ class ExtractionOCRControllerTest {
     private StorageService storageService;
 
     @MockBean
+    private com.familie.cheltuieli_familie.service.CloudinaryService cloudinaryService;
+
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
@@ -88,4 +91,5 @@ class ExtractionOCRControllerTest {
                         .file(fakePdf))
                 .andExpect(status().isInternalServerError());
     }
+
 }

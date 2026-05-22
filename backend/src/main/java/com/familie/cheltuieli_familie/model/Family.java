@@ -18,4 +18,7 @@ public class Family {
 
     @Column(name = "created_at")
     private LocalDate createdAt;
+
+    @Column(name = "owner_id")
+    private Long ownerId;
 }

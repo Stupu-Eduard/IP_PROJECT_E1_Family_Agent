@@ -44,6 +44,8 @@ public class OcrService {
     public void init() {
         tesseract.setDatapath(tessDataPath);
         tesseract.setLanguage(ocrLanguage);
+        // Set PSM to 1 (Automatic with Orientation and Script Detection)
+        tesseract.setPageSegMode(1);
     }
 
     public String extractTextFromPdf(File pdfFile) {
