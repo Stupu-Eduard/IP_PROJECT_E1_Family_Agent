@@ -233,6 +233,142 @@ class OcrControllerTest {
         assertEquals("Mâncare", response.getBody().category());
     }
 
+    // ── isImageFile branches: jpeg, png, webp, bmp ───────────────────────────
+
+    @Test
+    void testProcessReceipt_jpegExtension_treatedAsImage() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "receipt.jpeg", "image/jpeg", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.9));
+        when(receiptParser.parseReceipt("text")).thenReturn(null);
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(ocrService).extractTextFromImage(any()); // jpeg → image path
+    }
+
+    @Test
+    void testProcessReceipt_pngExtension_treatedAsImage() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "receipt.png", "image/png", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.8));
+        when(receiptParser.parseReceipt("text")).thenReturn(null);
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(ocrService).extractTextFromImage(any());
+    }
+
+    @Test
+    void testProcessReceipt_unknownExtension_treatedAsPdf() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        // extension sanitized to "tmp" (unknown) → not image → pdf path
+        MockMultipartFile file = new MockMultipartFile("file", "receipt.xyz", "application/octet-stream", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromPdf(any())).thenReturn("text from pdf");
+        when(receiptParser.parseReceipt("text from pdf")).thenReturn(null);
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(ocrService).extractTextFromPdf(any()); // non-image → pdf path
+    }
+
+    @Test
+    void testProcessReceipt_noExtension_treatedAsPdf() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "receipt", "application/octet-stream", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromPdf(any())).thenReturn("pdf text");
+        when(receiptParser.parseReceipt("pdf text")).thenReturn(null);
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(ocrService).extractTextFromPdf(any());
+    }
+
+    // ── resolveLocation null path + toExpenseEntity null fields ──────────────
+
+    @Test
+    void testProcessReceipt_nullStoreName_nullLocation() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.9));
+
+        ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
+        receipt.setStoreName(null);   // → resolveLocation returns null
+        receipt.setTotalAmount(new BigDecimal("20.00"));
+        receipt.setDate(null);        // → parseExpenseDate returns LocalDateTime.now()
+        receipt.setCategory("Food");
+        receipt.setItems(List.of());
+
+        when(receiptParser.parseReceipt("text")).thenReturn(receipt);
+
+        Category category = new Category();
+        category.setName("Food");
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(new BigDecimal("20.00"), response.getBody().amount());
+    }
+
+    @Test
+    void testProcessReceipt_blankStoreName_nullLocation() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+
+        MockMultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "data".getBytes());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
+
+        when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.85));
+
+        ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
+        receipt.setStoreName("   ");  // blank → resolveLocation returns null
+        receipt.setTotalAmount(new BigDecimal("15.00"));
+        receipt.setDate("2024-01-01");
+        receipt.setCategory(null);    // null category name
+        receipt.setItems(List.of());
+
+        when(receiptParser.parseReceipt("text")).thenReturn(receipt);
+        when(categoryRepository.findByName(null)).thenReturn(Optional.empty());
+        when(categoryRepository.findAll()).thenReturn(List.of());
+        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("url");
+
+        ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNull(response.getBody().category());
+    }
+
     @Test
     void testProcessReceiptCategoryNotFound_noFallback_returnsNullCategory() throws Exception {
         User user = new User();

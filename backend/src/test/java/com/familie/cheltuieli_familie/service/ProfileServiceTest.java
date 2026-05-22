@@ -19,8 +19,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -83,6 +87,74 @@ class ProfileServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         verify(userRepository, never()).save(any());
+    }
+
+    // ── uploadAvatarFile ─────────────────────────────────────────────────────
+
+    @Test
+    void uploadAvatarFile_throwsBadRequest_whenFileIsNull() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> profileService.uploadAvatarFile(null, user));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verifyNoInteractions(cloudinaryService, userRepository);
+    }
+
+    @Test
+    void uploadAvatarFile_throwsBadRequest_whenFileIsEmpty() {
+        MockMultipartFile empty = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[0]);
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> profileService.uploadAvatarFile(empty, user));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verifyNoInteractions(cloudinaryService, userRepository);
+    }
+
+    @Test
+    void uploadAvatarFile_success_jpgExtension() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
+        when(cloudinaryService.uploadFile(any(File.class), eq("avatars"), eq("user_1_avatar")))
+                .thenReturn("https://cloudinary.com/user_1_avatar");
+        when(userRepository.save(user)).thenReturn(user);
+
+        AvatarResponseDTO result = profileService.uploadAvatarFile(file, user);
+
+        assertEquals("https://cloudinary.com/user_1_avatar", result.getAvatarUrl());
+        assertEquals("https://cloudinary.com/user_1_avatar", user.getAvatarUrl());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void uploadAvatarFile_success_noExtension_defaultsToJpg() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "photo", "image/jpeg", "data".getBytes());
+        when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))
+                .thenReturn("https://cloudinary.com/avatar");
+        when(userRepository.save(user)).thenReturn(user);
+
+        AvatarResponseDTO result = profileService.uploadAvatarFile(file, user);
+        assertNotNull(result.getAvatarUrl());
+    }
+
+    @Test
+    void uploadAvatarFile_success_unsafeExtension_defaultsToJpg() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "malicious.sh", "text/plain", "data".getBytes());
+        when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))
+                .thenReturn("https://cloudinary.com/avatar");
+        when(userRepository.save(user)).thenReturn(user);
+
+        AvatarResponseDTO result = profileService.uploadAvatarFile(file, user);
+        assertNotNull(result.getAvatarUrl());
+    }
+
+    @Test
+    void uploadAvatarFile_throwsInternalServerError_whenTransferFails() throws Exception {
+        MultipartFile mockFile = mock(MultipartFile.class);
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("photo.jpg");
+        doThrow(new IOException("disk full")).when(mockFile).transferTo(any(File.class));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> profileService.uploadAvatarFile(mockFile, user));
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, ex.getStatusCode());
+        verifyNoInteractions(userRepository);
     }
 
     // ── deleteAccount — user fără familie ────────────────────────────────────

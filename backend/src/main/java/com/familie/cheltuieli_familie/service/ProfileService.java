@@ -62,8 +62,13 @@ public class ProfileService {
         try {
             String originalName = file.getOriginalFilename() != null
                     ? file.getOriginalFilename() : "avatar";
-            String ext = originalName.contains(".")
-                    ? originalName.substring(originalName.lastIndexOf('.')) : ".jpg";
+            // Whitelist extension to prevent path injection (SonarCloud S2083)
+            String rawExt = originalName.contains(".")
+                    ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase() : "jpg";
+            String ext = switch (rawExt) {
+                case "jpg", "jpeg", "png", "gif", "webp" -> "." + rawExt;
+                default -> ".jpg";
+            };
 
             tempFile = File.createTempFile("avatar_" + user.getId() + "_", ext);
             file.transferTo(tempFile);
@@ -81,7 +86,10 @@ public class ProfileService {
                     "Eroare la procesarea fișierului.");
         } finally {
             if (tempFile != null && tempFile.exists()) {
-                tempFile.delete();
+                // Check return value to satisfy S899 (ignoring return value of delete)
+                if (!tempFile.delete()) {
+                    log.warn("Nu s-a putut șterge fișierul temporar: {}", tempFile.getName());
+                }
             }
         }
     }

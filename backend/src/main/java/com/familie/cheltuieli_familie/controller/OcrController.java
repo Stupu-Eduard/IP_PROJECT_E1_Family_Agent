@@ -265,7 +265,12 @@ public class OcrController {
         if (filename == null || !filename.contains(".")) {
             return "tmp";
         }
-        return filename.substring(filename.lastIndexOf('.') + 1);
+        // Whitelist extension to prevent path injection (SonarCloud S2083)
+        String raw = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+        return switch (raw) {
+            case "jpg", "jpeg", "png", "webp", "bmp", "pdf" -> raw;
+            default -> "tmp";
+        };
     }
 
     private ExpenseEntity toExpenseEntity(Expense expense, String ocrText) {
