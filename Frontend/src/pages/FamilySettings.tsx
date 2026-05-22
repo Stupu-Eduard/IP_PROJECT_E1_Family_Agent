@@ -9,6 +9,16 @@ import {
     ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX, UserCheck
 } from 'lucide-react';
 
+interface JwtPayload {
+    role?: string;
+    userId?: number;
+    familyId?: number | null;
+    name?: string;
+    familyName?: string;
+    sub?: string;
+    exp?: number;
+}
+
 interface ChildBudgetState {
     amount: number;
     input: string;
@@ -21,11 +31,10 @@ export default function FamilySettings() {
     const token = useAuthStore((state) => state.token);
     const navigate = useNavigate();
 
-    const payload = token ? decodeJwtPayload(token) : null;
-    const currentUserRole = (payload as any)?.role ?? 'Child';
-    const currentUserId: number = (payload as any)?.userId;
-    const familyId: number | null = (payload as any)?.familyId ?? null;
-    const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent' || currentUserRole === 'Adult';
+    const payload = token ? decodeJwtPayload(token) as JwtPayload : null;
+    const currentUserRole = payload?.role ?? 'Child';
+    const currentUserId: number = payload?.userId ?? 0;
+    const familyId: number | null = payload?.familyId ?? null;
     const canManage = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
     const isChild = currentUserRole === 'Child';
 
@@ -246,8 +255,10 @@ export default function FamilySettings() {
             await familyApi.deleteChildAccount(familyId, member.id);
             setMembers(prev => prev.filter(m => m.id !== member.id));
         } catch (err: unknown) {
-            const e = err as any;
-            const msg = e?.response?.data?.message ?? e?.response?.data ?? 'Eroare la stergerea contului.';
+            const e = err as { response?: { data?: { message?: string } | string } };
+            const msg = e?.response?.data instanceof Object
+                ? (e.response.data as { message?: string }).message ?? 'Eroare la stergerea contului.'
+                : e?.response?.data ?? 'Eroare la stergerea contului.';
             alert(typeof msg === 'string' ? msg : 'Eroare la stergerea contului.');
         } finally {
             setDeletingChildId(null);
@@ -428,7 +439,7 @@ export default function FamilySettings() {
                         <div className="md:col-span-4">
                             <select
                                 value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value as any)}
+                                onChange={(e) => setInviteRole(e.target.value as 'Co-Parent' | 'Adult' | 'Child')}
                                 className="w-full bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none"
                             >
                                 <option value="Child">Rol: Copil</option>
