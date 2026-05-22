@@ -57,7 +57,7 @@ class GlobalExceptionHandlerTest {
                         .content("{\"rawText\": \"text\"}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.message").value("Eroare internă: AI processing failed"));
+                .andExpect(jsonPath("$.message").value("A apărut o eroare internă. Încearcă din nou mai târziu."));
     }
 
     @Test

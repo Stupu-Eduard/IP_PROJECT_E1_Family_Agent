@@ -228,7 +228,12 @@ export default function Dashboard() {
         const wsUrl =
             import.meta.env.VITE_WS_BASE_URL ||
             (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host
-        const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`)
+        
+        // Send token via Sec-WebSocket-Protocol header instead of query param
+        const token = useAuthStore.getState().token
+        const protocols = token ? [`auth-${token}`] : []
+        const socket = new WebSocket(wsUrl + '/locatie', protocols)
+        
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data)

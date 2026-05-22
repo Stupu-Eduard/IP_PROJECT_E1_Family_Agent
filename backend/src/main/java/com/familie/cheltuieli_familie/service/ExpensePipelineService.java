@@ -25,7 +25,16 @@ public class ExpensePipelineService {
 
     @Transactional
     public List<Long> processRawInput(String rawText) {
-        log.info("Starting pipeline for raw text: {}", rawText);
+        log.info("Starting pipeline for raw text");
+
+        // Generate idempotency key from raw text hash to prevent duplicates
+        String idempotencyKey = generateIdempotencyKey(rawText);
+        
+        // Check if we've already processed this exact text recently
+        if (syncService.existsByIdempotencyKey(idempotencyKey)) {
+            log.info("Duplicate raw text detected (idempotency key: {}), skipping processing", idempotencyKey);
+            return List.of();
+        }
 
         // extraction (OpenAI/DeepSeek)
         ExtractionRequest req = new ExtractionRequest();
@@ -42,6 +51,7 @@ public class ExpensePipelineService {
                     .person(extracted.getPerson())
                     .date(extracted.getTransactionDate())
                     .rawInput(extracted.getRawInput())
+                    .idempotencyKey(idempotencyKey)
                     .build();
             
             entity = syncService.syncExpense(entity);
@@ -61,5 +71,20 @@ public class ExpensePipelineService {
             
             return entity.getId();
         }).toList();
+    }
+
+    private String generateIdempotencyKey(String rawText) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            // Fallback to simple hash if SHA-256 unavailable
+            return String.valueOf(rawText.hashCode());
+        }
     }
 }

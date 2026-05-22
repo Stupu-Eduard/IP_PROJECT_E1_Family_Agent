@@ -99,6 +99,12 @@ public class SessionHandshakeInterceptor implements HandshakeInterceptor {
             return authHeader.substring(7);
         }
 
+        // 3. Încercăm din Sec-WebSocket-Protocol (utilizat când token-ul este trimis ca subprotocol)
+        String protocolHeader = request.getHeaders().getFirst("Sec-WebSocket-Protocol");
+        if (protocolHeader != null && protocolHeader.startsWith("auth-")) {
+            return protocolHeader.substring(5);
+        }
+
         return null;
     }
 

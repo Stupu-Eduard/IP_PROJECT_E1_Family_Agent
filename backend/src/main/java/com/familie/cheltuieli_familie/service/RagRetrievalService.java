@@ -28,9 +28,21 @@ public class RagRetrievalService {
      */
     public String askWithContext(String query) {
         log.info("Performing RAG query: {}", query);
+        String identity = buildIdentityPrefix();
         String context = retrieveContext(query, 5);
-        // Compact format: context first, then query — no duplicate labels
-        return llmRouterService.routeAndChat(context + "\n" + query);
+        // Identity prefix + RAG context + user query
+        return llmRouterService.routeAndChat(identity + context + "\n" + query);
+    }
+
+    private String buildIdentityPrefix() {
+        Long[] scope = securityService.resolveScope();
+        Long familyId = scope[0];
+        Long userId = scope[1];
+        if (userId == null) {
+            return "";
+        }
+        return String.format("[IDENTITATE_AUTENTIFICATA: user_id=%d, family_id=%s] ",
+                userId, familyId != null ? familyId : "null");
     }
 
     /**

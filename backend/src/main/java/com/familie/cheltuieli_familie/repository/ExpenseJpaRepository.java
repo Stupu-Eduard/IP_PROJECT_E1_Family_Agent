@@ -25,4 +25,6 @@ public interface ExpenseJpaRepository extends JpaRepository<ExpenseEntity, Long>
 
     @Query("SELECT e FROM ExpenseEntity e WHERE e.id = :id AND (e.familyId = :familyId OR e.userId = :userId)")
     java.util.Optional<ExpenseEntity> findByIdAndFamilyIdOrUserId(@Param("id") Long id, @Param("familyId") Long familyId, @Param("userId") Long userId);
+
+    boolean existsByIdempotencyKey(String idempotencyKey);
 }

@@ -25,7 +25,6 @@ export default function FamilySettings() {
     const currentUserRole = (payload as any)?.role ?? 'Child';
     const currentUserId: number = (payload as any)?.userId;
     const familyId: number | null = (payload as any)?.familyId ?? null;
-    const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent' || currentUserRole === 'Adult';
     const canManage = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
     const isChild = currentUserRole === 'Child';
 

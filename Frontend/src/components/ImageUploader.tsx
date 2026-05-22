@@ -28,6 +28,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
             setError('Fișierul depășește limita maximă de 5MB.');
             clearSelection(); return;
         }
+        // Validate file extension beyond MIME type (spoofable)
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        const fileName = file.name.toLowerCase();
+        const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+        if (!hasValidExtension) {
+            setError('Extensie fișier invalidă. Acceptate: .jpg, .jpeg, .png, .gif, .webp, .bmp');
+            clearSelection(); return;
+        }
         const objectUrl = URL.createObjectURL(file);
         setPreview(objectUrl);
         onImageSelect(file);
@@ -55,6 +63,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect }) =
         }
         if (file.size > MAX_SIZE) {
             setError('Fișierul depășește limita maximă de 5MB.');
+            return;
+        }
+        // Validate file extension beyond MIME type (spoofable)
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        const fileName = file.name.toLowerCase();
+        const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+        if (!hasValidExtension) {
+            setError('Extensie fișier invalidă. Acceptate: .jpg, .jpeg, .png, .gif, .webp, .bmp');
             return;
         }
         const objectUrl = URL.createObjectURL(file);

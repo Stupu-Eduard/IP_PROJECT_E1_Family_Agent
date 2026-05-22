@@ -41,6 +41,9 @@ public class ExpenseEntity {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "idempotency_key", length = 64, unique = true)
+    private String idempotencyKey;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

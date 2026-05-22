@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class HallucinationGuard {
 
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d{1,10}[.,]\\d{1,10})");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d{1,10}(?:[.,]\\d{1,10})?)");
     private static final int MAX_INPUT_LENGTH = 10000;
     private static final String SEMANTIC_INCREASE_EN = "increased";
     private static final String SEMANTIC_INCREASE_RO = "creștere";

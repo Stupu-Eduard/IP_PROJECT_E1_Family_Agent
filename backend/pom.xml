@@ -26,7 +26,7 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-bom</artifactId>
-                <version>1.68.0</version>
+                <version>1.75.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -132,7 +132,7 @@
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.69.0</version>
+            <version>1.75.0</version>
         </dependency>
 
         <!-- Actuator -->

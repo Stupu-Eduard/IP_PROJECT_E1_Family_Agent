@@ -48,6 +48,9 @@ public class LlmConfig {
     @Value("${langchain4j.open-ai.chat-model.temperature:0.1}")
     private double temperature;
 
+    @Value("${langchain4j.open-ai.chat-model.max-tokens:2048}")
+    private int maxTokens;
+
     @Value("${langchain4j.open-ai.chat-model.timeout:60}")
     private long timeoutSeconds;
 
@@ -83,6 +86,7 @@ public class LlmConfig {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .temperature(temperature)
+                .maxTokens(maxTokens)
                 .timeout(Duration.ofSeconds(timeoutSeconds))
                 .build();
     }
