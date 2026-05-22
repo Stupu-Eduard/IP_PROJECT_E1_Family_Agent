@@ -599,6 +599,7 @@ export default function FamilySettings() {
                                                         : 'Setează'}
                                             </button>
                                             {bs?.error && <span className="text-[11px] text-red-500">{bs.error}</span>}
+                               
                                         </form>
                                     )}
                                 </div>
