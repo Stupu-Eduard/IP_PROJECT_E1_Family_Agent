@@ -8,6 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Simple in-memory rate limiter for the chat endpoint.
  * Limits each user to a configurable number of requests per minute.
+ * 
+ * NOTE: This uses an in-memory ConcurrentHashMap. In a multi-instance deployment,
+ * consider using Redis or a shared cache. The map grows unbounded over time;
+ * a scheduled cleanup task should be added for long-running production use.
  */
 @Component
 public class ChatRateLimiter {
@@ -18,6 +22,10 @@ public class ChatRateLimiter {
     private final ConcurrentHashMap<String, UserRequestWindow> windows = new ConcurrentHashMap<>();
 
     public boolean allowRequest(String userId) {
+        if (userId == null || userId.isBlank()) {
+            // Reject unauthenticated/anonymous requests
+            return false;
+        }
         long now = Instant.now().toEpochMilli();
         UserRequestWindow window = windows.compute(userId, (k, v) -> {
             if (v == null || now - v.windowStart > WINDOW_MILLIS) {

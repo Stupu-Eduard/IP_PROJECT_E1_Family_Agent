@@ -5,17 +5,17 @@ import { useAuthStore, AUTH_TOKEN_STORAGE_KEY } from './authStore'
 
 describe('AuthStore - Zustand & Persistență', () => {
     beforeEach(() => {
-        // Clear localStorage by removing all items
-        Object.keys(localStorage).forEach(key => {
-            localStorage.removeItem(key)
+        // Clear sessionStorage by removing all items
+        Object.keys(sessionStorage).forEach(key => {
+            sessionStorage.removeItem(key)
         })
         useAuthStore.getState().logout()
     })
 
     afterEach(() => {
         // Clean up after each test
-        Object.keys(localStorage).forEach(key => {
-            localStorage.removeItem(key)
+        Object.keys(sessionStorage).forEach(key => {
+            sessionStorage.removeItem(key)
         })
     })
 
@@ -25,22 +25,22 @@ describe('AuthStore - Zustand & Persistență', () => {
         expect(state.isAuthenticated).toBe(false)
     })
 
-    it('ar trebui să salveze token-ul în localStorage la apelarea login()', () => {
+    it('ar trebui să salveze token-ul în sessionStorage la apelarea login()', () => {
         const mockToken = 'token-de-test-123'
         useAuthStore.getState().login(mockToken)
 
         expect(useAuthStore.getState().token).toBe(mockToken)
         expect(useAuthStore.getState().isAuthenticated).toBe(true)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(mockToken)
+        expect(sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(mockToken)
     })
 
-    it('ar trebui să curețe localStorage și starea la apelarea logout()', () => {
+    it('ar trebui să curețe sessionStorage și starea la apelarea logout()', () => {
         useAuthStore.getState().login('test-token')
         useAuthStore.getState().logout()
 
         expect(useAuthStore.getState().token).toBe(null)
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+        expect(sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
     })
 
     it('4. setToken() - Ramura IF: salvează token dacă valoarea este validă', () => {
@@ -49,7 +49,7 @@ describe('AuthStore - Zustand & Persistență', () => {
 
         expect(useAuthStore.getState().token).toBe(newToken)
         expect(useAuthStore.getState().isAuthenticated).toBe(true)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(newToken)
+        expect(sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(newToken)
     })
 
     it('5. setToken() - Ramura ELSE: șterge token dacă valoarea este null', () => {
@@ -61,6 +61,6 @@ describe('AuthStore - Zustand & Persistență', () => {
 
         expect(useAuthStore.getState().token).toBe(null)
         expect(useAuthStore.getState().isAuthenticated).toBe(false)
-        expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
+        expect(sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(null)
     })
 })

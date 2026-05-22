@@ -39,7 +39,7 @@ public class ChatController {
      * cu type: "text" | "chart" — compatibil cu frontendrul.
      */
     @PostMapping
-    public ResponseEntity<?> chat(@Valid @RequestBody ChatRequest req) {
+    public ResponseEntity<Object> chat(@Valid @RequestBody ChatRequest req) {
         String userId = getCurrentUserId();
         if (!rateLimiter.allowRequest(userId)) {
             long waitSeconds = rateLimiter.getRemainingSeconds(userId);
@@ -54,6 +54,14 @@ public class ChatController {
 
     private String getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "anonymous";
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return "anonymous";
+        }
+        // Use principal's email or ID for stable rate-limit key
+        Object principal = auth.getPrincipal();
+        if (principal instanceof com.familie.cheltuieli_familie.model.User user) {
+            return String.valueOf(user.getId());
+        }
+        return auth.getName();
     }
 }

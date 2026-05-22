@@ -124,18 +124,17 @@ public class OCRPreProcessor {
         }
 
         Mat src = Imgcodecs.imread(file.getAbsolutePath());
-
-        if (src.empty()) {
-            throw new IllegalArgumentException(
-                    "Fișierul imagine nu a putut fi procesat. Verifică formatul fișierului."
-            );
-        }
-
         Mat upscaled = null;
         Mat bankCropped = null;
         Mat gray = null;
 
         try {
+            if (src.empty()) {
+                throw new IllegalArgumentException(
+                        "Fișierul imagine nu a putut fi procesat. Verifică formatul fișierului."
+                );
+            }
+
             upscaled = upscale(src, 3.0);
 
             String bankKey = bank != null ? bank.toLowerCase() : "";
@@ -164,7 +163,7 @@ public class OCRPreProcessor {
             return matToBufferedImage(gray);
 
         } finally {
-            if (src != null) src.release();
+            src.release();
             if (upscaled != null) upscaled.release();
             if (bankCropped != null) bankCropped.release();
             if (gray != null) gray.release();

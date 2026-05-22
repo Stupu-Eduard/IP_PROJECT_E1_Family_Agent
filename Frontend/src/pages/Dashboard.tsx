@@ -229,15 +229,11 @@ export default function Dashboard() {
             import.meta.env.VITE_WS_BASE_URL ||
             (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host
         
-        // Use protocol upgrade with Authorization header instead of query param
-        const socket = new WebSocket(wsUrl + '/locatie')
-        socket.onopen = () => {
-            // Send token via message after connection instead of URL
-            const token = useAuthStore.getState().token
-            if (token) {
-                socket.send(JSON.stringify({ type: 'auth', token }))
-            }
-        }
+        // Send token via Sec-WebSocket-Protocol header instead of query param
+        const token = useAuthStore.getState().token
+        const protocols = token ? [`auth-${token}`] : []
+        const socket = new WebSocket(wsUrl + '/locatie', protocols)
+        
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data)

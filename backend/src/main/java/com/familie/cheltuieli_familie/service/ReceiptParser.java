@@ -78,7 +78,9 @@ public class ReceiptParser {
 
     /**
      * Sanitizes OCR text before sending to LLM to prevent prompt injection.
-     * Removes control characters, limits length, and strips potential injection patterns.
+     * Removes control characters (except newlines/tabs) and limits length
+     * to prevent context overflow attacks. Does NOT strip markdown or HTML;
+     * those are handled by the frontend renderer with rehype-sanitize.
      */
     private String sanitizeOcrText(String ocrText) {
         if (ocrText == null) {
