@@ -46,11 +46,12 @@ public class OCRPreProcessor {
         ensureOpenCvLoaded();
     }
 
-    private Mat enhanceContrast(Mat gray) {
-        Mat enhanced = new Mat();
-        Imgproc.equalizeHist(gray, enhanced);
-        return enhanced;
+    private Mat toGrayScale(Mat src) {
+        Mat gray = new Mat();
+        Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
+        return gray;
     }
+
 
     private Mat applyOtsuThreshold(Mat gray) {
         Mat thresholded = new Mat();
@@ -116,19 +117,6 @@ public class OCRPreProcessor {
         rotMat.release();
         return rotated;
     }
-
-    private Mat denoiseImage(Mat gray) {
-        Mat denoised = new Mat();
-        Imgproc.medianBlur(gray, denoised, 3);
-        return denoised;
-    }
-
-    private Mat toGrayScale(Mat src) {
-        Mat gray = new Mat();
-        Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
-        return gray;
-    }
-
     private BufferedImage matToBufferedImage(Mat matrix) throws IOException {
         MatOfByte mob = new MatOfByte();
         Imgcodecs.imencode(".png", matrix, mob);

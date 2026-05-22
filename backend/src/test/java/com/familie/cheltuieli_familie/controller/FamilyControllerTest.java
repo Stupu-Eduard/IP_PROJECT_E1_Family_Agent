@@ -63,7 +63,7 @@ class FamilyControllerTest {
 
     @Test
     void getMembers_returnsOk() {
-        FamilyMemberDTO dto = new FamilyMemberDTO(1L, 1L, "Alex", "alex@test.com", "Parent");
+        FamilyMemberDTO dto = new FamilyMemberDTO(1L, 1L, "Alex", "alex@test.com", "Parent", true);
         when(familyService.getMembers(10L, user)).thenReturn(List.of(dto));
 
         ResponseEntity<List<FamilyMemberDTO>> resp = controller.getMembers(10L, auth);
@@ -88,7 +88,7 @@ class FamilyControllerTest {
 
     @Test
     void updateMemberRole_withBody_returnsOk() {
-        FamilyMemberDTO dto = new FamilyMemberDTO(5L, 5L, "Bob", "bob@test.com", "Co-Parent");
+        FamilyMemberDTO dto = new FamilyMemberDTO(5L, 5L, "Bob", "bob@test.com", "Co-Parent", false);
         when(familyService.updateMemberRole(10L, 5L, "Co-Parent", user)).thenReturn(dto);
 
         ResponseEntity<FamilyMemberDTO> resp = controller.updateMemberRole(10L, 5L, Map.of("role", "Co-Parent"), auth);
@@ -99,7 +99,7 @@ class FamilyControllerTest {
 
     @Test
     void updateMemberRole_nullBody_passesNullRole() {
-        FamilyMemberDTO dto = new FamilyMemberDTO(5L, 5L, "Bob", "bob@test.com", "Child");
+        FamilyMemberDTO dto = new FamilyMemberDTO(5L, 5L, "Bob", "bob@test.com", "Child", false);
         when(familyService.updateMemberRole(eq(10L), eq(5L), isNull(), eq(user))).thenReturn(dto);
 
         ResponseEntity<FamilyMemberDTO> resp = controller.updateMemberRole(10L, 5L, null, auth);

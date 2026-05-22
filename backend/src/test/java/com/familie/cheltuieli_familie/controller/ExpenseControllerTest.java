@@ -448,6 +448,43 @@ class ExpenseControllerTest {
         verify(expenseRepository).save(any(Expense.class));
     }
 
+    @Test
+    void create_withReceiptUrl_setsOcrSourceType() {
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
+        LocationRepository locationRepository = mock(LocationRepository.class);
+        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+
+        User user = mockUser(5L);
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(user);
+
+        Category category = mock(Category.class);
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
+        when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of());
+
+        Expense savedExpense = mock(Expense.class);
+        when(savedExpense.getId()).thenReturn(20L);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
+
+        Projection row = new Projection(20L, BigDecimal.valueOf(80), "RON", null,
+                LocalDateTime.of(2026, 5, 5, 10, 0), "Food", "Alex", "OCR",
+                "https://cloudinary.com/receipt.jpg", null, null, null, null, null, null, null);
+        when(expenseRepository.findOneWithLocation(20L)).thenReturn(row);
+
+        CreateExpenseRequest req = new CreateExpenseRequest();
+        req.setAmount(BigDecimal.valueOf(80));
+        req.setCategoryName("Food");
+        req.setDate(LocalDate.of(2026, 5, 5));
+        req.setReceiptUrl("https://cloudinary.com/receipt.jpg");
+
+        ExpenseListDto result = controller.create(req, auth);
+
+        assertEquals(20L, result.id());
+        assertEquals("OCR", result.sourceType());
+    }
+
     // ── update ───────────────────────────────────────────────────────────────
 
     @Test

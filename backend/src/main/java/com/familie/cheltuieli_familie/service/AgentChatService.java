@@ -114,9 +114,11 @@ public class AgentChatService {
         cleaned = cleaned.replaceAll("(?m)^>\\s*", "");
 
         // Remove markdown table separators like |---|---|
-        cleaned = cleaned.replaceAll("(?m)^\\s*\\|?[-:|\\s]+\\|?\\s*$", "");
+        cleaned = java.util.Arrays.stream(cleaned.split("\n", -1))
+                .filter(line -> !isTableSeparatorLine(line))
+                .collect(java.util.stream.Collectors.joining("\n"));
         // Remove table cell pipes, keep inner text
-        cleaned = cleaned.replaceAll("\\|", " ");
+        cleaned = cleaned.replace("|", " ");
 
         // Remove list markers at line start (*, -, + followed by space)
         cleaned = cleaned.replaceAll("(?m)^\\s*[*+\\-]\\s+", "");
@@ -136,9 +138,22 @@ public class AgentChatService {
         cleaned = cleaned.replaceAll("\\n{3,}", "\\n\\n");
 
         // Trim each line and the whole text
-        cleaned = cleaned.replaceAll("(?m)^\\s+", "");
-        cleaned = cleaned.replaceAll("(?m)\\s+$", "");
+        cleaned = java.util.Arrays.stream(cleaned.split("\n", -1))
+                .map(String::strip)
+                .collect(java.util.stream.Collectors.joining("\n"));
 
         return cleaned.trim();
+    }
+
+    private static boolean isTableSeparatorLine(String line) {
+        String stripped = line.strip();
+        if (stripped.isEmpty()) return false;
+        String inner = stripped.startsWith("|") ? stripped.substring(1) : stripped;
+        if (inner.endsWith("|")) inner = inner.substring(0, inner.length() - 1);
+        if (!inner.contains("-")) return false;
+        for (char c : inner.toCharArray()) {
+            if (c != '-' && c != ':' && c != '|' && c != ' ' && c != '\t') return false;
+        }
+        return true;
     }
 }
