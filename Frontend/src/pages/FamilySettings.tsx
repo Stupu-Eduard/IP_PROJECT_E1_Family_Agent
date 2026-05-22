@@ -6,7 +6,7 @@ import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 import { familyApi, invitationApi, authApi, type InvitationDTO, api } from '../services/api';
 import {
     Mail, UserPlus, Trash2, Shield,
-    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX
+    ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX, UserCheck
 } from 'lucide-react';
 
 interface ChildBudgetState {
@@ -25,7 +25,8 @@ export default function FamilySettings() {
     const currentUserRole = (payload as any)?.role ?? 'Child';
     const currentUserId: number = (payload as any)?.userId;
     const familyId: number | null = (payload as any)?.familyId ?? null;
-    const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
+    const isAdult = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent' || currentUserRole === 'Adult';
+    const canManage = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
     const isChild = currentUserRole === 'Child';
 
     const [members, setMembers] = useState<GroupMemberDTO[]>([]);
@@ -33,7 +34,7 @@ export default function FamilySettings() {
     const [error, setError] = useState<string | null>(null);
 
     const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState<'Co-Parent' | 'Child'>('Child');
+    const [inviteRole, setInviteRole] = useState<'Co-Parent' | 'Adult' | 'Child'>('Child');
     const [isAdding, setIsAdding] = useState(false);
     const [addError, setAddError] = useState<string | null>(null);
     const [addSuccess, setAddSuccess] = useState(false);
@@ -92,7 +93,7 @@ export default function FamilySettings() {
 
     // Încarcă bugetele copiilor după ce s-au încărcat membrii
     useEffect(() => {
-        if (!isAdult || members.length === 0) return;
+        if (!canManage || members.length === 0) return;
         const children = members.filter(m => m.role === 'Child');
         children.forEach(child => {
             api.get<number>(`/api/v1/budgets/child/${child.userId}`)
@@ -110,7 +111,7 @@ export default function FamilySettings() {
                     }));
                 });
         });
-    }, [isAdult, members]);
+    }, [canManage, members]);
 
     const handleInviteMember = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -263,6 +264,7 @@ export default function FamilySettings() {
     const getRoleIcon = (role: string) => {
         if (role === 'Parent') return <Crown size={18} className="text-[#C97B4B]" />;
         if (role === 'Co-Parent') return <Shield size={18} className="text-[#B5956A]" />;
+        if (role === 'Adult') return <UserCheck size={18} className="text-[#6A8FAF]" />;
         return <Baby size={18} className="text-[#8C7E6E]" />;
     };
 
@@ -359,14 +361,14 @@ export default function FamilySettings() {
                 </button>
                 <div className="flex-1">
                     <h2 className="text-[24px] font-medium text-[#2D2926] tracking-tight">
-                        {isAdult ? 'Gestionare Familie' : 'Membrii Familiei Mele'}
+                        {canManage ? 'Gestionare Familie' : 'Membrii Familiei Mele'}
                     </h2>
                     <p className="text-[13px] text-[#9A8A7C]">
-                        {isAdult ? 'Administrează rolurile, accesul și bugetele membrilor' : 'Vezi cine mai face parte din grupul tău'}
+                        {canManage ? 'Administrează rolurile, accesul și bugetele membrilor' : 'Vezi cine mai face parte din grupul tău'}
                     </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                    {isAdult && members.length === 1 && (
+                    {canManage && members.length === 1 && (
                         <button
                             onClick={handleDeleteFamily}
                             disabled={isDeleting}
@@ -387,7 +389,7 @@ export default function FamilySettings() {
                 </div>
             </div>
 
-            {isAdult && (
+            {canManage && (
                 <div className="bg-white border border-[#EDE9E3] rounded-[14px] p-6 mb-8 stagger-2">
                     <h3 className="text-[14px] font-medium text-[#2D2926] mb-4 flex items-center gap-2">
                         <UserPlus size={18} className="text-[#C97B4B]" />
@@ -412,6 +414,7 @@ export default function FamilySettings() {
                                 className="w-full bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none"
                             >
                                 <option value="Child">Rol: Copil</option>
+                                <option value="Adult">Rol: Adult</option>
                                 <option value="Co-Parent">Rol: Co-Părinte</option>
                             </select>
                         </div>
@@ -460,6 +463,9 @@ export default function FamilySettings() {
                                                     {isMe && (
                                                         <span className="px-2.5 py-1 bg-[#FFF8F2] text-[#C97B4B] border border-[#F0DFD0] rounded-[6px] text-[11px] font-medium">Tu</span>
                                                     )}
+                                                    {member.owner && (
+                                                        <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-[6px] text-[11px] font-medium">Fondator</span>
+                                                    )}
                                                     <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-[6px] text-[11px] font-medium">Activ</span>
                                                 </div>
                                                 <div className="text-[12px] text-[#9A8A7C] flex items-center gap-2">
@@ -475,9 +481,9 @@ export default function FamilySettings() {
                                                 </div>
                                             </div>
                                         </div>
-                                        {isAdult && !isMe && (
+                                        {canManage && !isMe && !member.owner && (
                                             <div className="flex items-center gap-2">
-                                                {currentUserRole === 'Parent' && (
+                                                {currentUserRole === 'Parent' && !isChild && (
                                                     <div className="relative">
                                                         {roleChanging === member.id
                                                             ? <Loader2 size={14} className="animate-spin text-[#9A8A7C]" />
@@ -487,13 +493,26 @@ export default function FamilySettings() {
                                                                     onChange={(e) => handleRoleChange(member, e.target.value)}
                                                                     className="bg-[#FAF8F5] border border-[#EDE9E3] rounded-[8px] py-1.5 px-2 text-[12px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none focus:border-[#C4B9AC] pr-6"
                                                                 >
-                                                                    <option value="Parent">Parent</option>
                                                                     <option value="Co-Parent">Co-Parent</option>
+                                                                    <option value="Adult">Adult</option>
                                                                     <option value="Child">Child</option>
                                                                 </select>
                                                             )
                                                         }
                                                     </div>
+                                                )}
+                                                {currentUserRole === 'Parent' && isChild && (
+                                                    <button
+                                                        onClick={() => handleRoleChange(member, 'Adult')}
+                                                        disabled={roleChanging === member.id}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2D2926] text-white rounded-[8px] text-[12px] font-medium hover:opacity-90 disabled:opacity-50 transition-all"
+                                                        title="Promovează la adult"
+                                                    >
+                                                        {roleChanging === member.id
+                                                            ? <Loader2 size={13} className="animate-spin" />
+                                                            : <><UserCheck size={13} /> Promovează la adult</>
+                                                        }
+                                                    </button>
                                                 )}
                                                 <button
                                                     onClick={() => handleRemoveMember(member)}
@@ -507,7 +526,7 @@ export default function FamilySettings() {
                                     </div>
 
                                     {/* Buget per copil — vizibil doar părinților */}
-                                    {isAdult && isChild && (
+                                    {canManage && isChild && (
                                         <form
                                             onSubmit={(e) => handleSetChildBudget(e, member.userId)}
                                             className="mt-4 ml-14 flex items-center gap-3"

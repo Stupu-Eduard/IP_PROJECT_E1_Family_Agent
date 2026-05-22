@@ -3,5 +3,6 @@ export interface GroupMemberDTO {
     userId: number;
     name: string;
     email: string;
-    role: 'Parent' | 'Co-Parent' | 'Child';
+    role: 'Parent' | 'Co-Parent' | 'Adult' | 'Child';
+    owner: boolean;
 }
