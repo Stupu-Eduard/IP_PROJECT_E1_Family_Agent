@@ -112,4 +112,27 @@ class SyncServiceTest {
         assertNull(result.getRawInput());
         verify(eventPublisher, times(1)).publishEvent(any(ExpenseSyncEvent.class));
     }
+
+    @Test
+    void testExistsByIdempotencyKey_WithNullKey() {
+        assertFalse(syncService.existsByIdempotencyKey(null));
+    }
+
+    @Test
+    void testExistsByIdempotencyKey_WithBlankKey() {
+        assertFalse(syncService.existsByIdempotencyKey(""));
+        assertFalse(syncService.existsByIdempotencyKey("   "));
+    }
+
+    @Test
+    void testExistsByIdempotencyKey_WithValidKey() {
+        when(jpaRepository.existsByIdempotencyKey("key123")).thenReturn(true);
+        assertTrue(syncService.existsByIdempotencyKey("key123"));
+    }
+
+    @Test
+    void testExistsByIdempotencyKey_WithNonExistentKey() {
+        when(jpaRepository.existsByIdempotencyKey("key456")).thenReturn(false);
+        assertFalse(syncService.existsByIdempotencyKey("key456"));
+    }
 }
