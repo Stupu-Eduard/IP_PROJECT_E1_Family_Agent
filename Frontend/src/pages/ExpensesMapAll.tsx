@@ -21,7 +21,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
 import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } from 'lucide-react';
 import { fetchExpenses } from '../services/expenses';
-import { fetchCategoryNames, fetchUserNames } from '../services/lookups';
+import { fetchCategoryNames } from '../services/lookups';
+import { familyApi } from '../services/api';
+import { decodeJwtPayload } from '../utils/jwt';
 import { saveGeofenceZone, getMyGeofenceZone, deleteGeofenceZone, type LatLng } from '../services/geofencing';
 
 type MapExpense = {
@@ -74,8 +76,9 @@ export default function ExpensesMapAll() {
     const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
     const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
 
-    const socket = new WebSocket(`${wsUrl}/locatie?token=${token}`);
-
+    // Send token via Sec-WebSocket-Protocol header instead of query param
+    const protocols = token ? [`auth-${token}`] : [];
+    const socket = new WebSocket(wsUrl + '/locatie', protocols);
     socket.onopen = () => console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
     socket.onmessage = (event) => {
       try {
@@ -113,19 +116,26 @@ export default function ExpensesMapAll() {
     const controller = new AbortController();
     const run = async () => {
       try {
-        const [cats, people] = await Promise.all([
-          fetchCategoryNames(controller.signal),
-          fetchUserNames(controller.signal),
-        ]);
+        // Prefer family members when the current user is part of a family
+        const payload = decodeJwtPayload(token ?? '') as any;
+        const familyId: number | null = payload?.familyId ?? null;
+
+        const catsPromise = fetchCategoryNames(controller.signal);
+        // If user has a family, fetch family members; otherwise do not fetch global user list.
+        const peoplePromise = familyId
+          ? familyApi.getMembers(familyId).then(r => r.data.map((m: any) => m.name).filter(Boolean))
+          : Promise.resolve([] as string[]);
+
+        const [cats, people] = await Promise.all([catsPromise, peoplePromise]);
         setAvailableCategories((cats ?? []).filter(Boolean));
         setAvailablePeople((people ?? []).filter(Boolean));
       } catch {
-        // ignore
+        // ignore errors fetching lookups
       }
     };
     run();
     return () => controller.abort();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (hasInjectedExpenses) {

@@ -1,9 +1,11 @@
 package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.model.Transaction;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import com.familie.cheltuieli_familie.service.ExtractionPipelineService;
 import com.familie.cheltuieli_familie.service.StorageService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +24,7 @@ import com.familie.cheltuieli_familie.model.User;
 
 @RestController
 @RequestMapping("/api/ocr")
+@PreAuthorize("isAuthenticated()")
 public class ExtractionOCRController {
 
     private static final Path OCR_UPLOAD_DIRECTORY =
@@ -30,13 +33,16 @@ public class ExtractionOCRController {
     private final ExtractionPipelineService extractionPipelineService;
     private final StorageService storageService;
     private final CloudinaryService cloudinaryService;
+    private final SecurityService securityService;
 
     public ExtractionOCRController(ExtractionPipelineService extractionPipelineService,
                                    StorageService storageService,
-                                   CloudinaryService cloudinaryService) {
+                                   CloudinaryService cloudinaryService,
+                                   SecurityService securityService) {
         this.extractionPipelineService = extractionPipelineService;
         this.storageService = storageService;
         this.cloudinaryService = cloudinaryService;
+        this.securityService = securityService;
     }
 
     @PostMapping("/extract-and-save")
@@ -45,22 +51,29 @@ public class ExtractionOCRController {
             @RequestParam(value = "bank", required = false, defaultValue = "unknown") String bank,
             Authentication authentication
     ) throws IOException {
+        User currentUser = securityService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         Path tempFilePath = createTemporaryUploadFile(multipartFile);
 
         try {
             File tempFile = tempFilePath.toFile();
             
             String cloudinaryUrl = null;
-            if (authentication != null && authentication.getPrincipal() instanceof User user) {
-                String folder = "receipts/" + java.time.LocalDate.now().toString().substring(0, 7);
-                String publicId = "ocr_" + user.getId() + "_" + System.currentTimeMillis();
-                cloudinaryUrl = cloudinaryService.uploadFile(tempFile, folder, publicId);
-            }
+            String folder = "receipts/" + java.time.LocalDate.now().toString().substring(0, 7);
+            String publicId = "ocr_" + currentUser.getId() + "_" + System.currentTimeMillis();
+            cloudinaryUrl = cloudinaryService.uploadFile(tempFile, folder, publicId);
 
             List<Transaction> transactions = extractionPipelineService.processDocument(tempFile, bank);
             
-            if (cloudinaryUrl != null) {
-                for (Transaction t : transactions) {
+            // Enforce ownership on all extracted transactions
+            for (Transaction t : transactions) {
+                t.setUserId(currentUser.getId());
+                Long familyId = currentUser.getFamily() != null ? currentUser.getFamily().getId() : null;
+                t.setFamilyId(familyId);
+                if (cloudinaryUrl != null) {
                     t.setReceiptUrl(cloudinaryUrl);
                 }
             }

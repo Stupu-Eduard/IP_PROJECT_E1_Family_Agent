@@ -1,4 +1,7 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import {
     ResponsiveContainer,
     LineChart, Line,
@@ -82,12 +85,15 @@ interface InlineChartProps {
 }
 
 export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
-    const { chartType, title, data, dataKeys } = response.payload;
+    const { chartType, title, data, dataKeys, xAxisKey } = response.payload;
 
     // Determină seriile de afișat — single sau multi-series
     const seriesKeys = dataKeys && dataKeys.length > 0
         ? dataKeys
         : ['value'];
+
+    // Folosește xAxisKey din backend sau fallback la "name"
+    const xKey = xAxisKey || 'name';
 
     const tooltipStyle = {
         contentStyle: {
@@ -108,7 +114,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                 return (
                     <LineChart data={data as ChartDataPoint[]} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
                         {seriesKeys.map((key, idx) => (
@@ -123,7 +129,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                 return (
                     <BarChart data={data as ChartDataPoint[]} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
                         {seriesKeys.map((key, idx) => (
@@ -146,7 +152,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                             ))}
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: '#B8A99A' }} axisLine={false} tickLine={false} />
                         <Tooltip {...tooltipStyle} />
                         {seriesKeys.map((key, idx) => (
@@ -162,14 +168,24 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                 return (
                     <PieChart>
                         <Tooltip {...tooltipStyle} />
-                        <Pie data={data as ChartDataPoint[]} dataKey={seriesKeys[0] ?? 'value'}
-                             nameKey="name" cx="50%" cy="50%" outerRadius={55} innerRadius={28}>
+                        <Pie
+                            data={data as ChartDataPoint[]}
+                            dataKey={seriesKeys[0] ?? 'value'}
+                            nameKey={xKey}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={30}
+                            outerRadius={55}
+                            paddingAngle={3}
+                        >
                             {(data as ChartDataPoint[]).map((_, idx) => (
                                 <Cell key={`cell-${idx}`} fill={CHART_PALETTE[idx % CHART_PALETTE.length]} />
                             ))}
                         </Pie>
                     </PieChart>
                 );
+            default:
+                return null;
         }
     };
 
@@ -207,7 +223,7 @@ export const InlineChart: React.FC<InlineChartProps> = ({ response }) => {
                     {response.message}
                 </div>
             )}
-            <div style={{ width: '100%', height: 160 }}>
+            <div style={{ width: '100%', height: 240 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     {renderChart() as React.ReactElement}
                 </ResponsiveContainer>
@@ -332,7 +348,13 @@ const AgentResponseRenderer: React.FC<AgentResponseRendererProps> = ({ response 
             if (!isTextResponse(response)) {
                 return <AgentFallback message="Răspuns text malformat." />;
             }
-            return <span data-testid="agent-text">{response.text || response.message}</span>;
+            return (
+                <span data-testid="agent-text">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                        {response.text || response.message || ''}
+                    </ReactMarkdown>
+                </span>
+            );
         }
 
         case 'chart': {

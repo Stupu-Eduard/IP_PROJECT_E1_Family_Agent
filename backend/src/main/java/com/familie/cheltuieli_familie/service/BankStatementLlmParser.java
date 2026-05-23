@@ -28,13 +28,34 @@ public class BankStatementLlmParser {
             return List.of();
         }
 
+        String sanitized = sanitizeOcrText(ocrText);
+
         try {
-            String json = extractJson(ocrText);
+            String json = extractJson(sanitized);
             return parseTransactions(json);
         } catch (Exception e) {
             log.error("Failed to parse bank statement with LLM: {}", e.getMessage(), e);
             return List.of();
         }
+    }
+
+    /**
+     * Sanitizes OCR text before sending to LLM to prevent prompt injection.
+     * Removes control characters and limits length.
+     */
+    private String sanitizeOcrText(String ocrText) {
+        if (ocrText == null) {
+            return null;
+        }
+        // Remove control characters except newlines and tabs
+        String sanitized = ocrText.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "");
+        // Limit length to prevent context overflow attacks
+        int maxLength = 12000;
+        if (sanitized.length() > maxLength) {
+            log.warn("OCR text exceeds {} chars, truncating", maxLength);
+            sanitized = sanitized.substring(0, maxLength);
+        }
+        return sanitized.trim();
     }
 
     private String extractJson(String ocrText) {

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -21,4 +22,9 @@ public interface ExpenseJpaRepository extends JpaRepository<ExpenseEntity, Long>
     Page<ExpenseEntity> findByDateRange(LocalDate from, LocalDate to, Pageable pageable);
 
     List<ExpenseEntity> findByDateBetween(LocalDate from, LocalDate to);
+
+    @Query("SELECT e FROM ExpenseEntity e WHERE e.id = :id AND (e.familyId = :familyId OR e.userId = :userId)")
+    java.util.Optional<ExpenseEntity> findByIdAndFamilyIdOrUserId(@Param("id") Long id, @Param("familyId") Long familyId, @Param("userId") Long userId);
+
+    boolean existsByIdempotencyKey(String idempotencyKey);
 }

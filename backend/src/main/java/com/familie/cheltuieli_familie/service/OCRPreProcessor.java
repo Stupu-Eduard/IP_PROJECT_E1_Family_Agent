@@ -46,83 +46,6 @@ public class OCRPreProcessor {
         ensureOpenCvLoaded();
     }
 
-    private Mat enhanceContrast(Mat gray) {
-        Mat enhanced = new Mat();
-        Imgproc.equalizeHist(gray, enhanced);
-        return enhanced;
-    }
-
-    private Mat applyOtsuThreshold(Mat gray) {
-        Mat thresholded = new Mat();
-        Imgproc.threshold(gray, thresholded, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-        return thresholded;
-    }
-
-    private Mat deskew(Mat src) {
-        // Detect skew angle using moments
-        Mat gray = src.clone();
-        if (gray.channels() > 1) {
-            Imgproc.cvtColor(gray, gray, Imgproc.COLOR_BGR2GRAY);
-        }
-
-        Mat binary = new Mat();
-        Imgproc.threshold(gray, binary, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
-
-        java.util.List<org.opencv.core.MatOfPoint> contours = new ArrayList<>();
-        Mat hierarchy = new Mat();
-        Imgproc.findContours(binary, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        if (contours.isEmpty()) {
-            gray.release();
-            binary.release();
-            hierarchy.release();
-            return src.clone();
-        }
-
-        // Use minAreaRect on the largest contour to estimate skew
-        org.opencv.core.RotatedRect maxRect = null;
-        double maxArea = 0;
-        for (org.opencv.core.MatOfPoint contour : contours) {
-            org.opencv.core.RotatedRect rect = Imgproc.minAreaRect(new org.opencv.core.MatOfPoint2f(contour.toArray()));
-            double area = rect.size.width * rect.size.height;
-            if (area > maxArea) {
-                maxArea = area;
-                maxRect = rect;
-            }
-            contour.release();
-        }
-
-        gray.release();
-        binary.release();
-        hierarchy.release();
-
-        if (maxRect == null) {
-            return src.clone();
-        }
-
-        double angle = maxRect.angle;
-        if (maxRect.size.width < maxRect.size.height) {
-            angle = 90 + angle;
-        }
-
-        if (Math.abs(angle) < 0.5) {
-            return src.clone();
-        }
-
-        org.opencv.core.Point center = new org.opencv.core.Point(src.cols() / 2.0, src.rows() / 2.0);
-        Mat rotMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
-        Mat rotated = new Mat();
-        Imgproc.warpAffine(src, rotated, rotMat, src.size(), Imgproc.INTER_CUBIC, org.opencv.core.Core.BORDER_CONSTANT, new org.opencv.core.Scalar(255, 255, 255));
-        rotMat.release();
-        return rotated;
-    }
-
-    private Mat denoiseImage(Mat gray) {
-        Mat denoised = new Mat();
-        Imgproc.medianBlur(gray, denoised, 3);
-        return denoised;
-    }
-
     private Mat toGrayScale(Mat src) {
         Mat gray = new Mat();
         Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
@@ -196,54 +119,55 @@ public class OCRPreProcessor {
 
         if (file == null || !file.exists()) {
             throw new IllegalArgumentException(
-                    "Couldn't read the image from the file: " +
-                            (file == null ? "null" : file.getName())
+                    "Fișierul imagine nu a fost găsit sau nu poate fi citit."
             );
         }
 
         Mat src = Imgcodecs.imread(file.getAbsolutePath());
+        Mat upscaled = null;
+        Mat bankCropped = null;
+        Mat gray = null;
 
-        if (src.empty()) {
-            throw new IllegalArgumentException(
-                    "Couldn't read the image from the file: " +
-                            file.getName()
-            );
+        try {
+            if (src.empty()) {
+                throw new IllegalArgumentException(
+                        "Fișierul imagine nu a putut fi procesat. Verifică formatul fișierului."
+                );
+            }
+
+            upscaled = upscale(src, 3.0);
+
+            String bankKey = bank != null ? bank.toLowerCase() : "";
+
+            switch (bankKey) {
+                case "revolut":
+                    bankCropped = cropRevolut(upscaled);
+                    break;
+
+                case "bt":
+                    bankCropped = cropBT(upscaled);
+                    break;
+
+                case "ing":
+                    bankCropped = cropING(upscaled);
+                    break;
+
+                default:
+                    bankCropped = upscaled.clone();
+                    break;
+            }
+
+            gray = toGrayScale(bankCropped);
+            // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
+            
+            return matToBufferedImage(gray);
+
+        } finally {
+            src.release();
+            if (upscaled != null) upscaled.release();
+            if (bankCropped != null) bankCropped.release();
+            if (gray != null) gray.release();
         }
-
-        Mat upscaled = upscale(src, 3.0);
-
-        Mat bankCropped;
-        String bankKey = bank != null ? bank.toLowerCase() : "";
-
-        switch (bankKey) {
-            case "revolut":
-                bankCropped = cropRevolut(upscaled);
-                break;
-
-            case "bt":
-                bankCropped = cropBT(upscaled);
-                break;
-
-            case "ing":
-                bankCropped = cropING(upscaled);
-                break;
-
-            default:
-                bankCropped = upscaled.clone();
-                break;
-        }
-
-        Mat gray = toGrayScale(bankCropped);
-        // Removed aggressive equalizeHist and Otsu thresholding as they can wash out thermal print
-        
-        BufferedImage result = matToBufferedImage(gray);
-
-        src.release();
-        upscaled.release();
-        bankCropped.release();
-        gray.release();
-
-        return result;
     }
 
     public List<BufferedImage> processPdf(File pdfFile, String bank) throws IOException {
