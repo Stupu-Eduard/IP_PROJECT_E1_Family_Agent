@@ -67,9 +67,34 @@ public class FamilyService {
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
         verifyMembership(familyId, requester);
-        return familyMemberRepository.findByFamilyId(familyId).stream()
+        List<FamilyMember> members = familyMemberRepository.findByFamilyId(familyId);
+        assignChildColorsIfMissing(members);
+        return members.stream()
                 .map(this::toDTO)
                 .toList();
+    }
+
+    // Palette kept in sync with frontend
+    private static final String[] CHILD_PIN_COLORS = new String[]{
+            "#E24B4A", "#009E73", "#0072B2", "#F0E442", "#D55E00",
+            "#CC79A7", "#56B4E9", "#F7B801", "#000000", "#999999"
+    };
+
+    @Transactional
+    void assignChildColorsIfMissing(List<FamilyMember> members) {
+        List<FamilyMember> children = members.stream()
+                .filter(m -> "Child".equalsIgnoreCase(normalizeRole(m.getRole())))
+                .sorted((a, b) -> Long.compare(a.getId() == null ? 0L : a.getId(), b.getId() == null ? 0L : b.getId()))
+                .toList();
+
+        for (int i = 0; i < children.size(); i++) {
+            FamilyMember child = children.get(i);
+            if (child.getMarkerColor() == null) {
+                String color = CHILD_PIN_COLORS[i % CHILD_PIN_COLORS.length];
+                child.setMarkerColor(color);
+                familyMemberRepository.save(child);
+            }
+        }
     }
 
     @Transactional
@@ -220,6 +245,7 @@ public class FamilyService {
                 m.getUser().getName(),
                 m.getUser().getEmail(),
                 normalizeRole(m.getRole()),
+                m.getMarkerColor(),
                 isOwner
         );
     }

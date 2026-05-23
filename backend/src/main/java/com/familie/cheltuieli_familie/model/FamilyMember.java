@@ -28,4 +28,7 @@ public class FamilyMember {
 
     @Column(nullable = false)
     private String role;
+    
+        @Column(name = "marker_color")
+        private String markerColor;
 }

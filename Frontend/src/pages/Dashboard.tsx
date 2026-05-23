@@ -3,7 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useExpenseStore } from '../store/expenseStore'
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api'
-import { api } from '../services/api'
+import { api, familyApi } from '../services/api'
+import type { GroupMemberDTO } from '../types/GroupMemberDTO'
+// Palette must match backend
+const CHILD_PIN_COLORS = [
+    '#E24B4A', '#009E73', '#0072B2', '#F0E442', '#D55E00', '#CC79A7', '#56B4E9', '#F7B801', '#000000', '#999999'
+]
+
+function getChildColor(childId: number) {
+    const idx = Math.abs(Number(childId)) % CHILD_PIN_COLORS.length
+    return CHILD_PIN_COLORS[idx]
+}
+
+function getColoredPin(color: string) {
+    return `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z' fill='${encodeURIComponent(color)}'/><circle cx='16' cy='13' r='4' fill='white'/></svg>`
+}
 import KidDashboard from './KidDashboard'
 
 const containerStyle = { width: '100%', height: '200px', borderRadius: '12px' }
@@ -111,6 +125,7 @@ export default function Dashboard() {
 
     const [childLocations, setChildLocations] = useState<Record<number, any>>({})
     const [selectedChildId, setSelectedChildId] = useState<number | null>(null)
+    const [familyMembers, setFamilyMembers] = useState<GroupMemberDTO[]>([])
     const [tick,         setTick]         = useState(0)
     useEffect(() => {
         const id = setInterval(() => setTick((t) => t + 1), 4500)
@@ -221,6 +236,19 @@ export default function Dashboard() {
         void run()
         return () => controller.abort()
     }, [userRole, token, expenseVersion])
+
+    // Fetch family members to obtain marker colors
+    useEffect(() => {
+        if (userRole === 'Child') return
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1])) as any
+            const familyId: number | null = payload?.familyId ?? null
+            if (!familyId) return
+            familyApi.getMembers(familyId).then(r => setFamilyMembers(r.data)).catch(() => {})
+        } catch {
+            // ignore
+        }
+    }, [userRole, token])
 
     useEffect(() => {
         if (userRole === 'Child') return
@@ -410,6 +438,11 @@ export default function Dashboard() {
                     >
                         {(() => {
                             const loc = selectedChildId ? childLocations[selectedChildId] : null
+                            const getColorForChild = (childId: number) => {
+                                const found = familyMembers.find(m => m.userId === childId)
+                                return (found && found.markerColor) ? found.markerColor : getChildColor(childId)
+                            }
+                            const pinColor = loc?.childId ? getColorForChild(loc.childId) : '#3B82F6'
                             return loc?.lat && loc?.lng && isLoaded ? (
                             <div style={{ padding: '0 16px 16px' }}>
                                 <GoogleMap
@@ -418,7 +451,7 @@ export default function Dashboard() {
                                     zoom={15}
                                     options={{ disableDefaultUI: true, gestureHandling: 'cooperative' }}
                                 >
-                                    <Marker position={{ lat: loc.lat, lng: loc.lng }} />
+                                    <Marker position={{ lat: loc.lat, lng: loc.lng }} icon={getColoredPin(pinColor)} />
                                 </GoogleMap>
                                 <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-muted-2)', display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Lat: {loc.lat.toFixed(4)}</span>
@@ -471,6 +504,18 @@ export default function Dashboard() {
                         )
                         })()}
                     </div>
+
+                    {/* Legend: child marker colors */}
+                    {familyMembers.length > 0 && (
+                        <div style={{ padding: '10px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            {familyMembers.filter(m => m.role === 'Child').map(m => (
+                                <div key={m.userId} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
+                                    <span style={{ width: 12, height: 12, borderRadius: 4, background: m.markerColor ?? getChildColor(m.userId) }} />
+                                    <span style={{ color: 'var(--color-muted)', fontSize: 13 }}>{m.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div style={{ padding: '12px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                         <div style={{ color: 'var(--color-muted)' }}>Actualizat acum {tick % 5 + 1}s</div>
