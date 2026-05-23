@@ -48,8 +48,6 @@ public class OcrController {
     private final ReceiptParser receiptParser;
     private final CloudinaryService cloudinaryService;
     private final CategoryRepository categoryRepository;
-    private final LocationRepository locationRepository;
-    private final FamilyMemberRepository familyMemberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/process")
