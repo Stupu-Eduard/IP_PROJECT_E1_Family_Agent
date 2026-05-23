@@ -2,7 +2,12 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.OcrItemDTO;
 import com.familie.cheltuieli_familie.dto.OcrResponseDTO;
+import com.familie.cheltuieli_familie.event.ExpenseSyncEvent;
 import com.familie.cheltuieli_familie.model.Category;
+import com.familie.cheltuieli_familie.model.Expense;
+import com.familie.cheltuieli_familie.model.ExpenseEntity;
+import com.familie.cheltuieli_familie.model.ExpenseItem;
+import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.service.CloudinaryService;
@@ -11,6 +16,7 @@ import com.familie.cheltuieli_familie.service.OcrService.OcrResult;
 import com.familie.cheltuieli_familie.service.ReceiptParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -41,6 +48,9 @@ public class OcrController {
     private final ReceiptParser receiptParser;
     private final CloudinaryService cloudinaryService;
     private final CategoryRepository categoryRepository;
+    private final LocationRepository locationRepository;
+    private final FamilyMemberRepository familyMemberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/process")
     public ResponseEntity<OcrResponseDTO> processReceipt(
@@ -85,7 +95,7 @@ public class OcrController {
                     cloudinaryUrl);
 
             return ResponseEntity.ok(new OcrResponseDTO(
-                    receipt.getTotalAmount(),
+                    saved.getAmount(),
                     category != null ? category.getName() : null,
                     receipt.getDate(),
                     receipt.getStoreName(),
