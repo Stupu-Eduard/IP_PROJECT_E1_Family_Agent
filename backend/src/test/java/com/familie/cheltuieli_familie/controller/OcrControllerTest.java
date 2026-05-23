@@ -2,9 +2,6 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.OcrResponseDTO;
 import com.familie.cheltuieli_familie.model.Category;
-import com.familie.cheltuieli_familie.model.Expense;
-import com.familie.cheltuieli_familie.model.FamilyMember;
-import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.service.CloudinaryService;
@@ -16,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
@@ -38,24 +34,6 @@ class OcrControllerTest {
     @Mock private ReceiptParser receiptParser;
     @Mock private CategoryRepository categoryRepository;
     @Mock private CloudinaryService cloudinaryService;
-
-    @Mock
-    private CloudinaryService cloudinaryService;
-
-    @Mock
-    private ExpenseRepository expenseRepository;
-
-    @Mock
-    private ExpenseItemRepository expenseItemRepository;
-
-    @Mock
-    private LocationRepository locationRepository;
-
-    @Mock
-    private FamilyMemberRepository familyMemberRepository;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OcrController ocrController;
@@ -95,21 +73,6 @@ class OcrControllerTest {
         when(categoryRepository.findByName("Mâncare")).thenReturn(Optional.of(category));
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
 
-        when(locationRepository.findAll()).thenReturn(List.of());
-
-        Location location = new Location();
-        location.setStore("Kaufland");
-        when(locationRepository.save(any(Location.class))).thenReturn(location);
-
-        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
-
-        Expense savedExpense = new Expense();
-        savedExpense.setId(100L);
-        savedExpense.setAmount(new BigDecimal("150.50"));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
-
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
-
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -144,21 +107,6 @@ class OcrControllerTest {
         category.setName("Transport");
         when(categoryRepository.findByName("Transport")).thenReturn(Optional.of(category));
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
-
-        when(locationRepository.findAll()).thenReturn(List.of());
-
-        Location newLoc = new Location();
-        newLoc.setStore("OMV");
-        when(locationRepository.save(any(Location.class))).thenReturn(newLoc);
-
-        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
-
-        Expense savedExpense = new Expense();
-        savedExpense.setId(101L);
-        savedExpense.setAmount(new BigDecimal("200.00"));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
-
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
@@ -218,22 +166,6 @@ class OcrControllerTest {
         when(categoryRepository.findByName("Mâncare")).thenReturn(Optional.of(category));
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
 
-        when(locationRepository.findAll()).thenReturn(List.of());
-
-        Location newLoc = new Location();
-        newLoc.setStore("Lidl");
-        when(locationRepository.save(any(Location.class))).thenReturn(newLoc);
-
-        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenReturn("https://cloudinary.com/test");
-
-        Expense savedExpense = new Expense();
-        savedExpense.setId(102L);
-        savedExpense.setAmount(new BigDecimal("50.00"));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
-
-        when(expenseItemRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
-
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -269,17 +201,6 @@ class OcrControllerTest {
         when(categoryRepository.findByName("Diverse")).thenReturn(Optional.empty());
         when(categoryRepository.findAll()).thenReturn(List.of(fallback));
         when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenThrow(new RuntimeException("Cloudinary down"));
-
-        when(locationRepository.findAll()).thenReturn(List.of());
-
-        when(cloudinaryService.uploadFile(any(), anyString(), anyString())).thenThrow(new RuntimeException("Cloudinary down"));
-
-        Expense savedExpense = new Expense();
-        savedExpense.setId(103L);
-        savedExpense.setAmount(new BigDecimal("10.00"));
-        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
-
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
 
