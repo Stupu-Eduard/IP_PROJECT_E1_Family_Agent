@@ -46,3 +46,9 @@ Thumbs.db
 
 # Docker
 uploads/
+
+.claude
+
+.env*
+.env.production
+

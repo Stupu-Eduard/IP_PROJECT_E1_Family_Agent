@@ -100,7 +100,7 @@ class RagPipelineOcrE2ETest {
         List<EmbeddedExpense> results = Awaitility.await()
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(200))
-                .until(() -> qdrantVectorService.searchSimilar("Steam Purchase tranzactie", 5), r -> !r.isEmpty());
+                .until(() -> qdrantVectorService.searchSimilar("Steam Purchase tranzactie", 5, null, null), r -> !r.isEmpty());
 
         assertFalse(results.isEmpty(), "Should find the stored expense");
         assertTrue(results.stream().anyMatch(r -> r.getId() != null && r.getId() == uniqueId),
@@ -180,7 +180,7 @@ class RagPipelineOcrE2ETest {
         List<EmbeddedExpense> results = Awaitility.await()
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(200))
-                .until(() -> qdrantVectorService.searchSimilar("cat costa abonamentul Spotify", 5), r -> !r.isEmpty());
+                .until(() -> qdrantVectorService.searchSimilar("cat costa abonamentul Spotify", 5, null, null), r -> !r.isEmpty());
 
         assertFalse(results.isEmpty(), "RAG should retrieve the OCR'd expense");
 

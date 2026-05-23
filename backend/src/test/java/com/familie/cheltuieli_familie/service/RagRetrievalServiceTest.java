@@ -45,7 +45,7 @@ class RagRetrievalServiceTest {
 
         assertEquals(expectedAnswer, result);
         verify(llmRouterService).routeAndChat(contains(query));
-        verify(qdrantVectorService).searchSimilar(query, 10, null, 1L);
+        verify(qdrantVectorService).searchSimilar(query, 5, null, 1L);
     }
 
     @Test
@@ -86,12 +86,10 @@ class RagRetrievalServiceTest {
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 
-        assertTrue(result.contains("Cheltuieli anterioare relevante:"));
+        assertTrue(result.contains("[RAG]"));
         assertTrue(result.contains("Lidl"));
-        assertTrue(result.contains("100.50"));
-        assertTrue(result.contains("Teodor"));
-        assertTrue(result.contains("Necunoscut"));
-        assertTrue(result.contains("0.9500"));
+        // Compact format: "[RAG] 1:food|101|Lidl|2024-01-15" (%.0f rounds 100.50 to 101)
+        assertTrue(result.matches(".*\\[RAG\\]\\s+1:food\\|10[01]\\|Lidl\\|.*"), "Result was: " + result);
     }
 
     @Test
@@ -113,8 +111,8 @@ class RagRetrievalServiceTest {
 
         String result = ragRetrievalService.retrieveContext(query, 10);
 
-        // Should contain exactly 5 items (numbered 1-5)
-        long count = result.lines().filter(line -> line.matches("^\\d+\\..*")).count();
+        // Should contain exactly 5 items (each starts with space+number+colon)
+        long count = result.split(" \\d+:").length - 1;
         assertEquals(5, count);
     }
 

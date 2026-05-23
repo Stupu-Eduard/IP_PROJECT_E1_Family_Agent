@@ -28,9 +28,21 @@ public class RagRetrievalService {
      */
     public String askWithContext(String query) {
         log.info("Performing RAG query: {}", query);
-        String context = retrieveContext(query, 10);
-        String augmentedQuery = "Context din sistemul RAG:\n" + context + "\n\nÎntrebare utilizator: " + query;
-        return llmRouterService.routeAndChat(augmentedQuery);
+        String identity = buildIdentityPrefix();
+        String context = retrieveContext(query, 5);
+        // Identity prefix + RAG context + user query
+        return llmRouterService.routeAndChat(identity + context + "\n" + query);
+    }
+
+    private String buildIdentityPrefix() {
+        Long[] scope = securityService.resolveScope();
+        Long familyId = scope[0];
+        Long userId = scope[1];
+        if (userId == null) {
+            return "";
+        }
+        return String.format("[IDENTITATE_AUTENTIFICATA: user_id=%d, family_id=%s] ",
+                userId, familyId != null ? familyId : "null");
     }
 
     /**
@@ -55,20 +67,17 @@ public class RagRetrievalService {
                 .limit(5)
                 .toList();
 
-        StringBuilder context = new StringBuilder("Cheltuieli anterioare relevante:\n");
+        StringBuilder context = new StringBuilder("[RAG]");
         for (int i = 0; i < topResults.size(); i++) {
             EmbeddedExpense expense = topResults.get(i);
-            context.append(String.format("%d. %s: %.2f RON la %s pe data de %s (Persoană: %s, Scor: %.4f)%n",
+            context.append(String.format(" %d:%s|%.0f|%s|%s",
                     i + 1,
                     expense.getCategory(),
                     expense.getAmount(),
-                    expense.getLocation() != null ? expense.getLocation() : "Necunoscut",
-                    expense.getDate() != null ? expense.getDate().toString() : "Necunoscut",
-                    expense.getPerson() != null ? expense.getPerson() : "Familie",
-                    expense.getScore()
+                    expense.getLocation() != null ? expense.getLocation() : "-",
+                    expense.getDate() != null ? expense.getDate().toString() : "-"
             ));
         }
-
         return context.toString();
     }
 

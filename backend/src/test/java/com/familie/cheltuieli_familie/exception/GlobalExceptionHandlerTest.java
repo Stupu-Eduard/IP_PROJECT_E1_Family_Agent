@@ -44,6 +44,9 @@ class GlobalExceptionHandlerTest {
     private com.familie.cheltuieli_familie.service.BankStatementParser bankStatementParser;
 
     @MockBean
+    private com.familie.cheltuieli_familie.service.CloudinaryService cloudinaryService;
+
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
@@ -54,7 +57,7 @@ class GlobalExceptionHandlerTest {
                         .content("{\"rawText\": \"text\"}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.message").value("Eroare internă: AI processing failed"));
+                .andExpect(jsonPath("$.message").value("A apărut o eroare internă. Încearcă din nou mai târziu."));
     }
 
     @Test

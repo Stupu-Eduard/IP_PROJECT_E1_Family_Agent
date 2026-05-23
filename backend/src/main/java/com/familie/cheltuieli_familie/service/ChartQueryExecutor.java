@@ -113,7 +113,7 @@ public class ChartQueryExecutor {
             case COL_CATEGORY -> "c.name";
             case COL_LOCATION -> "l.store";
             case COL_PERSON -> "u.name";
-            default -> groupBy;
+            default -> throw new IllegalArgumentException("Invalid groupBy column: " + groupBy);
         };
     }
 

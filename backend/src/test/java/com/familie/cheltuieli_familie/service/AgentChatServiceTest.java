@@ -4,15 +4,11 @@ import com.familie.cheltuieli_familie.dto.response.AgentResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.ChartResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
-import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -24,7 +20,6 @@ class AgentChatServiceTest {
     @Mock private VisualIntentExtractor visualIntentExtractor;
     @Mock private ChartGenerationService chartGenerationService;
     @Mock private RagRetrievalService ragRetrievalService;
-    @Mock private FamilyMemberRepository familyMemberRepository;
 
     @InjectMocks
     private AgentChatService agentChatService;
@@ -47,12 +42,12 @@ class AgentChatServiceTest {
     @Test
     void processQuery_shouldFallbackToRag_onException() {
         when(visualIntentExtractor.extract(anyString())).thenThrow(new RuntimeException("Extractor failed"));
-        when(ragRetrievalService.askWithContext(anyString())).thenReturn("RAG Answer");
 
         AgentResponseDTO result = agentChatService.processQuery("buna salut te rog");
 
         assertTrue(result instanceof TextResponseDTO);
-        assertEquals("RAG Answer", ((TextResponseDTO)result).getMessage());
+        assertEquals("Nu am putut procesa cererea. Încearcă din nou sau reformulează întrebarea.",
+                ((TextResponseDTO)result).getMessage());
     }
 
     @Test
@@ -88,23 +83,53 @@ class AgentChatServiceTest {
 
     @Test
     void processQuery_withAuthenticatedUser() {
-        User user = new User();
-        user.setId(1L);
-        user.setName("John");
-        
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
         ChartQueryIntent intent = new ChartQueryIntent();
         intent.setResponseType("text");
         when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(contains("John"))).thenReturn("Hello John");
+        when(ragRetrievalService.askWithContext("hi")).thenReturn("Hello John");
 
         AgentResponseDTO result = agentChatService.processQuery("hi");
 
         assertEquals("Hello John", ((TextResponseDTO)result).getMessage());
-        
-        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void processQuery_withNullAuthentication_usesEmptyContext() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setResponseType("text");
+        when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(anyString())).thenReturn("Answer");
+
+        AgentResponseDTO result = agentChatService.processQuery("question");
+
+        assertEquals("Answer", ((TextResponseDTO) result).getMessage());
+        verify(ragRetrievalService).askWithContext("question");
+    }
+
+    @Test
+    void processQuery_withUserButNoFamily_contextOmitsFamilyName() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setResponseType("text");
+        when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(anyString())).thenReturn("No family answer");
+
+        AgentResponseDTO result = agentChatService.processQuery("hello");
+
+        String msg = ((TextResponseDTO) result).getMessage();
+        assertEquals("No family answer", msg);
+        verify(ragRetrievalService).askWithContext("hello");
+    }
+
+    @Test
+    void processQuery_withUserAndFamily_includesFamilyNameInContext() {
+        ChartQueryIntent intent = new ChartQueryIntent();
+        intent.setResponseType("text");
+        when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
+        when(ragRetrievalService.askWithContext(anyString())).thenReturn("Family answer");
+
+        AgentResponseDTO result = agentChatService.processQuery("test");
+
+        assertEquals("Family answer", ((TextResponseDTO) result).getMessage());
+        verify(ragRetrievalService).askWithContext("test");
     }
 }

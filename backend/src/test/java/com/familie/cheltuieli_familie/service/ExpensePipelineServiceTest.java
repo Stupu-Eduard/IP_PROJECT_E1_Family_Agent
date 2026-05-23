@@ -11,12 +11,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-
-import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class ExpensePipelineServiceTest {
@@ -40,42 +40,107 @@ class ExpensePipelineServiceTest {
     private ExpensePipelineService pipelineService;
 
     @Test
-    void testProcessRawInput_Success() throws Exception {
-        ExtractionResponse extractionResponse = ExtractionResponse.builder()
-                .amount(new BigDecimal("100.00"))
-                .build();
-        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
+    void processRawInput_shouldReturnEmptyListForDuplicate() {
+        when(syncService.existsByIdempotencyKey(anyString())).thenReturn(true);
 
-        ExpenseEntity savedEntity = ExpenseEntity.builder().id(1L).build();
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
-        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        List<Long> result = pipelineService.processRawInput("duplicate text");
 
-        List<Long> result = pipelineService.processRawInput("text");
-
-        assertEquals(1, result.size());
-        assertEquals(1L, result.get(0));
-        verify(thePipeHandler, times(1)).broadcast(anyString());
-        verify(validationService, times(1)).validatePersistence(1L);
+        assertTrue(result.isEmpty());
+        verify(extractionService, never()).process(any());
     }
 
     @Test
-    void testProcessRawInput_whenBroadcastFails_continuesProcessing() throws Exception {
-        ExtractionResponse extractionResponse = ExtractionResponse.builder()
-                .amount(new BigDecimal("10.00"))
+    void processRawInput_shouldProcessAndReturnIds() throws Exception {
+        when(syncService.existsByIdempotencyKey(anyString())).thenReturn(false);
+
+        ExtractionResponse extraction = ExtractionResponse.builder()
+                .amount(new BigDecimal("100.00"))
+                .category("Food")
+                .location("Store")
+                .person("Alice")
+                .transactionDate(LocalDate.now())
+                .rawInput("test")
                 .build();
-        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extractionResponse));
 
-        ExpenseEntity savedEntity = ExpenseEntity.builder().id(2L).build();
-        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(savedEntity);
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extraction));
 
-        // Simulam o exceptie la scrierea JSON-ului pentru broadcast
-        when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
+        ExpenseEntity saved = ExpenseEntity.builder()
+                .id(1L)
+                .amount(new BigDecimal("100.00"))
+                .category("Food")
+                .build();
 
-        List<Long> result = pipelineService.processRawInput("text");
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(saved);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        doNothing().when(thePipeHandler).broadcast(anyString());
+
+        List<Long> result = pipelineService.processRawInput("new text");
 
         assertEquals(1, result.size());
-        assertEquals(2L, result.get(0));
-        // Verificam ca eroarea a fost capturata si procesarea a continuat
-        verify(thePipeHandler, never()).broadcast(anyString());
+        assertEquals(1L, result.get(0));
+        verify(validationService).validatePersistence(1L);
+        verify(thePipeHandler).broadcast(anyString());
+    }
+
+    @Test
+    void processRawInput_shouldHandleMultipleExtractions() throws Exception {
+        when(syncService.existsByIdempotencyKey(anyString())).thenReturn(false);
+
+        ExtractionResponse extraction1 = ExtractionResponse.builder()
+                .amount(new BigDecimal("100.00"))
+                .category("Food")
+                .transactionDate(LocalDate.now())
+                .build();
+
+        ExtractionResponse extraction2 = ExtractionResponse.builder()
+                .amount(new BigDecimal("200.00"))
+                .category("Transport")
+                .transactionDate(LocalDate.now())
+                .build();
+
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extraction1, extraction2));
+
+        ExpenseEntity saved1 = ExpenseEntity.builder().id(1L).build();
+        ExpenseEntity saved2 = ExpenseEntity.builder().id(2L).build();
+
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(saved1).thenReturn(saved2);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{}");
+        doNothing().when(thePipeHandler).broadcast(anyString());
+
+        List<Long> result = pipelineService.processRawInput("multiple items");
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void processRawInput_shouldHandleBroadcastFailure() throws Exception {
+        when(syncService.existsByIdempotencyKey(anyString())).thenReturn(false);
+
+        ExtractionResponse extraction = ExtractionResponse.builder()
+                .amount(new BigDecimal("50.00"))
+                .category("Food")
+                .transactionDate(LocalDate.now())
+                .build();
+
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of(extraction));
+
+        ExpenseEntity saved = ExpenseEntity.builder().id(1L).build();
+        when(syncService.syncExpense(any(ExpenseEntity.class))).thenReturn(saved);
+        when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("JSON error"));
+
+        List<Long> result = pipelineService.processRawInput("test");
+
+        assertEquals(1, result.size());
+        // Should not throw even if broadcast fails
+    }
+
+    @Test
+    void processRawInput_shouldHandleEmptyExtraction() {
+        when(syncService.existsByIdempotencyKey(anyString())).thenReturn(false);
+        when(extractionService.process(any(ExtractionRequest.class))).thenReturn(List.of());
+
+        List<Long> result = pipelineService.processRawInput("empty");
+
+        assertTrue(result.isEmpty());
     }
 }

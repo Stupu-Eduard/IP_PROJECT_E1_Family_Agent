@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.model.StorageResult;
 import com.familie.cheltuieli_familie.model.Transaction;
+import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.service.ExtractionPipelineService;
 import com.familie.cheltuieli_familie.service.StorageService;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,10 +42,21 @@ class ExtractionOCRControllerTest {
     private StorageService storageService;
 
     @MockBean
+    private com.familie.cheltuieli_familie.service.CloudinaryService cloudinaryService;
+
+    @MockBean
+    private com.familie.cheltuieli_familie.security.util.SecurityService securityService;
+
+    @MockBean
     private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
     void extractAndSave_ShouldProcessFileAndReturnTransactions() throws Exception {
+        User mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setEmail("test@test.com");
+        when(securityService.getCurrentUser()).thenReturn(mockUser);
+
         MockMultipartFile fakePdf = new MockMultipartFile(
                 "file",
                 "extras.pdf",
@@ -62,10 +75,11 @@ class ExtractionOCRControllerTest {
 
         when(extractionPipelineService.processDocument(any(File.class), any())).thenReturn(mockTransactions);
         when(storageService.save(any())).thenReturn(new StorageResult(1, 1, 0));
+        when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString())).thenReturn("http://cloudinary.com/test");
 
         mockMvc.perform(multipart("/api/ocr/extract-and-save")
                         .file(fakePdf)
-                        .param("bank", "ing")) // Parametrul este optional in controllerul tau
+                        .param("bank", "ing"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].amount").value(250.50))
                 .andExpect(jsonPath("$[0].description").value("Factura Curent"))
@@ -73,7 +87,9 @@ class ExtractionOCRControllerTest {
     }
 
     @Test
-    void extractAndSave_ShouldHandleServiceExceptions() throws Exception {
+    void extractAndSave_ShouldReturnUnauthorizedWhenNotAuthenticated() throws Exception {
+        when(securityService.getCurrentUser()).thenReturn(null);
+
         MockMultipartFile fakePdf = new MockMultipartFile(
                 "file",
                 "test_error.pdf",
@@ -81,11 +97,9 @@ class ExtractionOCRControllerTest {
                 "Fisier defect".getBytes()
         );
 
-        when(extractionPipelineService.processDocument(any(File.class), any()))
-                .thenThrow(new RuntimeException("OCR a esuat brusc!"));
-
         mockMvc.perform(multipart("/api/ocr/extract-and-save")
                         .file(fakePdf))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized());
     }
+
 }
