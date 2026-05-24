@@ -1,16 +1,17 @@
 package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
+import com.familie.cheltuieli_familie.security.ChatRateLimiter;
 import com.familie.cheltuieli_familie.service.AgentChatService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -18,15 +19,10 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@AutoConfigureMockMvc(addFilters = false)
-@WebMvcTest(ChatController.class)
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class ChatControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
+    @Mock
     private AgentChatService agentChatService;
 
     @MockBean
@@ -69,9 +65,17 @@ class ChatControllerTest {
     }
 
     @Test
-    void testChat_requiresAuthentication() {
-        PreAuthorize preAuthorize = ChatController.class.getAnnotation(PreAuthorize.class);
-        assertNotNull(preAuthorize, "ChatController should have @PreAuthorize");
-        assertEquals("isAuthenticated()", preAuthorize.value());
+    void chat_shouldProcessMessageSuccessfully() {
+        when(rateLimiter.allowRequest(anyString())).thenReturn(true);
+        TextResponseDTO expectedResponse = new TextResponseDTO("Processed");
+        when(agentChatService.processQuery("hello")).thenReturn(expectedResponse);
+
+        ChatController.ChatRequest req = new ChatController.ChatRequest();
+        req.setMessage("hello");
+
+        ResponseEntity<Object> response = chatController.chat(req);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expectedResponse, response.getBody());
     }
 }

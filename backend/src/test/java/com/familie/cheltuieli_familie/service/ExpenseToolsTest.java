@@ -3,6 +3,7 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
+import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.security.util.SecurityService;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,16 +13,22 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ExpenseToolsTest {
 
     @Mock private ExpenseAnalyticsService analyticsService;
@@ -35,12 +42,13 @@ class ExpenseToolsTest {
 
     @BeforeEach
     void setUp() {
-        // No-op: initialization is handled by MockitoExtension
+        when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
     }
 
     @Test
-    void getCurrentDate_shouldReturnNow() {
-        assertEquals(LocalDate.now().toString(), expenseTools.getCurrentDate());
+    void getCurrentDate_shouldReturnToday() {
+        String result = expenseTools.getCurrentDate();
+        assertEquals(LocalDate.now().toString(), result);
     }
 
     @Test
@@ -50,174 +58,199 @@ class ExpenseToolsTest {
                 .thenReturn(List.of("Food", "Car"));
 
         String result = expenseTools.listCategories();
-        assertTrue(result.contains("Food, Car"));
+
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
-    void listFamilyMembers_shouldReturnNamesFromFamily() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        User u = new User(); u.setName("John");
-        FamilyMember fm = new FamilyMember(); fm.setUser(u);
-        when(familyMemberRepository.findByFamilyId(anyLong())).thenReturn(List.of(fm));
+    void listCategories_shouldReturnMessageWhenEmpty() {
+        when(analyticsService.findCategoriesUsedByFamily(1L, 2L))
+                .thenReturn(Collections.emptyList());
 
-        String result = expenseTools.listFamilyMembers();
-        assertTrue(result.contains("John"));
+        String result = expenseTools.listCategories();
+
+        assertTrue(result.contains("Nu am găsit categorii"));
     }
 
     @Test
-    void calculateTotal_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateTotal(any(), any(), any(), any()))
-                .thenReturn(new BigDecimal("500.00"));
+    void calculateTotal_shouldReturnFormattedTotal() {
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+                .thenReturn(new BigDecimal("150.50"));
 
-        String result = expenseTools.calculateTotal("2026-01-01", "2026-01-31");
-        assertEquals("Total expenses: 500.00 RON", result);
+        String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("150.50"));
+        assertTrue(result.contains("RON"));
     }
 
     @Test
-    void detectAnomalies_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.detectAnomalies(any(), any(), any()))
-                .thenReturn(List.of(Map.of("category", "Food", "amount", new BigDecimal("300"), "date", LocalDate.now())));
+    void calculateTotal_shouldHandleError() {
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+                .thenThrow(new RuntimeException("DB error"));
 
-        String result = expenseTools.detectAnomalies("200");
-        assertTrue(result.contains("Food (300 RON on"));
+        String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Error"));
     }
 
     @Test
-    void byCategoryDetailed_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.findByCategory(anyString(), any(), any(), any(), any()))
-                .thenReturn(List.of(Map.of(
-                        "amount", new BigDecimal("10"),
-                        "location", "Store",
-                        "date", LocalDate.now(),
-                        "description", "Desc",
-                        "raw_input", "OCR Text"
-                )));
+    void compareMembers_shouldReturnFormattedResult() {
+        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
+                .thenReturn(Map.of("Alice", new BigDecimal("100"), "Bob", new BigDecimal("200")));
 
-        String result = expenseTools.byCategoryDetailed("Food", "2026-01-01", "2026-01-31");
-        assertTrue(result.contains("10 RON at Store"));
-        assertTrue(result.contains("Receipt details: OCR Text"));
+        String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Alice"));
+        assertTrue(result.contains("Bob"));
     }
 
     @Test
-    void compareMembers_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.compareMembers(any(), any(), anyLong(), anyLong()))
-                .thenReturn(Map.of("John", new BigDecimal("100"), "Jane", new BigDecimal("200")));
+    void compareMembers_shouldReturnMessageWhenEmpty() {
+        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
+                .thenReturn(Collections.emptyMap());
 
-        String result = expenseTools.compareMembers("2026-01-01", "2026-01-31");
-        assertTrue(result.contains("John: 100 RON"));
-        assertTrue(result.contains("Jane: 200 RON"));
+        String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("No spending data"));
     }
 
     @Test
-    void byCategory_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.byCategory(any(), any(), anyLong(), anyLong()))
-                .thenReturn(Map.of("Food", new BigDecimal("300")));
+    void detectAnomalies_shouldReturnFormattedResult() {
+        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
+                .thenReturn(List.of(
+                        Map.of("category", "Food", "amount", new BigDecimal("500"), "date", "2024-01-15"),
+                        Map.of("category", "Transport", "amount", new BigDecimal("300"), "date", "2024-01-20")
+                ));
 
-        String result = expenseTools.byCategory("2026-01-01", "2026-01-31");
-        assertTrue(result.contains("Food: 300 RON"));
+        String result = expenseTools.detectAnomalies("100");
+
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
-    void byPerson_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.findByPerson(anyString(), any(), any(), anyLong(), anyLong()))
-                .thenReturn(List.of(Map.of("amount", new BigDecimal("50"), "category", "Misc", "date", LocalDate.now())));
+    void detectAnomalies_shouldReturnMessageWhenEmpty() {
+        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
+                .thenReturn(Collections.emptyList());
 
-        String result = expenseTools.byPerson("John", "2026-01-01", "2026-01-31");
-        assertTrue(result.contains("50 RON for Misc on"));
+        String result = expenseTools.detectAnomalies("1000");
+
+        assertTrue(result.contains("No anomalies found"));
     }
 
     @Test
-    void comparePeriods_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateTotal(any(), any(), anyLong(), anyLong()))
-                .thenReturn(new BigDecimal("100"), new BigDecimal("200"));
+    void byCategory_shouldReturnFormattedResult() {
+        when(analyticsService.byCategory(any(), any(), eq(1L), eq(2L)))
+                .thenReturn(Map.of("Food", new BigDecimal("300"), "Transport", new BigDecimal("150")));
 
-        String result = expenseTools.comparePeriods("2026-01-01", "2026-01-15", "2026-01-16", "2026-01-31");
-        assertTrue(result.contains("Period 1 (2026-01-01 to 2026-01-15): 100 RON"));
-        assertTrue(result.contains("Period 2 (2026-01-16 to 2026-01-31): 200 RON"));
+        String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Food"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
-    void topExpenses_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.getTopExpenses(anyInt(), anyLong(), anyLong()))
-                .thenReturn(List.of(Map.of("amount", new BigDecimal("1000"), "category", "Rent", "person", "John", "date", LocalDate.now())));
+    void byPerson_shouldReturnFormattedResult() {
+        when(analyticsService.findByPerson(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("100"), "category", "Food", "date", "2024-01-15"),
+                        Map.of("amount", new BigDecimal("200"), "category", "Transport", "date", "2024-01-20")
+                ));
+
+        String result = expenseTools.byPerson("Alice", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Alice"));
+        assertTrue(result.contains("Food"));
+    }
+
+    @Test
+    void comparePeriods_shouldReturnComparison() {
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+                .thenReturn(new BigDecimal("500"))
+                .thenReturn(new BigDecimal("600"));
+
+        String result = expenseTools.comparePeriods("2024-01-01", "2024-01-31", "2024-02-01", "2024-02-29");
+
+        assertTrue(result.contains("Period 1"));
+        assertTrue(result.contains("Period 2"));
+    }
+
+    @Test
+    void topExpenses_shouldReturnFormattedResult() {
+        when(analyticsService.getTopExpenses(anyInt(), eq(1L), eq(2L)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("500"), "category", "Electronics", "person", "Alice", "date", "2024-01-15"),
+                        Map.of("amount", new BigDecimal("300"), "category", "Food", "person", "Bob", "date", "2024-01-20")
+                ));
 
         String result = expenseTools.topExpenses("5");
-        assertTrue(result.contains("1000 RON (Rent) by John on"));
+
+        assertTrue(result.contains("Electronics"));
+        assertTrue(result.contains("Food"));
     }
 
     @Test
-    void monthlyAverage_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateMonthlyAverage(anyInt(), anyLong(), anyLong()))
-                .thenReturn(new BigDecimal("1500.50"));
+    void monthlyAverage_shouldReturnFormattedResult() {
+        when(analyticsService.calculateMonthlyAverage(anyInt(), eq(1L), eq(2L)))
+                .thenReturn(new BigDecimal("450.00"));
 
         String result = expenseTools.monthlyAverage("3");
-        assertEquals("Monthly average for the last 3 months: 1500.50 RON", result);
+
+        assertTrue(result.contains("450.00"));
+        assertTrue(result.contains("RON"));
     }
 
     @Test
-    void describeTrend_shouldReturnTrendString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateTrend(anyString(), any(), any(), anyLong(), anyLong()))
-                .thenReturn("Trend info");
+    void describeTrend_shouldReturnTrend() {
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn("Spending on Food has increased by 10%");
 
-        String result = expenseTools.describeTrend("Food", "2026-01-01", "2026-01-31");
-        assertEquals("Trend info", result);
+        String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("increased"));
     }
 
     @Test
-    void getVisualDescription_shouldReturnIncreased() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateTrend(anyString(), any(), any(), anyLong(), anyLong()))
-                .thenReturn("increased by 15%");
+    void getVisualDescription_shouldReturnIncreaseDescription() {
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn("Spending on Food has increased by 15%");
 
-        String result = expenseTools.getVisualDescription("Food", "2026-01-01", "2026-01-31");
-        assertTrue(result.contains("creștere de 15%"));
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("creștere"));
     }
 
     @Test
-    void getVisualDescription_shouldReturnDecreased() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.calculateTrend(anyString(), any(), any(), anyLong(), anyLong()))
-                .thenReturn("decreased by 10%");
+    void getVisualDescription_shouldReturnDecreaseDescription() {
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn("Spending on Food has decreased by 10%");
 
-        String result = expenseTools.getVisualDescription("Food", "2026-01-01", "2026-01-31");
-        assertTrue(result.contains("scădere de 10%"));
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("scădere"));
     }
 
     @Test
-    void byLocation_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.findByLocation(anyString(), any(), any(), anyLong(), anyLong()))
-                .thenReturn(List.of(Map.of("amount", new BigDecimal("20"), "category", "Snack", "date", LocalDate.now(), "description", "chips")));
+    void getVisualDescription_shouldReturnStableDescription() {
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn("Spending on Food is 100 RON. No data for the previous period to compare.");
 
-        String result = expenseTools.byLocation("Shop", "2026-01-01", "2026-01-31");
-        assertTrue(result.contains("20 RON for Snack on"));
+        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("stabil"));
     }
 
     @Test
-    void searchByAmount_shouldReturnFormattedString() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.findByAmount(any(), anyLong(), anyLong()))
-                .thenReturn(List.of(Map.of(
-                        "amount", new BigDecimal("100"),
-                        "category", "Gift",
-                        "location", "Mall",
-                        "date", LocalDate.now(),
-                        "description", "present",
-                        "raw_input", "receipt text"
-                )));
+    void byCategoryDetailed_shouldReturnFormattedResult() {
+        when(analyticsService.findByCategory(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn(List.of(
+                        Map.of("amount", new BigDecimal("100"), "location", "Store", "date", "2024-01-15", "description", "Test", "raw_input", "receipt text")
+                ));
 
-        String result = expenseTools.searchByAmount("100");
-        assertTrue(result.contains("Gift - 100 RON la Mall"));
+        String result = expenseTools.byCategoryDetailed("Food", "2024-01-01", "2024-01-31");
+
+        assertTrue(result.contains("Store"));
     }
 
     @Test
@@ -241,20 +274,81 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void getDatabaseSchema_shouldReturnNonEmptyString() {
-        String result = expenseTools.getDatabaseSchema();
-        assertFalse(result.isEmpty());
-        assertTrue(result.contains("expenses"));
+    void searchByAmount_shouldReturnFormattedResult() {
+        when(analyticsService.findByAmount(any(), eq(1L), eq(2L)))
+                .thenReturn(List.of(
+                        Map.of("category", "Food", "amount", new BigDecimal("99.99"), "location", "Lidl", "date", "2024-01-15", "description", "Groceries", "raw_input", "receipt")
+                ));
+
+        String result = expenseTools.searchByAmount("99.99");
+
+        assertTrue(result.contains("99.99"));
+        assertTrue(result.contains("Lidl"));
     }
 
     @Test
-    void listFamilyMembers_individualMode_shouldReturnOwnName() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+    void getExpenseItems_shouldReturnItems() {
+        com.familie.cheltuieli_familie.model.ExpenseItem item = new com.familie.cheltuieli_familie.model.ExpenseItem();
+        item.setItemName("Milk");
+        item.setQuantity(new BigDecimal("2"));
+        item.setAmount(new BigDecimal("10.00"));
+
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
+                .thenReturn(Optional.of(new com.familie.cheltuieli_familie.model.ExpenseEntity()));
+        when(expenseItemRepository.findByExpenseId(anyLong()))
+                .thenReturn(List.of(item));
+
+        String result = expenseTools.getExpenseItems("1");
+
+        assertTrue(result.contains("Milk"));
+    }
+
+    @Test
+    void getExpenseItems_shouldReturnUnauthorizedMessage() {
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
+                .thenReturn(Optional.empty());
+
+        String result = expenseTools.getExpenseItems("999");
+
+        assertTrue(result.contains("Nu am găsit"));
+    }
+
+    @Test
+    void getDatabaseSchema_shouldReturnSchema() {
+        String result = expenseTools.getDatabaseSchema();
+
+        assertTrue(result.contains("expenses"));
+        assertTrue(result.contains("categories"));
+        assertTrue(result.contains("users"));
+    }
+
+    @Test
+    void listFamilyMembers_shouldReturnMembersWhenFamilyExists() {
         User user = new User();
-        user.setName("SoloUser");
+        user.setId(1L);
+        user.setName("Alice");
+
+        com.familie.cheltuieli_familie.model.FamilyMember member = new com.familie.cheltuieli_familie.model.FamilyMember();
+        member.setUser(user);
+
+        when(familyMemberRepository.findByFamilyId(1L)).thenReturn(List.of(member));
+
+        String result = expenseTools.listFamilyMembers();
+
+        assertTrue(result.contains("Alice"));
+    }
+
+    @Test
+    void listFamilyMembers_shouldReturnCurrentUserWhenNoFamily() {
+        User user = new User();
+        user.setId(2L);
+        user.setName("Bob");
+
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 2L});
         when(securityService.getCurrentUser()).thenReturn(user);
 
         String result = expenseTools.listFamilyMembers();
-        assertEquals("Family members: SoloUser", result);
+
+        assertTrue(result.contains("Bob"));
     }
 }

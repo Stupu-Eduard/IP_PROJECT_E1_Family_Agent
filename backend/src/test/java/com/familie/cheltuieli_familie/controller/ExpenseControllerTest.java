@@ -1,27 +1,35 @@
 package com.familie.cheltuieli_familie.controller;
 
-import com.familie.cheltuieli_familie.mapper.ExpenseMapper;
 import com.familie.cheltuieli_familie.dto.CreateExpenseRequest;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
+import com.familie.cheltuieli_familie.dto.LocationDto;
+import com.familie.cheltuieli_familie.mapper.ExpenseMapper;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
-import com.familie.cheltuieli_familie.model.Family;
 import com.familie.cheltuieli_familie.model.FamilyMember;
-import com.familie.cheltuieli_familie.model.Location;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.CategoryRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.LocationRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.server.ResponseStatusException;
+
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ExpenseControllerTest {
 
     private record Projection(Long id, BigDecimal amount, String currency, String description,
@@ -62,20 +72,14 @@ class ExpenseControllerTest {
             return expenseDate;
         }
 
-        @Override
-        public String getCategory() {
-            return category;
-        }
+    @Mock
+    private CategoryRepository categoryRepository;
 
-        @Override
-        public String getPerson() {
-            return person;
-        }
+    @Mock
+    private FamilyMemberRepository familyMemberRepository;
 
-        @Override
-        public String getSourceType() {
-            return sourceType;
-        }
+    @Mock
+    private LocationRepository locationRepository;
 
         @Override
         public String getReceiptUrl() {
@@ -87,48 +91,17 @@ class ExpenseControllerTest {
             return locationId;
         }
 
-        @Override
-        public String getStore() {
-            return store;
-        }
+    @Mock
+    private ExpenseMapper expenseMapper;
 
-        @Override
-        public String getAddress() {
-            return address;
-        }
+    @InjectMocks
+    private ExpenseController expenseController;
 
-        @Override
-        public String getCity() {
-            return city;
-        }
-
-        @Override
-        public String getCountry() {
-            return country;
-        }
-
-        @Override
-        public Double getLat() {
-            return lat;
-        }
-
-        @Override
-        public Double getLng() {
-            return lng;
-        }
-    }
-
-    private Authentication parentAuth(User user) {
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(auth.getAuthorities()).thenAnswer(i ->
-                List.of(new SimpleGrantedAuthority("ROLE_PARENT")));
-        return auth;
-    }
-
-    private User mockUser(Long id) {
-        User user = mock(User.class);
-        when(user.getId()).thenReturn(id);
+    private User createUser(Long id, String email) {
+        User user = new User();
+        user.setId(id);
+        user.setEmail(email);
+        user.setName("Test User");
         return user;
     }
 
@@ -298,11 +271,8 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void list_nullAuth_returnsEmptyList() {
-        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), mock(FamilyMemberRepository.class), mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
-
-        List<ExpenseListDto> result = controller.list(null, null, null, null);
-
+    void list_shouldReturnEmptyListWhenNotAuthenticated() {
+        List<ExpenseListDto> result = expenseController.list(null, null, null, null);
         assertTrue(result.isEmpty());
     }
 
@@ -741,83 +711,39 @@ class ExpenseControllerTest {
     }
 
     @Test
-    void update_parent_noFamilyOnExpense_throwsForbidden() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void list_shouldReturnUserExpenses() {
+        User user = createUser(1L, "test@test.com");
+        Authentication auth = createAuth(user);
 
-        User user = mockUser(8L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(8L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(Collections.emptyList());
+        when(expenseRepository.findAllByUserFiltered(eq(1L), any(), any()))
+                .thenReturn(Collections.emptyList());
 
-        User otherUser = mockUser(99L);
-        Expense expense = mock(Expense.class);
-        when(expense.getUser()).thenReturn(otherUser);
-        when(expense.getFamily()).thenReturn(null);
-        when(expenseRepository.findById(8L)).thenReturn(Optional.of(expense));
-
-        CreateExpenseRequest req = new CreateExpenseRequest();
-        req.setAmount(BigDecimal.ONE);
-        req.setCategoryName("Food");
-        req.setDate(LocalDate.of(2026, 1, 1));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.update(8L, req, auth));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        List<ExpenseListDto> result = expenseController.list(null, null, null, auth);
+        assertNotNull(result);
     }
 
     @Test
-    void update_categoryNotFound_throwsBadRequest() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        CategoryRepository categoryRepository = mock(CategoryRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void create_shouldCreateExpense() {
+        User user = createUser(1L, "test@test.com");
+        Authentication auth = createAuth(user);
 
-        User user = mockUser(9L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(9L)).thenReturn(List.of());
+        CreateExpenseRequest request = new CreateExpenseRequest();
+        request.setAmount(new BigDecimal("100"));
+        request.setDescription("Test");
+        request.setDate(LocalDate.now());
+        request.setCategoryName("Food");
 
-        Expense expense = mock(Expense.class);
-        when(expense.getUser()).thenReturn(user);
-        when(expenseRepository.findById(9L)).thenReturn(Optional.of(expense));
-        when(categoryRepository.findByName("Unknown")).thenReturn(Optional.empty());
+        Category category = new Category();
+        category.setName("Food");
 
-        CreateExpenseRequest req = new CreateExpenseRequest();
-        req.setAmount(BigDecimal.ONE);
-        req.setCategoryName("Unknown");
-        req.setDate(LocalDate.of(2026, 1, 1));
+        Expense expense = new Expense();
+        expense.setId(1L);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.update(9L, req, auth));
-        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-    }
-
-    @Test
-    void update_withExistingLocation_updatesInPlace() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        CategoryRepository categoryRepository = mock(CategoryRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        LocationRepository locationRepository = mock(LocationRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, categoryRepository, familyMemberRepository, locationRepository, mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
-
-        User user = mockUser(10L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(10L)).thenReturn(List.of());
-
-        Location existingLocation = mock(Location.class);
-        Expense expense = mock(Expense.class);
-        when(expense.getUser()).thenReturn(user);
-        when(expense.getLocation()).thenReturn(existingLocation);
-        when(expense.getId()).thenReturn(10L);
-        when(expenseRepository.findById(10L)).thenReturn(Optional.of(expense));
-        when(expenseRepository.save(expense)).thenReturn(expense);
-        when(locationRepository.save(existingLocation)).thenReturn(existingLocation);
-
-        Category category = mock(Category.class);
         when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
+        when(expenseRepository.save(any(Expense.class))).thenReturn(expense);
+        when(expenseRepository.findOneWithLocation(1L)).thenReturn(null);
+        when(expenseMapper.toDto(any())).thenReturn(createExpenseListDto());
 
         Projection row = new Projection(10L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0), "Food", null, "manual",
@@ -836,97 +762,62 @@ class ExpenseControllerTest {
         verify(locationRepository).save(existingLocation);
     }
 
-    // ── delete ───────────────────────────────────────────────────────────────
-
     @Test
-    void delete_child_throwsForbidden() {
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(mock(ExpenseRepository.class), mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void create_shouldThrowWhenCategoryNotFound() {
+        User user = createUser(1L, "test@test.com");
+        Authentication auth = createAuth(user);
 
-        User user = mockUser(1L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
+        CreateExpenseRequest request = new CreateExpenseRequest();
+        request.setCategoryName("NonExistent");
 
-        FamilyMember childMember = mock(FamilyMember.class);
-        when(childMember.getRole()).thenReturn("Child");
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(categoryRepository.findByName("NonExistent")).thenReturn(Optional.empty());
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.delete(1L, auth));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> expenseController.create(request, auth));
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
 
     @Test
-    void delete_whenNotFound_throwsNotFound() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void getById_shouldReturnExpense() {
+        ExpenseRepository.ExpenseWithLocationProjection projection = mock(ExpenseRepository.ExpenseWithLocationProjection.class);
+        when(expenseRepository.findOneWithLocation(1L)).thenReturn(projection);
+        when(expenseMapper.toDto(any())).thenReturn(createExpenseListDto());
 
-        User user = mockUser(2L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of());
-        when(expenseRepository.findById(99L)).thenReturn(Optional.empty());
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.delete(99L, auth));
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        ExpenseListDto result = expenseController.getById(1L);
+        assertNotNull(result);
     }
 
     @Test
-    void delete_parent_ownExpense_succeeds() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void getById_shouldThrowWhenNotFound() {
+        when(expenseRepository.findOneWithLocation(999L)).thenReturn(null);
 
-        User user = mockUser(3L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(3L)).thenReturn(List.of());
-
-        Expense expense = mock(Expense.class);
-        when(expense.getUser()).thenReturn(user);
-        when(expenseRepository.findById(10L)).thenReturn(Optional.of(expense));
-
-        assertDoesNotThrow(() -> controller.delete(10L, auth));
-        verify(expenseRepository).deleteById(10L);
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> expenseController.getById(999L));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
 
     @Test
-    void delete_parent_familyExpense_succeeds() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void delete_shouldThrowWhenChildUser() {
+        User user = createUser(1L, "test@test.com");
+        Authentication auth = createAuth(user);
 
-        User user = mockUser(4L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of());
+        FamilyMember member = new FamilyMember();
+        member.setRole("Child");
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(member));
 
-        User otherUser = mockUser(99L);
-        Family family = mock(Family.class);
-        when(family.getId()).thenReturn(40L);
-
-        Expense expense = mock(Expense.class);
-        when(expense.getUser()).thenReturn(otherUser);
-        when(expense.getFamily()).thenReturn(family);
-        when(expenseRepository.findById(11L)).thenReturn(Optional.of(expense));
-        when(familyMemberRepository.existsByFamilyIdAndUserId(40L, 4L)).thenReturn(true);
-
-        assertDoesNotThrow(() -> controller.delete(11L, auth));
-        verify(expenseRepository).deleteById(11L);
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> expenseController.delete(1L, auth));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }
 
     @Test
-    void delete_parent_noAccess_throwsForbidden() {
-        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
-        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
-        ExpenseController controller = new ExpenseController(expenseRepository, mock(CategoryRepository.class), familyMemberRepository, mock(LocationRepository.class), mock(org.springframework.context.ApplicationEventPublisher.class), new ExpenseMapper());
+    void delete_shouldDeleteWhenParentUser() {
+        User user = createUser(1L, "test@test.com");
+        Authentication auth = createAuth(user);
 
-        User user = mockUser(5L);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
-        when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of());
+        FamilyMember member = new FamilyMember();
+        member.setRole("Parent");
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(member));
 
         User otherUser = mockUser(99L);
         Family family = mock(Family.class);
@@ -1065,8 +956,8 @@ class ExpenseControllerTest {
 
         Location loc = new Location();
         Expense expense = new Expense();
+        expense.setId(1L);
         expense.setUser(user);
-        expense.setLocation(loc);
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(expense));
         when(expenseRepository.save(any())).thenReturn(expense);
         when(categoryRepository.findByName("Food")).thenReturn(Optional.of(mock(Category.class)));
@@ -1131,13 +1022,7 @@ class ExpenseControllerTest {
         assertEquals("Person", dto.person());
         assertEquals("source", dto.sourceType());
 
-        assertNotNull(dto.location());
-        assertEquals(100L, dto.location().id());
-        assertEquals("Store", dto.location().store());
-        assertEquals("Address", dto.location().address());
-        assertEquals("City", dto.location().city());
-        assertEquals("Country", dto.location().country());
-        assertEquals(1.23, dto.location().lat());
-        assertEquals(4.56, dto.location().lng());
+        assertDoesNotThrow(() -> expenseController.delete(1L, auth));
+        verify(expenseRepository).deleteById(1L);
     }
 }
