@@ -9,7 +9,6 @@ import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,8 +50,8 @@ class FamilyServiceTest {
     @Mock
     private ProfileService profileService;
 
-    @InjectMocks
-    private FamilyService familyService;
+    @Mock
+    private FamilyRepository familyRepository;
 
     // ── shared fixtures ───────────────────────────────────────────────────────
     private User requester;

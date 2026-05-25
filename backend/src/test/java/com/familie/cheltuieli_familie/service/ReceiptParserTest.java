@@ -120,6 +120,61 @@ class ReceiptParserTest {
     }
 
     @Test
+    void parseReceipt_shouldNormalizeStoreName() {
+        String json = """
+            {
+              "storeName": "l1dl",
+              "totalAmount": 100.00,
+              "date": "01/01/2025",
+              "category": "Food"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("some receipt");
+
+        assertNotNull(result);
+        assertEquals("Lidl", result.getStoreName());
+    }
+
+    @Test
+    void parseReceipt_shouldReturnNullForInvalidAmount() {
+        String json = """
+            {
+              "storeName": "Test",
+              "totalAmount": -10.00,
+              "date": "01/01/2025",
+              "category": "Food"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("invalid receipt");
+
+        assertNull(result);
+    }
+
+    @Test
+    void parseReceipt_shouldReturnNullForZeroAmount() {
+        String json = """
+            {
+              "storeName": "Test",
+              "totalAmount": 0,
+              "date": "01/01/2025",
+              "category": "Food"
+            }
+            """;
+
+        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
+
+        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("zero amount receipt");
+
+        assertNull(result);
+    }
+
+    @Test
     void parseReceipt_shouldHandleMarkdownFences() {
         String json = """
             ```json
