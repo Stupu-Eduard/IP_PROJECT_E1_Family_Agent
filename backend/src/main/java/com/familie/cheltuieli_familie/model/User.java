@@ -2,15 +2,12 @@ package com.familie.cheltuieli_familie.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "users")
 @Data
-//tabel users
 public class User {
 
     @Id
@@ -27,10 +24,4 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDate createdAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "family_id")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private Family family;
 }
