@@ -68,6 +68,15 @@ public class FamilyController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{familyId}/members/{memberId}/account")
+    public ResponseEntity<Void> deleteChildAccount(
+            @PathVariable Long familyId,
+            @PathVariable Long memberId,
+            Authentication auth) {
+        familyService.deleteChildAccount(familyId, memberId, requester(auth));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{familyId}")
     public ResponseEntity<Void> deleteFamily(
             @PathVariable Long familyId,

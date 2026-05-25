@@ -24,15 +24,17 @@ import java.util.Map;
 @Slf4j
 public class FamilyService {
 
-    private static final String ROLE_PARENT    = "Parent";
-    private static final String ROLE_CHILD     = "Child";
-    private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
+    private static final String ROLE_PARENT       = "Parent";
+    private static final String ROLE_CHILD        = "Child";
+    private static final String ERR_NOT_MEMBER    = "Nu ești membru al acestei familii.";
+    private static final String ERR_MEMBER_NOT_FOUND = "Membrul nu există.";
 
     private final FamilyMemberRepository familyMemberRepository;
     private final FamilyRepository       familyRepository;
     private final JwtUtil                jwtUtil;
     private final com.familie.cheltuieli_familie.repository.ExpenseRepository expenseRepository;
     private final com.familie.cheltuieli_familie.repository.BudgetRepository budgetRepository;
+    private final ProfileService         profileService;
 
     @Transactional
     public Map<String, Object> createFamily(String name, User requester) {
@@ -56,10 +58,10 @@ public class FamilyService {
         log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId",   requester.getId());
-        claims.put("role",     ROLE_PARENT);
-        claims.put("name",     requester.getName());
-        claims.put("familyId", savedFamily.getId());
+        claims.put("userId",     requester.getId());
+        claims.put("role",       ROLE_PARENT);
+        claims.put("name",       requester.getName());
+        claims.put("familyId",   savedFamily.getId());
         claims.put("familyName", savedFamily.getName());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
@@ -151,7 +153,7 @@ public class FamilyService {
         }
 
         FamilyMember member = familyMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
@@ -188,11 +190,39 @@ public class FamilyService {
         return toDTO(member);
     }
 
+    @Transactional
+    public void deleteChildAccount(Long familyId, Long memberId, User requester) {
+        verifyAdultRole(familyId, requester);
+
+        FamilyMember member = familyMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
+
+        if (!member.getFamily().getId().equals(familyId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
+        }
+
+        if (isParentRole(member.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Nu poți șterge contul unui alt administrator. Poți șterge doar conturi de copil.");
+        }
+
+        if (member.getUser().getId().equals(requester.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Folosește /api/v1/profile/account pentru a-ți șterge propriul cont.");
+        }
+
+        User targetUser = member.getUser();
+        log.info("Părinte cu id={} șterge contul copilului cu id={} din familia id={}",
+                requester.getId(), targetUser.getId(), familyId);
+
+        profileService.deleteAccount(targetUser);
+    }
+
     public void removeMember(Long familyId, Long memberId, User requester) {
         verifyAdultRole(familyId, requester);
 
         FamilyMember member = familyMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
