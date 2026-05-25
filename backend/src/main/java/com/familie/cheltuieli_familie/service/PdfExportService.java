@@ -66,7 +66,7 @@ public class PdfExportService {
                 ? total.divide(new BigDecimal(diffDays), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        return renderPdf(from, to, person, filtered, labels, values, total, average);
+        return renderPdf(from, to, person, filtered, new ChartData(labels, values, total, average));
     }
 
     // ── Data fetching ─────────────────────────────────────────────────────────
@@ -171,11 +171,14 @@ public class PdfExportService {
 
     // ── PDF rendering ─────────────────────────────────────────────────────────
 
+    /** Grupează datele calculate pentru grafic și KPI-uri — reduce numărul de parametri din renderPdf. */
+    private record ChartData(List<String> labels, List<BigDecimal> values,
+                             BigDecimal total, BigDecimal average) {}
+
     private byte[] renderPdf(
             LocalDate from, LocalDate to, String person,
             List<ExpenseWithLocationProjection> expenses,
-            List<String> labels, List<BigDecimal> values,
-            BigDecimal total, BigDecimal average) throws IOException {
+            ChartData chart) throws IOException {
 
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
@@ -187,8 +190,8 @@ public class PdfExportService {
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float y = PAGE_HEIGHT - MARGIN;
                 y = drawHeader(cs, fontBold, fontRegular, from, to, person, y);
-                y = drawChart(cs, fontRegular, labels, values, y);
-                y = drawKpis(cs, fontBold, fontRegular, total, average, expenses.size(), y);
+                y = drawChart(cs, fontRegular, chart.labels(), chart.values(), y);
+                y = drawKpis(cs, fontBold, fontRegular, chart.total(), chart.average(), expenses.size(), y);
                 drawTable(cs, fontBold, fontRegular, expenses, y);
                 drawFooter(cs, fontRegular);
             }

@@ -246,8 +246,10 @@ export default function Reports() {
             )}
 
             {/* ── Filtre + Total ───────────────────────────────────────────── */}
-            <div className="card fade-up" style={{ padding: '12px 16px', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div className="card fade-up" style={{ padding: '14px 16px', marginBottom: 12 }}>
+
+                {/* Rând 1: filtre temporale + persoane */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
 
                     {/* Toggle preset (NEATINS) */}
                     <div className="tabs">
@@ -316,21 +318,26 @@ export default function Reports() {
                             }}>▾</span>
                         </div>
                     )}
+                </div>
 
-                    {/* Total perioadă — acum din date reale */}
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button
-                            className="btn btn-ghost"
-                            style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
-                            onClick={handleExportPdf}
-                            disabled={isExporting || isLoading || data.length === 0}
-                            title="Exportă perioada curentă ca PDF"
-                        >
-                            {isExporting
-                                ? <><RefreshCw size={13} style={{ animation: 'ring-rotate 0.9s linear infinite' }} /> Se generează...</>
-                                : <><Download size={13} /> Export PDF</>
-                            }
-                        </button>
+                {/* Separator */}
+                <div style={{ height: 1, background: 'var(--color-border)', margin: '12px 0' }} />
+
+                {/* Rând 2: export PDF (stânga) + total (dreapta) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button
+                        className="btn btn-ghost"
+                        style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={handleExportPdf}
+                        disabled={isExporting || isLoading || data.length === 0}
+                        title="Exportă perioada curentă ca PDF"
+                    >
+                        {isExporting
+                            ? <><RefreshCw size={13} style={{ animation: 'ring-rotate 0.9s linear infinite' }} /> Se generează...</>
+                            : <><Download size={13} /> Export PDF</>
+                        }
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 1, height: 28, background: 'var(--color-border)' }} />
                         <div>
                             <div className="label" style={{ marginBottom: 2 }}>TOTAL PERIOADĂ</div>
@@ -437,7 +444,7 @@ export default function Reports() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
-                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#B8A99A' }} dy={10} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={false} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#B8A99A' }} />
                                 <Tooltip
                                     contentStyle={{ borderRadius: 12, border: '1px solid #EDE9E3', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}
