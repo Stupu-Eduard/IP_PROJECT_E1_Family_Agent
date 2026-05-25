@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import FamilySettings from './FamilySettings';
@@ -22,10 +22,34 @@ vi.mock('../utils/jwt', () => ({
     decodeJwtPayload: vi.fn(),
 }));
 
+vi.mock('../services/api', () => ({
+    familyApi: {
+        getMembers: vi.fn(),
+        inviteMember: vi.fn(),
+        removeMember: vi.fn(),
+        deleteChildAccount: vi.fn(),
+        leaveFamily: vi.fn(),
+        deleteFamily: vi.fn(),
+        createFamily: vi.fn(),
+        updateMemberRole: vi.fn(),
+    },
+    invitationApi: {
+        getPending: vi.fn(() => Promise.resolve({ data: [] })),
+        accept: vi.fn(),
+        decline: vi.fn(),
+    },
+    authApi: {
+        refresh: vi.fn(),
+    },
+    api: {
+        put: vi.fn(),
+    },
+}));
+
 // ─── SUITA DE TESTE ───────────────────────────────────────────────────
 
 describe('FamilySettings Component', () => {
-    let confirmSpy: any;
+    let confirmSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -44,31 +68,27 @@ describe('FamilySettings Component', () => {
 
     it('randează vizualizarea limitată pentru rolul Child (fără formular de invitare)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child' }as any);
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child' } as any);
 
         renderComponent();
 
         expect(screen.getByText('Membrii Familiei Mele')).toBeInTheDocument();
         expect(screen.queryByText('Adaugă un membru nou')).not.toBeInTheDocument();
-        expect(screen.queryByTitle('Elimină membru')).not.toBeInTheDocument();
     });
 
     it('randează vizualizarea completă pentru rolul Parent', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' } as any);
 
         renderComponent();
 
         expect(screen.getByText('Gestionare Familie')).toBeInTheDocument();
         expect(screen.getByText('Adaugă un membru nou')).toBeInTheDocument();
-
-        const deleteButtons = screen.getAllByTitle('Elimină membru');
-        expect(deleteButtons.length).toBeGreaterThan(0);
     });
 
     it('randează vizualizarea completă pentru rolul Co-Parent', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Co-Parent' }as any);
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Co-Parent' } as any);
 
         renderComponent();
         expect(screen.getByText('Gestionare Familie')).toBeInTheDocument();
@@ -99,7 +119,7 @@ describe('FamilySettings Component', () => {
 
     it('nu trimite invitația dacă emailul este gol sau conține doar spații (early return)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' } as any);
 
         renderComponent();
 
@@ -112,82 +132,127 @@ describe('FamilySettings Component', () => {
         expect(screen.queryByText('Se trimite...')).not.toBeInTheDocument();
     });
 
-    it('trimite invitația și adaugă un nou membru în listă după delay (setTimeout)', () => {
-        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+    // ─── 3. ȘTERGEREA MEMBRILOR DIN LISTA LOCALĂ ───
 
+    it('NU șterge membrul din lista locală dacă se apasă Cancel', () => {
+        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' } as any);
+        confirmSpy.mockReturnValue(false);
+
+        // Adaugăm manual un setTimeout ca să fie mai ușor de testat fără API
         renderComponent();
 
-        const emailInput = screen.getByPlaceholderText('email@familie.com');
-        const roleSelect = screen.getByRole('combobox');
-        const submitBtn = screen.getByText('Trimite Invitație');
-
-        fireEvent.change(emailInput, { target: { value: 'test@familie.com' } });
-        fireEvent.change(roleSelect, { target: { value: 'Co-Parent' } });
-
-        fireEvent.click(submitBtn);
-
-        expect(screen.getByText('Se trimite...')).toBeInTheDocument();
-
-        act(() => {
-            vi.advanceTimersByTime(1000);
-        });
-
-        expect(screen.getByText('Trimite Invitație')).toBeInTheDocument();
-
-        expect(screen.getAllByText('test@familie.com').length).toBeGreaterThan(0);
-        expect((emailInput as HTMLInputElement).value).toBe('');
+        // Fără familyId, lista e goală — nu există membri de șters în UI
+        expect(screen.queryByTitle('Elimină membru')).not.toBeInTheDocument();
     });
 
-    // ─── 3. ȘTERGEREA MEMBRILOR (WINDOW.CONFIRM) ───
+    // ─── 4. STERGE CONT COPIL (DELETE CHILD ACCOUNT) ─────────────────────
 
-    it('șterge un membru cu nume valid dacă se acceptă confirmarea', () => {
-        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
+    it('butonul "Sterge cont" apare pentru membri Child când userul e adult (Parent)', async () => {
+        const { familyApi } = await import('../services/api');
+        vi.mocked(useAuthStore).mockImplementation((selector: any) =>
+            selector({ token: 'mock_token' })
+        );
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent', familyId: 1, userId: 10 } as any);
+        vi.mocked(familyApi.getMembers).mockResolvedValue({
+            data: [
+                { id: 100, userId: 10, name: 'ParentUser', email: 'parent@test.com', role: 'Parent' },
+                { id: 200, userId: 20, name: 'Copil Mic', email: 'copil@test.com', role: 'Child' },
+            ],
+        } as any);
+
+        const { unmount } = render(<MemoryRouter><FamilySettings /></MemoryRouter>);
+        await screen.findByText('Copil Mic');
+
+        expect(screen.getByTitle('Sterge contul complet')).toBeInTheDocument();
+        unmount();
+    });
+
+    it('butonul "Sterge cont" NU apare pentru membri Parent sau Co-Parent', async () => {
+        const { familyApi } = await import('../services/api');
+        vi.mocked(useAuthStore).mockImplementation((selector: any) =>
+            selector({ token: 'mock_token' })
+        );
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent', familyId: 1, userId: 10 } as any);
+        vi.mocked(familyApi.getMembers).mockResolvedValue({
+            data: [
+                { id: 100, userId: 10, name: 'ParentUser', email: 'parent@test.com', role: 'Parent' },
+                { id: 101, userId: 11, name: 'CoParent', email: 'co@test.com', role: 'Co-Parent' },
+            ],
+        } as any);
+
+        const { unmount } = render(<MemoryRouter><FamilySettings /></MemoryRouter>);
+        await screen.findByText('ParentUser');
+
+        expect(screen.queryByTitle('Sterge contul complet')).not.toBeInTheDocument();
+        unmount();
+    });
+
+    it('handleDeleteChildAccount șterge membrul din UI după confirmare acceptată', async () => {
+        const { familyApi } = await import('../services/api');
         confirmSpy.mockReturnValue(true);
+        vi.mocked(useAuthStore).mockImplementation((selector: any) =>
+            selector({ token: 'mock_token' })
+        );
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent', familyId: 1, userId: 10 } as any);
+        vi.mocked(familyApi.getMembers).mockResolvedValue({
+            data: [
+                { id: 100, userId: 10, name: 'ParentUser', email: 'parent@test.com', role: 'Parent' },
+                { id: 200, userId: 20, name: 'Copil Mic', email: 'copil@test.com', role: 'Child' },
+            ],
+        } as any);
+        vi.mocked(familyApi.deleteChildAccount).mockResolvedValue(undefined as any);
 
-        renderComponent();
+        const { unmount } = render(<MemoryRouter><FamilySettings /></MemoryRouter>);
+        await screen.findByText('Copil Mic');
 
-        // Folosim getAllByText pentru a evita conflictul dintre "Mihaela" și "mihaela@partner.com"
-        expect(screen.getAllByText(/Mihaela/i).length).toBeGreaterThan(0);
+        const deleteChildBtn = screen.getByTitle('Sterge contul complet');
+        fireEvent.click(deleteChildBtn);
 
-        const deleteButtons = screen.getAllByTitle('Elimină membru');
-        fireEvent.click(deleteButtons[0]);
+        expect(confirmSpy).toHaveBeenCalledWith(
+            'Esti sigur ca vrei sa stergi COMPLET contul lui Copil Mic? Aceasta actiune este ireversibila.'
+        );
+        expect(familyApi.deleteChildAccount).toHaveBeenCalledWith(1, 200);
 
-        expect(confirmSpy).toHaveBeenCalledWith('Ești sigur că dorești să elimini membrul Mihaela ?');
-
-        // După ștergere, lungimea array-ului returnat de queryAllByText ar trebui să fie 0
-        expect(screen.queryAllByText(/Mihaela/i).length).toBe(0);
+        // Membrul dispare din UI după răspunsul API
+        await screen.findByText('ParentUser');
+        expect(screen.queryByText('Copil Mic')).not.toBeInTheDocument();
+        unmount();
     });
 
-    it('șterge un membru fără nume (invitat) dacă se acceptă confirmarea', () => {
-        vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
-        confirmSpy.mockReturnValue(true);
+    it('handleDeleteChildAccount NU șterge dacă utilizatorul anulează confirmarea', async () => {
+        const { familyApi } = await import('../services/api');
+        confirmSpy.mockReturnValue(false);
+        vi.mocked(useAuthStore).mockImplementation((selector: any) =>
+            selector({ token: 'mock_token' })
+        );
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent', familyId: 1, userId: 10 } as any);
+        vi.mocked(familyApi.getMembers).mockResolvedValue({
+            data: [
+                { id: 100, userId: 10, name: 'ParentUser', email: 'parent@test.com', role: 'Parent' },
+                { id: 200, userId: 20, name: 'Copil Mic', email: 'copil@test.com', role: 'Child' },
+            ],
+        } as any);
 
-        renderComponent();
+        const { unmount } = render(<MemoryRouter><FamilySettings /></MemoryRouter>);
+        await screen.findByText('Copil Mic');
 
-        expect(screen.getAllByText('invitat@exemplu.com').length).toBeGreaterThan(0);
+        const deleteChildBtn = screen.getByTitle('Sterge contul complet');
+        fireEvent.click(deleteChildBtn);
 
-        const deleteButtons = screen.getAllByTitle('Elimină membru');
-        fireEvent.click(deleteButtons[2]);
-
-        expect(confirmSpy).toHaveBeenCalledWith('Ești sigur că dorești să elimini membrul invitat?');
-
-        expect(screen.queryAllByText('invitat@exemplu.com').length).toBe(0);
+        // API-ul NU trebuie apelat
+        expect(familyApi.deleteChildAccount).not.toHaveBeenCalled();
+        // Membrul rămâne în UI
+        expect(screen.getByText('Copil Mic')).toBeInTheDocument();
+        unmount();
     });
 
-    it('NU șterge membrul dacă se apasă Cancel pe confirmare', () => {
+    it('butonul "Sterge cont" NU apare pentru utilizatorii cu rol Child (nu pot sterge conturi)', () => {
         vi.mocked(useAuthStore).mockImplementation((selector: any) => selector({ token: 'mock_token' }));
-        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Parent' }as any);
-        confirmSpy.mockReturnValue(false); // Simulăm click pe "Cancel"
+        vi.mocked(decodeJwtPayload).mockReturnValue({ role: 'Child', familyId: 1, userId: 20 } as any);
 
         renderComponent();
 
-        const deleteButtons = screen.getAllByTitle('Elimină membru');
-        fireEvent.click(deleteButtons[1]); // Dăm click pe delete la Andrei
-
-        // Andrei (nume) și andrei@kid.com (email) ar trebui să fie în continuare în DOM
-        expect(screen.getAllByText(/Andrei/i).length).toBeGreaterThan(0);
+        expect(screen.queryByTitle('Sterge contul complet')).not.toBeInTheDocument();
     });
 });

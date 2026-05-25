@@ -137,4 +137,15 @@ class FamilyControllerTest {
         assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode());
         verify(familyService).leaveFamily(10L, user);
     }
+
+    @Test
+    void deleteChildAccount_returnsNoContent() {
+        doNothing().when(familyService).deleteChildAccount(10L, 200L, user);
+
+        ResponseEntity<Void> resp = controller.deleteChildAccount(10L, 200L, auth);
+
+        assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode());
+        verify(familyService).deleteChildAccount(10L, 200L, user);
+    }
+
 }

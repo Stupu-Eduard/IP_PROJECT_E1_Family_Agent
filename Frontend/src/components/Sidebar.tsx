@@ -1,5 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import PersonSvg from './PersonSvg'
+import { findPredefinedAvatar, isRemoteAvatarUrl } from '../utils/avatars'
+import { decodeJwtPayload } from '../utils/jwt'
 
 // ── Nav items Părinte ──────────────────────────────────────────────────────
 const parentNavItems = [
@@ -41,8 +44,9 @@ const childNavItems = [
 export default function Sidebar() {
     const navigate = useNavigate()
     const location = useLocation()
-    const token    = useAuthStore((s) => s.token)
-    const logout   = useAuthStore((s) => s.logout)
+    const token     = useAuthStore((s) => s.token)
+    const logout    = useAuthStore((s) => s.logout)
+    const avatarUrl = useAuthStore((s) => s.avatarUrl)
 
     // ── Detectare rol și nume din JWT ─────────────────────────────────────
     let userRole      = 'Parent'
@@ -52,8 +56,8 @@ export default function Sidebar() {
     let familyLabel   = 'Family Agent'
 
     if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
+        const payload = decodeJwtPayload(token) as { role?: string; name?: string; sub?: string; familyName?: string } | null
+        if (payload) {
             userRole = payload.role || 'Parent'
 
             // Extragem numele din câmpul name sau sub (email)
@@ -67,11 +71,11 @@ export default function Sidebar() {
             }
 
             if (payload.familyName) {
-                familyLabel = `Familia ${payload.familyName}`
+                familyLabel = payload.familyName
             }
 
             userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
-        } catch {}
+        }
     }
 
     const isChild  = userRole === 'Child'
@@ -88,6 +92,28 @@ export default function Sidebar() {
         logout()
         navigate('/login', { replace: true })
     }
+
+    // ── Render avatar ─────────────────────────────────────────────────────
+    const predefinedAvatar = findPredefinedAvatar(avatarUrl)
+    const remoteUrl = isRemoteAvatarUrl(avatarUrl) ? avatarUrl : null
+
+    const avatarContent = remoteUrl ? (
+        <img
+            src={remoteUrl}
+            alt="Avatar"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+        />
+    ) : predefinedAvatar ? (
+        <PersonSvg fg={predefinedAvatar.fg} variant={predefinedAvatar.variant} size={20} />
+    ) : (
+        userInitials
+    )
+
+    const avatarBg = predefinedAvatar
+        ? predefinedAvatar.bg
+        : isChild
+            ? 'linear-gradient(135deg, #B5956A, #D4B896)'
+            : undefined
 
     return (
         <aside className="fa-sidebar">
@@ -127,23 +153,24 @@ export default function Sidebar() {
 
             <div style={{ flex: 1 }} />
 
-            {/* User footer */}
-            <div className="fa-sidebar-footer">
+            {/* User footer — click navigheaza la /profile */}
+            <button
+                className="fa-sidebar-footer"
+                onClick={() => navigate('/profile')}
+                style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+            >
                 <div
                     className="fa-sidebar-avatar"
-                    style={isChild
-                        ? { background: 'linear-gradient(135deg, #B5956A, #D4B896)' }
-                        : undefined
-                    }
+                    style={avatarBg ? { background: avatarBg, overflow: remoteUrl ? 'hidden' : undefined } : undefined}
                 >
-                    {userInitials}
+                    {avatarContent}
                 </div>
                 <div className="fa-sidebar-user-info">
                     <div className="fa-sidebar-user-name">{userName}</div>
                     <div className="fa-sidebar-user-role">{userRoleLabel}</div>
                 </div>
                 <button
-                    onClick={handleLogout}
+                    onClick={(e) => { e.stopPropagation(); handleLogout() }}
                     className="fa-sidebar-logout"
                     title="Logout"
                 >
@@ -152,7 +179,7 @@ export default function Sidebar() {
                         <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
                     </svg>
                 </button>
-            </div>
+            </button>
         </aside>
     )
 }

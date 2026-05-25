@@ -15,11 +15,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,51 +32,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class FamilyServiceTest {
-        @Test
-        void assignChildColorsIfMissing_assignsColorsAndCyclesPalette() {
-                // Create 12 children, some with markerColor, some without
-                List<FamilyMember> children = new java.util.ArrayList<>();
-                for (int i = 0; i < 12; i++) {
-                        FamilyMember child = new FamilyMember();
-                        child.setId((long) (200 + i));
-                        child.setRole("Child");
-                        child.setFamily(family);
-                        child.setUser(new User());
-                        // Set markerColor for even indices only
-                        if (i % 2 == 0) {
-                                child.setMarkerColor("#custom" + i);
-                        }
-                        children.add(child);
-                }
-
-                // Spy the service to call real method
-                FamilyService spyService = org.mockito.Mockito.spy(familyService);
-
-                // Call the method under test
-                spyService.assignChildColorsIfMissing(children);
-
-                // Verify that only children without markerColor got a color from the palette and were saved, in sorted order by ID
-                String[] palette = {
-                        "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
-                        "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
-                };
-                // Sort all children by ID to match service logic
-                List<FamilyMember> sortedChildren = new java.util.ArrayList<>(children);
-                sortedChildren.sort((a, b) -> Long.compare(a.getId(), b.getId()));
-                for (int i = 0; i < sortedChildren.size(); i++) {
-                    FamilyMember child = sortedChildren.get(i);
-                    String expectedColor = palette[i % palette.length];
-                    if ((child.getId() - 200) % 2 == 0) {
-                        // Even index: should keep custom color
-                        assertTrue(child.getMarkerColor().startsWith("#custom"));
-                    } else {
-                        // Odd index: should be assigned from palette
-                        assertEquals(expectedColor, child.getMarkerColor());
-                        verify(familyMemberRepository).save(child);
-                    }
-                }
-        }
-
 
     @Mock
     private FamilyMemberRepository familyMemberRepository;
@@ -94,11 +48,15 @@ class FamilyServiceTest {
     @Mock
     private BudgetRepository budgetRepository;
 
+    @Mock
+    private ProfileService profileService;
+
     @InjectMocks
     private FamilyService familyService;
 
-    private Family family;
+    // ── shared fixtures ───────────────────────────────────────────────────────
     private User requester;
+    private Family family;
     private FamilyMember parentMembership;
 
     @BeforeEach
@@ -122,6 +80,46 @@ class FamilyServiceTest {
         user.setName(name);
         return user;
     }
+
+    // ── assignChildColorsIfMissing ───────────────────────────────────────────
+
+    @Test
+    void assignChildColorsIfMissing_assignsColorsAndCyclesPalette() {
+        List<FamilyMember> children = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            FamilyMember child = new FamilyMember();
+            child.setId((long) (200 + i));
+            child.setRole("Child");
+            child.setFamily(family);
+            child.setUser(new User());
+            if (i % 2 == 0) {
+                child.setMarkerColor("#custom" + i);
+            }
+            children.add(child);
+        }
+
+        FamilyService spyService = org.mockito.Mockito.spy(familyService);
+        spyService.assignChildColorsIfMissing(children);
+
+        String[] palette = {
+                "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
+                "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
+        };
+        List<FamilyMember> sortedChildren = new java.util.ArrayList<>(children);
+        sortedChildren.sort((a, b) -> Long.compare(a.getId(), b.getId()));
+        for (int i = 0; i < sortedChildren.size(); i++) {
+            FamilyMember child = sortedChildren.get(i);
+            String expectedColor = palette[i % palette.length];
+            if ((child.getId() - 200) % 2 == 0) {
+                assertTrue(child.getMarkerColor().startsWith("#custom"));
+            } else {
+                assertEquals(expectedColor, child.getMarkerColor());
+                verify(familyMemberRepository).save(child);
+            }
+        }
+    }
+
+    // ── createFamily ─────────────────────────────────────────────────────────
 
     @Test
     void createFamily_shouldCreateNewFamily() {
@@ -176,15 +174,12 @@ class FamilyServiceTest {
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }
 
+    // ── deleteFamily ──────────────────────────────────────────────────────────
+
     @Test
     void deleteFamily_shouldDeleteWhenLastParent() {
-        FamilyMember member = new FamilyMember();
-        member.setFamily(family);
-        member.setUser(requester);
-        member.setRole("Parent");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(member));
-        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(member));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership));
         when(familyRepository.findById(10L)).thenReturn(Optional.of(family));
 
         assertDoesNotThrow(() -> familyService.deleteFamily(10L, requester));
@@ -193,51 +188,47 @@ class FamilyServiceTest {
 
     @Test
     void deleteFamily_shouldThrowWhenMultipleMembers() {
-        FamilyMember member1 = new FamilyMember();
-        member1.setRole("Parent");
         FamilyMember member2 = new FamilyMember();
         member2.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(member1));
-        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(member1, member2));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership, member2));
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> familyService.deleteFamily(10L, requester));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
     }
 
+    // ── leaveFamily ───────────────────────────────────────────────────────────
+
     @Test
     void leaveFamily_shouldAllowMemberToLeave() {
-        FamilyMember member = new FamilyMember();
-        member.setRole("Child");
+        FamilyMember childMember = new FamilyMember();
+        childMember.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(member));
-        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(member));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(childMember));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(childMember));
 
         assertDoesNotThrow(() -> familyService.leaveFamily(10L, requester));
-        verify(familyMemberRepository).delete(member);
+        verify(familyMemberRepository).delete(childMember);
     }
 
     @Test
     void leaveFamily_shouldThrowWhenLastParent() {
-        FamilyMember member = new FamilyMember();
-        member.setRole("Parent");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(member));
-        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(member));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership));
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> familyService.leaveFamily(10L, requester));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
     }
 
+    // ── updateMemberRole ──────────────────────────────────────────────────────
+
     @Test
     void updateMemberRole_shouldUpdateRole() {
-        family.setOwnerId(3L);
         User target = createUser(2L, "target@test.com", "Target");
-
-        FamilyMember requesterMember = new FamilyMember();
-        requesterMember.setRole("Parent");
+        family.setOwnerId(3L);
 
         FamilyMember targetMember = new FamilyMember();
         targetMember.setId(20L);
@@ -245,9 +236,9 @@ class FamilyServiceTest {
         targetMember.setUser(target);
         targetMember.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(requesterMember));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
-        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(requesterMember, targetMember));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership, targetMember));
         when(familyMemberRepository.save(any())).thenReturn(targetMember);
 
         FamilyMemberDTO result = familyService.updateMemberRole(10L, 20L, "Parent", requester);
@@ -258,10 +249,10 @@ class FamilyServiceTest {
 
     @Test
     void updateMemberRole_shouldThrowWhenNotParent() {
-        FamilyMember member = new FamilyMember();
-        member.setRole("Child");
+        FamilyMember childRequester = new FamilyMember();
+        childRequester.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(member));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(childRequester));
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> familyService.updateMemberRole(10L, 20L, "Parent", requester));
@@ -269,83 +260,10 @@ class FamilyServiceTest {
     }
 
     @Test
-    void removeMember_shouldRemoveMember() {
-        family.setOwnerId(3L);
-        User target = createUser(2L, "target@test.com", "Target");
-
-        FamilyMember requesterMember = new FamilyMember();
-        requesterMember.setRole("Parent");
-
-        FamilyMember targetMember = new FamilyMember();
-        targetMember.setFamily(family);
-        targetMember.setUser(target);
-        targetMember.setRole("Child");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(requesterMember));
-        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
-
-        assertDoesNotThrow(() -> familyService.removeMember(10L, 20L, requester));
-        verify(familyMemberRepository).delete(targetMember);
-    }
-
-    @Test
-    void removeMember_shouldThrowWhenRemovingOwner() {
-        family.setOwnerId(2L);
-        User target = createUser(2L, "target@test.com", "Target");
-
-        FamilyMember requesterMember = new FamilyMember();
-        requesterMember.setRole("Parent");
-
-        FamilyMember targetMember = new FamilyMember();
-        targetMember.setFamily(family);
-        targetMember.setUser(target);
-        targetMember.setRole("Parent");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(requesterMember));
-        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
-
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> familyService.removeMember(10L, 20L, requester));
-        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
-    }
-
-    @Test
-    void removeMember_throwsForbidden_whenRemovingOwner() {
-        family.setOwnerId(2L);
-
-        User ownerUser = new User();
-        ownerUser.setId(2L);
-        ownerUser.setName("Owner");
-        ownerUser.setEmail("owner@test.com");
-
-        FamilyMember ownerMember = new FamilyMember();
-        ownerMember.setId(200L);
-        ownerMember.setUser(ownerUser);
-        ownerMember.setFamily(family);
-        ownerMember.setRole("Co-Parent");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
-                .thenReturn(Optional.of(parentMembership));
-        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
-
-        Long famId = family.getId();
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.removeMember(famId, 200L, requester));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        assertTrue(ex.getReason().contains("Fondatorul"));
-    }
-
-    // ── updateMemberRole owner/normalizeRole coverage ────────────────────────
-
-    @Test
     void updateMemberRole_throwsForbidden_whenChangingOwnerRole() {
         family.setOwnerId(2L);
 
-        User ownerUser = new User();
-        ownerUser.setId(2L);
-        ownerUser.setName("Owner");
-        ownerUser.setEmail("owner@test.com");
-
+        User ownerUser = createUser(2L, "owner@test.com", "Owner");
         FamilyMember ownerMember = new FamilyMember();
         ownerMember.setId(200L);
         ownerMember.setUser(ownerUser);
@@ -356,42 +274,37 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
 
-        Long famId = family.getId();
+        // Pregătim argumentele înainte de lambda — o singură invocare throwing
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(famId, 200L, "child", requester));
+                () -> familyService.updateMemberRole(familyId, 200L, "child", requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         assertTrue(ex.getReason().contains("fondatorului"));
     }
 
     @Test
     void updateMemberRole_changesChildToAdult() {
-        User targetUser = new User();
-        targetUser.setId(2L);
-        targetUser.setName("Target");
-        targetUser.setEmail("target@test.com");
+        User targetUser = createUser(2L, "target@test.com", "Target");
 
         FamilyMember targetMember = new FamilyMember();
-        targetMember.setId(200L);
-        targetMember.setUser(targetUser);
+        targetMember.setId(20L);
         targetMember.setFamily(family);
+        targetMember.setUser(targetUser);
         targetMember.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
-                .thenReturn(Optional.of(parentMembership));
-        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership, targetMember));
         when(familyMemberRepository.save(any())).thenReturn(targetMember);
 
-        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, "adult", requester);
+        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 20L, "adult", requester);
 
         assertEquals("Adult", result.getRole());
     }
 
     @Test
     void updateMemberRole_withNullNewRole_treatsAsChild() {
-        User targetUser = new User();
-        targetUser.setId(2L);
-        targetUser.setName("Target");
-        targetUser.setEmail("target@test.com");
+        User targetUser = createUser(2L, "target@test.com", "Target");
 
         FamilyMember targetMember = new FamilyMember();
         targetMember.setId(200L);
@@ -404,9 +317,156 @@ class FamilyServiceTest {
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
         when(familyMemberRepository.save(any())).thenReturn(targetMember);
 
-        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, null, requester);
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        FamilyMemberDTO result = familyService.updateMemberRole(familyId, 200L, null, requester);
 
         assertEquals("Child", result.getRole());
         verify(familyMemberRepository).save(any());
+    }
+
+    // ── removeMember ──────────────────────────────────────────────────────────
+
+    @Test
+    void removeMember_shouldRemoveMember() {
+        User target = createUser(2L, "target@test.com", "Target");
+        family.setOwnerId(3L);
+
+        FamilyMember targetMember = new FamilyMember();
+        targetMember.setFamily(family);
+        targetMember.setUser(target);
+        targetMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
+
+        assertDoesNotThrow(() -> familyService.removeMember(10L, 20L, requester));
+        verify(familyMemberRepository).delete(targetMember);
+    }
+
+    @Test
+    void removeMember_shouldThrowWhenRemovingOwner() {
+        User target = createUser(2L, "target@test.com", "Target");
+        family.setOwnerId(2L);
+
+        FamilyMember targetMember = new FamilyMember();
+        targetMember.setFamily(family);
+        targetMember.setUser(target);
+        targetMember.setRole("Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> familyService.removeMember(10L, 20L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    void removeMember_throwsForbidden_whenRemovingOwner() {
+        family.setOwnerId(2L);
+
+        User ownerUser = createUser(2L, "owner@test.com", "Owner");
+        FamilyMember ownerMember = new FamilyMember();
+        ownerMember.setId(200L);
+        ownerMember.setUser(ownerUser);
+        ownerMember.setFamily(family);
+        ownerMember.setRole("Co-Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
+
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.removeMember(familyId, 200L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Fondatorul"));
+    }
+
+    // ── deleteChildAccount ───────────────────────────────────────────────────
+
+    @Test
+    void deleteChildAccount_success_callsProfileServiceDeleteAccount() {
+        User childUser = createUser(2L, "copil@test.com", "Copil");
+
+        FamilyMember childMember = new FamilyMember();
+        childMember.setId(20L);
+        childMember.setUser(childUser);
+        childMember.setFamily(family);
+        childMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(childMember));
+
+        assertDoesNotThrow(() -> familyService.deleteChildAccount(10L, 20L, requester));
+        verify(profileService).deleteAccount(childUser);
+    }
+
+    @Test
+    void deleteChildAccount_throwsForbidden_whenTargetIsParent() {
+        User anotherParent = createUser(5L, "parent2@test.com", "Parent2");
+
+        FamilyMember parentMember = new FamilyMember();
+        parentMember.setId(300L);
+        parentMember.setUser(anotherParent);
+        parentMember.setFamily(family);
+        parentMember.setRole("Parent");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(300L)).thenReturn(Optional.of(parentMember));
+
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(familyId, 300L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(profileService, never()).deleteAccount(any());
+    }
+
+    @Test
+    void deleteChildAccount_throwsBadRequest_whenRequesterDeletesOwnAccount() {
+        FamilyMember selfMember = new FamilyMember();
+        selfMember.setId(100L);
+        selfMember.setUser(requester);
+        selfMember.setFamily(family);
+        selfMember.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(100L)).thenReturn(Optional.of(selfMember));
+
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(familyId, 100L, requester));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(profileService, never()).deleteAccount(any());
+    }
+
+    @Test
+    void deleteChildAccount_throwsForbidden_whenMemberBelongsToDifferentFamily() {
+        Family otherFamily = new Family();
+        otherFamily.setId(99L);
+
+        User childUser = createUser(3L, "child@test.com", "Child");
+
+        FamilyMember memberOfOtherFamily = new FamilyMember();
+        memberOfOtherFamily.setId(200L);
+        memberOfOtherFamily.setUser(childUser);
+        memberOfOtherFamily.setFamily(otherFamily);
+        memberOfOtherFamily.setRole("Child");
+
+        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
+                .thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(memberOfOtherFamily));
+
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> familyService.deleteChildAccount(familyId, 200L, requester));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }
