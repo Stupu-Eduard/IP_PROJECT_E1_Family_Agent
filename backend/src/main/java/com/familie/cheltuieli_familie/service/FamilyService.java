@@ -76,8 +76,8 @@ public class FamilyService {
 
     // Palette kept in sync with frontend
     private static final String[] CHILD_PIN_COLORS = new String[]{
-            "#E24B4A", "#009E73", "#0072B2", "#F0E442", "#D55E00",
-            "#CC79A7", "#56B4E9", "#F7B801", "#000000", "#999999"
+            "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
+            "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
     };
 
     @Transactional
