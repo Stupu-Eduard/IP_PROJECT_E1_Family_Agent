@@ -704,13 +704,13 @@ class ExpenseControllerTest {
                 expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
-        User user = mockUser(1L);
+        User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of(childMember));
 
         Expense expense = mock(Expense.class);
         when(expense.getSourceType()).thenReturn("manual");
@@ -869,6 +869,7 @@ class ExpenseControllerTest {
         when(familyMemberRepository.findByUserId(8L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
+
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(null);

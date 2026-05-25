@@ -1,6 +1,5 @@
 package com.familie.cheltuieli_familie.service;
 
-import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
@@ -22,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -30,11 +32,20 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ExpenseToolsTest {
 
-    @Mock private ExpenseAnalyticsService analyticsService;
-    @Mock private FamilyMemberRepository familyMemberRepository;
-    @Mock private ExpenseItemRepository expenseItemRepository;
-    @Mock private ExpenseJpaRepository expenseJpaRepository;
-    @Mock private SecurityService securityService;
+    @Mock
+    private ExpenseAnalyticsService analyticsService;
+
+    @Mock
+    private FamilyMemberRepository familyMemberRepository;
+
+    @Mock
+    private ExpenseItemRepository expenseItemRepository;
+
+    @Mock
+    private ExpenseJpaRepository expenseJpaRepository;
+
+    @Mock
+    private SecurityService securityService;
 
     @InjectMocks
     private ExpenseTools expenseTools;
@@ -51,15 +62,14 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void listCategories_shouldReturnJoinedNames() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
-        when(analyticsService.findCategoriesUsedByFamily(any(), any()))
-                .thenReturn(List.of("Food", "Car"));
+    void listCategories_shouldReturnCategories() {
+        when(analyticsService.findCategoriesUsedByFamily(1L, 2L))
+                .thenReturn(List.of("Food", "Transport"));
 
         String result = expenseTools.listCategories();
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Car"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
@@ -74,7 +84,7 @@ class ExpenseToolsTest {
 
     @Test
     void calculateTotal_shouldReturnFormattedTotal() {
-        when(analyticsService.calculateTotal(any(), any(), any(), any()))
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
                 .thenReturn(new BigDecimal("150.50"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -85,7 +95,7 @@ class ExpenseToolsTest {
 
     @Test
     void calculateTotal_shouldHandleError() {
-        when(analyticsService.calculateTotal(any(), any(), any(), any()))
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
                 .thenThrow(new RuntimeException("DB error"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -95,7 +105,7 @@ class ExpenseToolsTest {
 
     @Test
     void compareMembers_shouldReturnFormattedResult() {
-        when(analyticsService.compareMembers(any(), any(), any(), any()))
+        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
                 .thenReturn(Map.of("Alice", new BigDecimal("100"), "Bob", new BigDecimal("200")));
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -106,7 +116,7 @@ class ExpenseToolsTest {
 
     @Test
     void compareMembers_shouldReturnMessageWhenEmpty() {
-        when(analyticsService.compareMembers(any(), any(), any(), any()))
+        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
                 .thenReturn(Collections.emptyMap());
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -116,8 +126,7 @@ class ExpenseToolsTest {
 
     @Test
     void detectAnomalies_shouldReturnFormattedResult() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
-        when(analyticsService.detectAnomalies(any(), any(), any()))
+        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("category", "Food", "amount", new BigDecimal("500"), "date", "2024-01-15"),
                         Map.of("category", "Transport", "amount", new BigDecimal("300"), "date", "2024-01-20")
@@ -131,7 +140,7 @@ class ExpenseToolsTest {
 
     @Test
     void detectAnomalies_shouldReturnMessageWhenEmpty() {
-        when(analyticsService.detectAnomalies(any(), any(), any()))
+        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.detectAnomalies("1000");
@@ -141,8 +150,7 @@ class ExpenseToolsTest {
 
     @Test
     void byCategory_shouldReturnFormattedResult() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
-        when(analyticsService.byCategory(any(), any(), any(), any()))
+        when(analyticsService.byCategory(any(), any(), eq(1L), eq(2L)))
                 .thenReturn(Map.of("Food", new BigDecimal("300"), "Transport", new BigDecimal("150")));
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
@@ -153,7 +161,7 @@ class ExpenseToolsTest {
 
     @Test
     void byPerson_shouldReturnFormattedResult() {
-        when(analyticsService.findByPerson(anyString(), any(), any(), any(), any()))
+        when(analyticsService.findByPerson(anyString(), any(), any(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("100"), "category", "Food", "date", "2024-01-15"),
                         Map.of("amount", new BigDecimal("200"), "category", "Transport", "date", "2024-01-20")
@@ -167,7 +175,7 @@ class ExpenseToolsTest {
 
     @Test
     void comparePeriods_shouldReturnComparison() {
-        when(analyticsService.calculateTotal(any(), any(), any(), any()))
+        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
                 .thenReturn(new BigDecimal("500"))
                 .thenReturn(new BigDecimal("600"));
 
@@ -179,7 +187,7 @@ class ExpenseToolsTest {
 
     @Test
     void topExpenses_shouldReturnFormattedResult() {
-        when(analyticsService.getTopExpenses(anyInt(), any(), any()))
+        when(analyticsService.getTopExpenses(anyInt(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("500"), "category", "Electronics", "person", "Alice", "date", "2024-01-15"),
                         Map.of("amount", new BigDecimal("300"), "category", "Food", "person", "Bob", "date", "2024-01-20")
@@ -193,7 +201,7 @@ class ExpenseToolsTest {
 
     @Test
     void monthlyAverage_shouldReturnFormattedResult() {
-        when(analyticsService.calculateMonthlyAverage(anyInt(), any(), any()))
+        when(analyticsService.calculateMonthlyAverage(anyInt(), eq(1L), eq(2L)))
                 .thenReturn(new BigDecimal("450.00"));
 
         String result = expenseTools.monthlyAverage("3");
@@ -204,7 +212,7 @@ class ExpenseToolsTest {
 
     @Test
     void describeTrend_shouldReturnTrend() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
                 .thenReturn("Spending on Food has increased by 10%");
 
         String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
@@ -212,39 +220,24 @@ class ExpenseToolsTest {
         assertTrue(result.contains("increased"));
     }
 
-    @Test
-    void getVisualDescription_shouldReturnIncreaseDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
-                .thenReturn("Spending on Food has increased by 15%");
+    @ParameterizedTest
+    @CsvSource({
+        "Spending on Food has increased by 15%, creștere",
+        "Spending on Food has decreased by 10%, scădere",
+        "'Spending on Food is 100 RON. No data for the previous period to compare.', stabil"
+    })
+    void getVisualDescription_shouldReturnCorrectDescription(String trend, String expected) {
+        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+                .thenReturn(trend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertTrue(result.contains("creștere"));
-    }
-
-    @Test
-    void getVisualDescription_shouldReturnDecreaseDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
-                .thenReturn("Spending on Food has decreased by 10%");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertTrue(result.contains("scădere"));
-    }
-
-    @Test
-    void getVisualDescription_shouldReturnStableDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
-                .thenReturn("Spending on Food is 100 RON. No data for the previous period to compare.");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertTrue(result.contains("stabil"));
+        assertTrue(result.contains(expected));
     }
 
     @Test
     void byCategoryDetailed_shouldReturnFormattedResult() {
-        when(analyticsService.findByCategory(anyString(), any(), any(), any(), any()))
+        when(analyticsService.findByCategory(anyString(), any(), any(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("100"), "location", "Store", "date", "2024-01-15", "description", "Test", "raw_input", "receipt text")
                 ));
@@ -256,7 +249,7 @@ class ExpenseToolsTest {
 
     @Test
     void byLocation_shouldReturnFormattedResult() {
-        when(analyticsService.findByLocation(anyString(), any(), any(), any(), any()))
+        when(analyticsService.findByLocation(anyString(), any(), any(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("50"), "category", "Food", "date", "2024-01-15", "description", "Lunch")
                 ));
@@ -268,7 +261,7 @@ class ExpenseToolsTest {
 
     @Test
     void searchByAmount_shouldReturnFormattedResult() {
-        when(analyticsService.findByAmount(any(), any(), any()))
+        when(analyticsService.findByAmount(any(), eq(1L), eq(2L)))
                 .thenReturn(List.of(
                         Map.of("category", "Food", "amount", new BigDecimal("99.99"), "location", "Lidl", "date", "2024-01-15", "description", "Groceries", "raw_input", "receipt")
                 ));
@@ -280,23 +273,16 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void getExpenseItems_shouldReturnJoinedNames() {
-        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
+    void getExpenseItems_shouldReturnItems() {
+        com.familie.cheltuieli_familie.model.ExpenseItem item = new com.familie.cheltuieli_familie.model.ExpenseItem();
+        item.setItemName("Milk");
+        item.setQuantity(new BigDecimal("2"));
+        item.setAmount(new BigDecimal("10.00"));
 
-        com.familie.cheltuieli_familie.model.ExpenseEntity mockExpense =
-                new com.familie.cheltuieli_familie.model.ExpenseEntity();
-        mockExpense.setId(123L);
-
-        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
-                .thenReturn(Optional.of(mockExpense));
-
-        com.familie.cheltuieli_familie.model.ExpenseItem mockItem =
-                mock(com.familie.cheltuieli_familie.model.ExpenseItem.class);
-        when(mockItem.getItemName()).thenReturn("Milk");
-        when(mockItem.getQuantity()).thenReturn(new BigDecimal("2"));
-        when(mockItem.getAmount()).thenReturn(new BigDecimal("5.5"));
-
-        when(expenseItemRepository.findByExpenseId(anyLong())).thenReturn(List.of(mockItem));
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
+                .thenReturn(Optional.of(new com.familie.cheltuieli_familie.model.ExpenseEntity()));
+        when(expenseItemRepository.findByExpenseId(anyLong()))
+                .thenReturn(List.of(item));
 
         String result = expenseTools.getExpenseItems("1");
 
@@ -305,7 +291,7 @@ class ExpenseToolsTest {
 
     @Test
     void getExpenseItems_shouldReturnUnauthorizedMessage() {
-        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
                 .thenReturn(Optional.empty());
 
         String result = expenseTools.getExpenseItems("999");
@@ -328,7 +314,7 @@ class ExpenseToolsTest {
         user.setId(1L);
         user.setName("Alice");
 
-        FamilyMember member = new FamilyMember();
+        com.familie.cheltuieli_familie.model.FamilyMember member = new com.familie.cheltuieli_familie.model.FamilyMember();
         member.setUser(user);
 
         when(familyMemberRepository.findByFamilyId(1L)).thenReturn(List.of(member));
