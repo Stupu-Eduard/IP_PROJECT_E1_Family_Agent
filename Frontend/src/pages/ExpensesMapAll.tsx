@@ -178,6 +178,15 @@ export default function ExpensesMapAll() {
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
+  // cluster palette — matches backend CHILD_PIN_COLORS + common fallbacks
+  const CLUSTER_COLORS = ['#28b4f0','#dc7c0e','#11a811','#F0E442','#CC79A7','#8016a3','#56B4E9','#F7B801','#000000','#999999','#FF0000','#E53E3E'];
+  const clusterStyles = CLUSTER_COLORS.map(color => ({
+    textColor: 'white', textSize: 13, width: 40, height: 40,
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/></svg>`)}`,
+  }));
+
+  const [clusterExpenses, setClusterExpenses] = useState<MapExpense[]>([]);
+
   // polygon drawing state (expense filter)
   const polygonRef = useRef<any>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
@@ -497,6 +506,26 @@ export default function ExpensesMapAll() {
         {mapsApiKey && isLoaded && (
           <div className="w-full bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="flex flex-col md:flex-row">
+              {!selectedExpense && clusterExpenses.length > 0 && (
+                <aside className="md:w-[300px] md:border-r border-[#EDE9E3] p-5 overflow-y-auto max-h-[600px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[14px] font-medium text-[#2D2926]">{clusterExpenses.length} cheltuieli</span>
+                    <button onClick={() => setClusterExpenses([])} className="text-[12px] text-[#9A8A7C] hover:text-[#2D2926]">✕</button>
+                  </div>
+                  {clusterExpenses.map((e: any) => (
+                    <div
+                      key={e.id}
+                      className="p-3 mb-2 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] cursor-pointer hover:border-[#C4B9AC] transition-colors"
+                      onClick={() => { setSelectedExpense(e); setClusterExpenses([]); setPlace(null); setGoogleMapsUri(null); setMessage(null); }}
+                    >
+                      <div className="text-[14px] font-semibold text-[#2D2926]">{e.amount?.toFixed(2)} RON</div>
+                      <div className="text-[12px] text-[#9A8A7C] mt-0.5">{e.description || e.location || 'Fără descriere'}</div>
+                      {e.rawDate && <div className="text-[11px] text-[#C4B9AC] mt-0.5">{e.rawDate}</div>}
+                    </div>
+                  ))}
+                </aside>
+              )}
+
               {selectedExpense && (
                 <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
                   <div>
@@ -611,29 +640,21 @@ export default function ExpensesMapAll() {
 
                   <MarkerClusterer
                     onLoad={(clustererInstance: any) => {
-                      clustererInstance.addListener('clusteringend', () => {
-                        clustererInstance.getClusters().forEach((cluster: any) => {
-                          if (cluster.getMarkers().length > 1) {
-                            const color = cluster.getMarkers()[0]?._expenseColor ?? '#E53E3E';
-                            const svg = `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
-                            const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-                            if (cluster.clusterIcon_?.div_) {
-                              cluster.clusterIcon_.div_.style.backgroundImage = `url("${url}")`;
-                              cluster.clusterIcon_.div_.style.backgroundSize = '40px 40px';
-                            }
-                          }
-                        });
+                      clustererInstance.addListener('clusterclick', (cluster: any) => {
+                        const expenses = cluster.getMarkers().map((m: any) => m._expense).filter(Boolean);
+                        setClusterExpenses(expenses);
+                        setSelectedExpense(null);
+                        setPlace(null);
                       });
                     }}
                     options={{
                       gridSize: 30,
-                      styles: [1, 2, 3].map(() => ({
-                        textColor: 'white',
-                        textSize: 13,
-                        width: 40,
-                        height: 40,
-                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="#9A8A7C" stroke="white" stroke-width="2"/></svg>')}`,
-                      })),
+                      styles: clusterStyles,
+                      calculator: (markers: any[], numStyles: number) => {
+                        const color = markers[0]?._expenseColor;
+                        const idx = CLUSTER_COLORS.indexOf(color);
+                        return { text: String(markers.length), index: idx >= 0 ? idx + 1 : numStyles };
+                      },
                     }}
                   >
                     {(clusterer: any) => (
@@ -649,7 +670,7 @@ export default function ExpensesMapAll() {
                             title={e.description || e.location || ''}
                             icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
                             label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
-                            onLoad={(markerInstance: any) => { markerInstance._expenseColor = pinColor; }}
+                            onLoad={(markerInstance: any) => { markerInstance._expenseColor = pinColor; markerInstance._expense = e; }}
                             onClick={() => {
                               setSelectedExpense(e);
                               setPlace(null);
