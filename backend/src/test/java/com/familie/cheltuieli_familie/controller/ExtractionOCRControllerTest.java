@@ -56,6 +56,7 @@ class ExtractionOCRControllerTest {
         mockUser.setId(1L);
         mockUser.setEmail("test@test.com");
         when(securityService.getCurrentUser()).thenReturn(mockUser);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
 
         MockMultipartFile fakePdf = new MockMultipartFile(
                 "file",
