@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
@@ -34,7 +33,7 @@ class ExpenseToolsTest {
     @Mock private ExpenseAnalyticsService analyticsService;
     @Mock private FamilyMemberRepository familyMemberRepository;
     @Mock private ExpenseItemRepository expenseItemRepository;
-    @Mock private com.familie.cheltuieli_familie.repository.ExpenseJpaRepository expenseJpaRepository;
+    @Mock private ExpenseJpaRepository expenseJpaRepository;
     @Mock private SecurityService securityService;
 
     @InjectMocks
@@ -282,22 +281,20 @@ class ExpenseToolsTest {
     void getExpenseItems_shouldReturnJoinedNames() {
         when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
 
-        var mockExpense = new com.familie.cheltuieli_familie.model.ExpenseEntity();
+        com.familie.cheltuieli_familie.model.ExpenseEntity mockExpense =
+                new com.familie.cheltuieli_familie.model.ExpenseEntity();
         mockExpense.setId(123L);
-        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
-                .thenReturn(java.util.Optional.of(mockExpense));
 
-        var mockItem = mock(com.familie.cheltuieli_familie.model.ExpenseItem.class);
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
+                .thenReturn(Optional.of(mockExpense));
+
+        com.familie.cheltuieli_familie.model.ExpenseItem mockItem =
+                mock(com.familie.cheltuieli_familie.model.ExpenseItem.class);
         when(mockItem.getItemName()).thenReturn("Milk");
         when(mockItem.getQuantity()).thenReturn(new BigDecimal("2"));
         when(mockItem.getAmount()).thenReturn(new BigDecimal("5.5"));
-        
-        when(expenseItemRepository.findByExpenseId(anyLong())).thenReturn(List.of(mockItem));
 
-        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
-                .thenReturn(Optional.of(new com.familie.cheltuieli_familie.model.ExpenseEntity()));
-        when(expenseItemRepository.findByExpenseId(anyLong()))
-                .thenReturn(List.of(item));
+        when(expenseItemRepository.findByExpenseId(anyLong())).thenReturn(List.of(mockItem));
 
         String result = expenseTools.getExpenseItems("1");
 
@@ -329,7 +326,7 @@ class ExpenseToolsTest {
         user.setId(1L);
         user.setName("Alice");
 
-        com.familie.cheltuieli_familie.model.FamilyMember member = new com.familie.cheltuieli_familie.model.FamilyMember();
+        FamilyMember member = new FamilyMember();
         member.setUser(user);
 
         when(familyMemberRepository.findByFamilyId(1L)).thenReturn(List.of(member));

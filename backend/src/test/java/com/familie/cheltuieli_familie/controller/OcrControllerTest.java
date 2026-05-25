@@ -9,7 +9,6 @@ import com.familie.cheltuieli_familie.service.CloudinaryService;
 import com.familie.cheltuieli_familie.service.OcrService;
 import com.familie.cheltuieli_familie.service.OcrService.OcrResult;
 import com.familie.cheltuieli_familie.service.ReceiptParser;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,25 +35,9 @@ class OcrControllerTest {
     @Mock private ReceiptParser receiptParser;
     @Mock private CategoryRepository categoryRepository;
     @Mock private CloudinaryService cloudinaryService;
-    @Mock private ExpenseRepository expenseRepository;
-    @Mock private ExpenseItemRepository expenseItemRepository;
-    @Mock private LocationRepository locationRepository;
-    @Mock private FamilyMemberRepository familyMemberRepository;
-    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OcrController ocrController;
-
-    @BeforeEach
-    void setUp() {
-        // expenseRepository.save() must return the expense itself so saved.getAmount() works
-        lenient().when(expenseRepository.save(any(Expense.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        // locationRepository.findAll() returns empty list → controller will create+save new Location
-        lenient().when(locationRepository.findAll()).thenReturn(List.of());
-        // locationRepository.save() returns null → location stored on expense will be null (acceptable)
-        lenient().when(locationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    }
 
     @Test
     void testProcessReceiptUnauthorized() {
@@ -228,8 +211,6 @@ class OcrControllerTest {
         assertEquals("Mâncare", response.getBody().category());
     }
 
-    // ── isImageFile branches: jpeg, png, webp, bmp ───────────────────────────
-
     @Test
     void testProcessReceipt_jpegExtension_treatedAsImage() throws Exception {
         User user = new User();
@@ -245,7 +226,7 @@ class OcrControllerTest {
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(ocrService).extractTextFromImage(any()); // jpeg → image path
+        verify(ocrService).extractTextFromImage(any());
     }
 
     @Test
@@ -272,7 +253,6 @@ class OcrControllerTest {
         user.setId(1L);
         user.setName("Test User");
 
-        // extension sanitized to "tmp" (unknown) → not image → pdf path
         MockMultipartFile file = new MockMultipartFile("file", "receipt.xyz", "application/octet-stream", "data".getBytes());
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null);
 
@@ -282,7 +262,7 @@ class OcrControllerTest {
 
         ResponseEntity<OcrResponseDTO> response = ocrController.processReceipt(file, auth);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(ocrService).extractTextFromPdf(any()); // non-image → pdf path
+        verify(ocrService).extractTextFromPdf(any());
     }
 
     @Test
@@ -303,8 +283,6 @@ class OcrControllerTest {
         verify(ocrService).extractTextFromPdf(any());
     }
 
-    // ── resolveLocation null path + toExpenseEntity null fields ──────────────
-
     @Test
     void testProcessReceipt_nullStoreName_nullLocation() throws Exception {
         User user = new User();
@@ -317,9 +295,9 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.9));
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.setStoreName(null);   // → resolveLocation returns null
+        receipt.setStoreName(null);
         receipt.setTotalAmount(new BigDecimal("20.00"));
-        receipt.setDate(null);        // → parseExpenseDate returns LocalDateTime.now()
+        receipt.setDate(null);
         receipt.setCategory("Food");
         receipt.setItems(List.of());
 
@@ -348,10 +326,10 @@ class OcrControllerTest {
         when(ocrService.extractTextFromImage(any())).thenReturn(new OcrResult("text", 0.85));
 
         ReceiptParser.ParsedReceipt receipt = new ReceiptParser.ParsedReceipt();
-        receipt.setStoreName("   ");  // blank → resolveLocation returns null
+        receipt.setStoreName("   ");
         receipt.setTotalAmount(new BigDecimal("15.00"));
         receipt.setDate("2024-01-01");
-        receipt.setCategory(null);    // null category name
+        receipt.setCategory(null);
         receipt.setItems(List.of());
 
         when(receiptParser.parseReceipt("text")).thenReturn(receipt);
