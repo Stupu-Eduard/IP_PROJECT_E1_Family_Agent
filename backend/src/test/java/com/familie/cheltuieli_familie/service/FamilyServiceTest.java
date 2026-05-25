@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class FamilyServiceTest {
 
+
     @Mock
     private FamilyMemberRepository familyMemberRepository;
 
