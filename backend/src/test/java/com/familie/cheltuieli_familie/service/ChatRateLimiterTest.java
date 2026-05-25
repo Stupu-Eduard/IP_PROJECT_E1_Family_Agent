@@ -78,7 +78,7 @@ class ChatRateLimiterTest {
     }
 
     @Test
-    void allowRequest_shouldResetWindowAfterTimeout() throws InterruptedException {
+    void allowRequest_shouldResetWindowAfterTimeout() {
         String userId = "user5";
         for (int i = 0; i < 10; i++) {
             rateLimiter.allowRequest(userId);
@@ -92,7 +92,7 @@ class ChatRateLimiterTest {
     }
 
     @Test
-    void allowRequest_shouldAllowAfterWindowReset() throws InterruptedException {
+    void allowRequest_shouldAllowAfterWindowReset() {
         String userId = "user6";
         assertTrue(rateLimiter.allowRequest(userId));
     }

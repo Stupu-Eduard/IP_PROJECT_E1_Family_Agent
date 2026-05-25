@@ -25,6 +25,7 @@ import java.util.Map;
 public class FamilyService {
 
     private static final String ROLE_PARENT    = "Parent";
+    private static final String ROLE_CHILD     = "Child";
     private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
     private static final String ERR_MEMBER_NOT_FOUND = "Membrul nu există.";
 
@@ -69,9 +70,34 @@ public class FamilyService {
 
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
         verifyMembership(familyId, requester);
-        return familyMemberRepository.findByFamilyId(familyId).stream()
+        List<FamilyMember> members = familyMemberRepository.findByFamilyId(familyId);
+        assignChildColorsIfMissing(members);
+        return members.stream()
                 .map(this::toDTO)
                 .toList();
+    }
+
+    // Palette kept in sync with frontend
+    private static final String[] CHILD_PIN_COLORS = new String[]{
+            "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
+            "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
+    };
+
+    @Transactional
+    void assignChildColorsIfMissing(List<FamilyMember> members) {
+        List<FamilyMember> children = members.stream()
+            .filter(m -> ROLE_CHILD.equalsIgnoreCase(normalizeRole(m.getRole())))
+            .sorted((a, b) -> Long.compare(a.getId() == null ? 0L : a.getId(), b.getId() == null ? 0L : b.getId()))
+            .toList();
+
+        for (int i = 0; i < children.size(); i++) {
+            FamilyMember child = children.get(i);
+            if (child.getMarkerColor() == null) {
+                String color = CHILD_PIN_COLORS[i % CHILD_PIN_COLORS.length];
+                child.setMarkerColor(color);
+                familyMemberRepository.save(child);
+            }
+        }
     }
 
     @Transactional
@@ -247,17 +273,18 @@ public class FamilyService {
                 m.getUser().getName(),
                 m.getUser().getEmail(),
                 normalizeRole(m.getRole()),
+                m.getMarkerColor(),
                 isOwner
         );
     }
 
     private String normalizeRole(String role) {
-        if (role == null) return "Child";
+        if (role == null) return ROLE_CHILD;
         return switch (role.toLowerCase()) {
             case "parent"    -> ROLE_PARENT;
             case "co-parent" -> "Co-Parent";
             case "adult"     -> "Adult";
-            default          -> "Child";
+            default          -> ROLE_CHILD;
         };
     }
 }

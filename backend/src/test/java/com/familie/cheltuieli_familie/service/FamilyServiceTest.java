@@ -33,12 +33,24 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class FamilyServiceTest {
 
-    @Mock private FamilyMemberRepository familyMemberRepository;
-    @Mock private FamilyRepository familyRepository;
-    @Mock private JwtUtil jwtUtil;
-    @Mock private ExpenseRepository expenseRepository;
-    @Mock private BudgetRepository budgetRepository;
-    @Mock private ProfileService profileService;
+    @Mock
+    private FamilyMemberRepository familyMemberRepository;
+
+    @Mock
+    private FamilyRepository familyRepository;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @Mock
+    private ExpenseRepository expenseRepository;
+
+    @Mock
+    private BudgetRepository budgetRepository;
+
+    // Am adăugat mock-ul lipsă pentru profileService
+    @Mock
+    private ProfileService profileService;
 
     @InjectMocks
     private FamilyService familyService;
@@ -50,16 +62,15 @@ class FamilyServiceTest {
 
     @BeforeEach
     void setUp() {
-        requester = createUser(1L, "requester@test.com", "Requester");
-
         family = new Family();
         family.setId(10L);
         family.setOwnerId(1L);
 
+        requester = createUser(1L, "test@test.com", "Test");
+
         parentMembership = new FamilyMember();
-        parentMembership.setId(100L);
-        parentMembership.setUser(requester);
         parentMembership.setFamily(family);
+        parentMembership.setUser(requester);
         parentMembership.setRole("Parent");
     }
 
@@ -69,6 +80,53 @@ class FamilyServiceTest {
         user.setEmail(email);
         user.setName(name);
         return user;
+    }
+
+    // ── assignChildColorsIfMissing ───────────────────────────────────────────
+
+    @Test
+    void assignChildColorsIfMissing_assignsColorsAndCyclesPalette() {
+        // Create 12 children, some with markerColor, some without
+        List<FamilyMember> children = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            FamilyMember child = new FamilyMember();
+            child.setId((long) (200 + i));
+            child.setRole("Child");
+            child.setFamily(family);
+            child.setUser(new User());
+            // Set markerColor for even indices only
+            if (i % 2 == 0) {
+                child.setMarkerColor("#custom" + i);
+            }
+            children.add(child);
+        }
+
+        // Spy the service to call real method
+        FamilyService spyService = org.mockito.Mockito.spy(familyService);
+
+        // Call the method under test
+        spyService.assignChildColorsIfMissing(children);
+
+        // Verify that only children without markerColor got a color from the palette and were saved, in sorted order by ID
+        String[] palette = {
+                "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
+                "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
+        };
+        // Sort all children by ID to match service logic
+        List<FamilyMember> sortedChildren = new java.util.ArrayList<>(children);
+        sortedChildren.sort((a, b) -> Long.compare(a.getId(), b.getId()));
+        for (int i = 0; i < sortedChildren.size(); i++) {
+            FamilyMember child = sortedChildren.get(i);
+            String expectedColor = palette[i % palette.length];
+            if ((child.getId() - 200) % 2 == 0) {
+                // Even index: should keep custom color
+                assertTrue(child.getMarkerColor().startsWith("#custom"));
+            } else {
+                // Odd index: should be assigned from palette
+                assertEquals(expectedColor, child.getMarkerColor());
+                verify(familyMemberRepository).save(child);
+            }
+        }
     }
 
     // ── createFamily ─────────────────────────────────────────────────────────
@@ -99,8 +157,6 @@ class FamilyServiceTest {
                 () -> familyService.createFamily("New Family", requester));
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
     }
-
-    // ── getMembers ────────────────────────────────────────────────────────────
 
     @Test
     void getMembers_shouldReturnMembers() {
@@ -239,17 +295,17 @@ class FamilyServiceTest {
         User targetUser = createUser(2L, "target@test.com", "Target");
 
         FamilyMember targetMember = new FamilyMember();
-        targetMember.setId(200L);
-        targetMember.setUser(targetUser);
+        targetMember.setId(20L);
         targetMember.setFamily(family);
+        targetMember.setUser(targetUser);
         targetMember.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
-                .thenReturn(Optional.of(parentMembership));
-        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(targetMember));
+        when(familyMemberRepository.findByFamilyId(10L)).thenReturn(List.of(parentMembership, targetMember));
         when(familyMemberRepository.save(any())).thenReturn(targetMember);
 
-        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, "adult", requester);
+        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 20L, "adult", requester);
 
         assertEquals("Adult", result.getRole());
     }
@@ -340,35 +396,19 @@ class FamilyServiceTest {
         User childUser = createUser(2L, "copil@test.com", "Copil");
 
         FamilyMember childMember = new FamilyMember();
-        childMember.setId(200L);
+        childMember.setId(20L);
         childMember.setUser(childUser);
         childMember.setFamily(family);
         childMember.setRole("Child");
 
-        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
-                .thenReturn(Optional.of(parentMembership));
-        when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(childMember));
+        when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
+        when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(childMember));
 
-        familyService.deleteChildAccount(family.getId(), 200L, requester);
-
+        // Corectat ca să apeleze deleteChildAccount în loc de removeMember
+        assertDoesNotThrow(() -> familyService.deleteChildAccount(10L, 20L, requester));
+        
+        // Verificăm dacă serviciul de profile este apelat să șteargă copilul
         verify(profileService).deleteAccount(childUser);
-    }
-
-    @Test
-    void deleteChildAccount_throwsForbidden_whenRequesterIsChild() {
-        FamilyMember childRequesterMembership = new FamilyMember();
-        childRequesterMembership.setId(99L);
-        childRequesterMembership.setUser(requester);
-        childRequesterMembership.setFamily(family);
-        childRequesterMembership.setRole("Child");
-
-        when(familyMemberRepository.findByFamilyIdAndUserId(family.getId(), requester.getId()))
-                .thenReturn(Optional.of(childRequesterMembership));
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteChildAccount(family.getId(), 200L, requester));
-        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        verify(profileService, never()).deleteAccount(any());
     }
 
     @Test

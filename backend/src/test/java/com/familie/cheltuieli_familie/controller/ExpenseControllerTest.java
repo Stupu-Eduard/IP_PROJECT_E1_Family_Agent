@@ -2,6 +2,7 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.CreateExpenseRequest;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
+import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.mapper.ExpenseMapper;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;
@@ -143,22 +144,22 @@ class ExpenseControllerTest {
 
     @Test
     void list_withoutLocation_returnsNullLocation() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(2L);
         FamilyMember membership5 = mockMembership(5L);
-        when(mockFamilyMemberRepo.findByUserId(2L)).thenReturn(List.of(membership5));
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of(membership5));
 
         ExpenseWithLocationProjection row = mockProjection(
                 1L, BigDecimal.ONE, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 null, null, "manual", null, null, null, null, null, null, null, null);
 
-        when(mockExpenseRepo.findAllByFamilyFiltered(eq(5L), isNull(), isNull(), isNull()))
+        when(expenseRepository.findAllByFamilyFiltered(eq(5L), isNull(), isNull(), isNull()))
                 .thenReturn(List.of(row));
 
         List<ExpenseListDto> result = controller.list(null, null, null, parentAuth(user));
@@ -169,10 +170,10 @@ class ExpenseControllerTest {
 
     @Test
     void list_childAuth_usesUserFilteredQuery() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(3L);
@@ -184,7 +185,7 @@ class ExpenseControllerTest {
                 5L, BigDecimal.ONE, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 null, null, "manual", null, null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findAllByUserFiltered(eq(3L), isNull(), isNull())).thenReturn(List.of(row));
+        when(expenseRepository.findAllByUserFiltered(eq(3L), isNull(), isNull())).thenReturn(List.of(row));
 
         List<ExpenseListDto> result = controller.list(null, null, null, auth);
 
@@ -194,23 +195,23 @@ class ExpenseControllerTest {
 
     @Test
     void list_parentWithoutFamily_fallsBackToUserFiltered() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
         when(auth.getAuthorities()).thenAnswer(i -> List.of(new SimpleGrantedAuthority("ROLE_PARENT")));
-        when(mockFamilyMemberRepo.findByUserId(4L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of());
 
         ExpenseWithLocationProjection row = mockProjection(
                 7L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 3, 1, 0, 0),
                 null, null, "manual", null, null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findAllByUserFiltered(eq(4L), isNull(), isNull())).thenReturn(List.of(row));
+        when(expenseRepository.findAllByUserFiltered(eq(4L), isNull(), isNull())).thenReturn(List.of(row));
 
         List<ExpenseListDto> result = controller.list(null, null, null, auth);
 
@@ -231,10 +232,10 @@ class ExpenseControllerTest {
 
     @Test
     void list_withCoParentRole_worksLikeParent() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
@@ -243,11 +244,11 @@ class ExpenseControllerTest {
         when(auth.getAuthorities()).thenAnswer(i -> List.of(new SimpleGrantedAuthority("ROLE_CO-PARENT")));
 
         FamilyMember membership = mockMembership(100L);
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of(membership));
-        when(mockExpenseRepo.findAllByFamilyFiltered(eq(100L), any(), any(), any())).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(membership));
+        when(expenseRepository.findAllByFamilyFiltered(eq(100L), any(), any(), any())).thenReturn(List.of());
 
         controller.list(null, null, null, auth);
-        verify(mockExpenseRepo).findAllByFamilyFiltered(eq(100L), any(), any(), any());
+        verify(expenseRepository).findAllByFamilyFiltered(eq(100L), any(), any(), any());
     }
 
     @Test
@@ -281,13 +282,13 @@ class ExpenseControllerTest {
 
     @Test
     void getById_whenNotFound_throwsNotFound() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class),
+                expenseRepository, mock(CategoryRepository.class),
                 mock(FamilyMemberRepository.class), mock(LocationRepository.class),
                 mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
-        when(mockExpenseRepo.findOneWithLocation(99L)).thenReturn(null);
+        when(expenseRepository.findOneWithLocation(99L)).thenReturn(null);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.getById(99L));
@@ -296,9 +297,9 @@ class ExpenseControllerTest {
 
     @Test
     void getById_whenFound_mapsToDto() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class),
+                expenseRepository, mock(CategoryRepository.class),
                 mock(FamilyMemberRepository.class), mock(LocationRepository.class),
                 mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
@@ -308,7 +309,7 @@ class ExpenseControllerTest {
                 "Utilities", "Family", "manual",
                 null, null, null, null, null, null, null, null);
 
-        when(mockExpenseRepo.findOneWithLocation(2L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(2L)).thenReturn(row);
 
         ExpenseListDto dto = controller.getById(2L);
 
@@ -341,35 +342,35 @@ class ExpenseControllerTest {
 
     @Test
     void create_withLocation_savesExpenseAndLocation() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
-        LocationRepository mockLocationRepo = mock(LocationRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
+        LocationRepository locationRepository = mock(LocationRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
-                mockLocationRepo, mock(ApplicationEventPublisher.class), new ExpenseMapper());
+                expenseRepository, categoryRepository, familyMemberRepository,
+                locationRepository, mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of());
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of());
 
         Location savedLocation = mock(Location.class);
-        when(mockLocationRepo.save(any(Location.class))).thenReturn(savedLocation);
+        when(locationRepository.save(any(Location.class))).thenReturn(savedLocation);
 
         Expense savedExpense = mock(Expense.class);
         when(savedExpense.getId()).thenReturn(10L);
-        when(mockExpenseRepo.save(any(Expense.class))).thenReturn(savedExpense);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ExpenseWithLocationProjection row = mockProjection(
                 10L, BigDecimal.valueOf(50), "RON", "lunch",
                 LocalDateTime.of(2026, 5, 1, 12, 0),
                 "Food", "Alex", "manual", null,
                 1L, "Restaurant", "Main St", "Cluj", "RO", 46.77, 23.59);
-        when(mockExpenseRepo.findOneWithLocation(10L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(10L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.valueOf(50));
@@ -383,37 +384,37 @@ class ExpenseControllerTest {
         assertEquals(10L, result.id());
         assertEquals("Food", result.category());
         assertNotNull(result.location());
-        verify(mockLocationRepo).save(any(Location.class));
+        verify(locationRepository).save(any(Location.class));
     }
 
     @Test
     void create_withoutLocation_skipsLocationSave() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
-        LocationRepository mockLocationRepo = mock(LocationRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
+        LocationRepository locationRepository = mock(LocationRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
-                mockLocationRepo, mock(ApplicationEventPublisher.class), new ExpenseMapper());
+                expenseRepository, categoryRepository, familyMemberRepository,
+                locationRepository, mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(2L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Transport")).thenReturn(Optional.of(category));
-        when(mockFamilyMemberRepo.findByUserId(2L)).thenReturn(List.of());
+        when(categoryRepository.findByName("Transport")).thenReturn(Optional.of(category));
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of());
 
         Expense savedExpense = mock(Expense.class);
         when(savedExpense.getId()).thenReturn(11L);
-        when(mockExpenseRepo.save(any(Expense.class))).thenReturn(savedExpense);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ExpenseWithLocationProjection row = mockProjection(
                 11L, BigDecimal.valueOf(20), "RON", null,
                 LocalDateTime.of(2026, 5, 2, 8, 0),
                 "Transport", "Alex", "manual", null,
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(11L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(11L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.valueOf(20));
@@ -424,21 +425,21 @@ class ExpenseControllerTest {
 
         assertEquals(11L, result.id());
         assertNull(result.location());
-        verify(mockLocationRepo, never()).save(any(Location.class));
+        verify(locationRepository, never()).save(any(Location.class));
     }
 
     @Test
     void create_categoryNotFound_throwsBadRequest() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mock(FamilyMemberRepository.class),
+                expenseRepository, categoryRepository, mock(FamilyMemberRepository.class),
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(3L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockCategoryRepo.findByName("Inexistent")).thenReturn(Optional.empty());
+        when(categoryRepository.findByName("Inexistent")).thenReturn(Optional.empty());
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.valueOf(10));
@@ -452,11 +453,11 @@ class ExpenseControllerTest {
 
     @Test
     void create_withFamily_setsExpenseFamily() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
+                expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(4L);
@@ -464,23 +465,23 @@ class ExpenseControllerTest {
         when(auth.getPrincipal()).thenReturn(user);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
 
         Family family = mock(Family.class);
         FamilyMember fm = mock(FamilyMember.class);
         when(fm.getFamily()).thenReturn(family);
-        when(mockFamilyMemberRepo.findByUserId(4L)).thenReturn(List.of(fm));
+        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of(fm));
 
         Expense savedExpense = mock(Expense.class);
         when(savedExpense.getId()).thenReturn(12L);
-        when(mockExpenseRepo.save(any(Expense.class))).thenReturn(savedExpense);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ExpenseWithLocationProjection row = mockProjection(
                 12L, BigDecimal.valueOf(30), "RON", null,
                 LocalDateTime.of(2026, 5, 3, 9, 0),
                 "Food", "Alex", "manual", null,
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(12L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(12L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.valueOf(30));
@@ -490,30 +491,30 @@ class ExpenseControllerTest {
         ExpenseListDto result = controller.create(req, auth);
 
         assertEquals(12L, result.id());
-        verify(mockExpenseRepo).save(any(Expense.class));
+        verify(expenseRepository).save(any(Expense.class));
     }
 
     @Test
     void create_withReceiptUrl_setsOcrSourceType() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
-        LocationRepository mockLocationRepo = mock(LocationRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
+        LocationRepository locationRepository = mock(LocationRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
-                mockLocationRepo, mock(ApplicationEventPublisher.class), new ExpenseMapper());
+                expenseRepository, categoryRepository, familyMemberRepository,
+                locationRepository, mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(5L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
-        when(mockFamilyMemberRepo.findByUserId(5L)).thenReturn(List.of());
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
+        when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of());
 
         Expense savedExpense = mock(Expense.class);
         when(savedExpense.getId()).thenReturn(20L);
-        when(mockExpenseRepo.save(any(Expense.class))).thenReturn(savedExpense);
+        when(expenseRepository.save(any(Expense.class))).thenReturn(savedExpense);
 
         ExpenseWithLocationProjection row = mockProjection(
                 20L, BigDecimal.valueOf(80), "RON", null,
@@ -521,7 +522,7 @@ class ExpenseControllerTest {
                 "Food", "Alex", "OCR",
                 "https://cloudinary.com/receipt.jpg",
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(20L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(20L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.valueOf(80));
@@ -580,16 +581,16 @@ class ExpenseControllerTest {
 
     @Test
     void update_whenNotFound_throwsNotFound() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class),
+                expenseRepository, mock(CategoryRepository.class),
                 mock(FamilyMemberRepository.class), mock(LocationRepository.class),
                 mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockExpenseRepo.findById(99L)).thenReturn(Optional.empty());
+        when(expenseRepository.findById(99L)).thenReturn(Optional.empty());
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -603,10 +604,10 @@ class ExpenseControllerTest {
 
     @Test
     void update_child_nonManualExpense_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
@@ -615,11 +616,11 @@ class ExpenseControllerTest {
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
 
         Expense expense = mock(Expense.class);
         when(expense.getSourceType()).thenReturn("ocr");
-        when(mockExpenseRepo.findById(1L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.findById(1L)).thenReturn(Optional.of(expense));
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -633,10 +634,10 @@ class ExpenseControllerTest {
 
     @Test
     void update_child_anotherPersonExpense_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
@@ -645,13 +646,13 @@ class ExpenseControllerTest {
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
 
         User otherUser = mockUser(99L);
         Expense expense = mock(Expense.class);
         when(expense.getSourceType()).thenReturn("manual");
         when(expense.getUser()).thenReturn(otherUser);
-        when(mockExpenseRepo.findById(2L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.findById(2L)).thenReturn(Optional.of(expense));
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -665,10 +666,10 @@ class ExpenseControllerTest {
 
     @Test
     void update_child_nullOwner_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
@@ -677,12 +678,12 @@ class ExpenseControllerTest {
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
 
         Expense expense = mock(Expense.class);
         when(expense.getSourceType()).thenReturn("manual");
         when(expense.getUser()).thenReturn(null);
-        when(mockExpenseRepo.findById(3L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.findById(3L)).thenReturn(Optional.of(expense));
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -696,11 +697,11 @@ class ExpenseControllerTest {
 
     @Test
     void update_child_ownManualExpense_succeeds() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
+                expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(4L);
@@ -709,24 +710,24 @@ class ExpenseControllerTest {
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(mockFamilyMemberRepo.findByUserId(4L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of(childMember));
 
         Expense expense = mock(Expense.class);
         when(expense.getSourceType()).thenReturn("manual");
         when(expense.getUser()).thenReturn(user);
         when(expense.getId()).thenReturn(4L);
-        when(mockExpenseRepo.findById(4L)).thenReturn(Optional.of(expense));
-        when(mockExpenseRepo.save(expense)).thenReturn(expense);
+        when(expenseRepository.findById(4L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.save(expense)).thenReturn(expense);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
 
         ExpenseWithLocationProjection row = mockProjection(
                 4L, BigDecimal.ONE, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 "Food", null, "manual", null,
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(4L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(4L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -739,33 +740,33 @@ class ExpenseControllerTest {
 
     @Test
     void update_parent_ownExpense_succeeds() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
+                expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(5L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(5L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of());
 
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(user);
         when(expense.getId()).thenReturn(5L);
-        when(mockExpenseRepo.findById(5L)).thenReturn(Optional.of(expense));
-        when(mockExpenseRepo.save(expense)).thenReturn(expense);
+        when(expenseRepository.findById(5L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.save(expense)).thenReturn(expense);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
 
         ExpenseWithLocationProjection row = mockProjection(
                 5L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 "Food", null, "manual", null,
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(5L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(5L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.TEN);
@@ -778,17 +779,17 @@ class ExpenseControllerTest {
 
     @Test
     void update_parent_familyExpense_succeeds() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
+                expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(6L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(6L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(6L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
         Family family = mock(Family.class);
@@ -798,19 +799,19 @@ class ExpenseControllerTest {
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(family);
         when(expense.getId()).thenReturn(6L);
-        when(mockExpenseRepo.findById(6L)).thenReturn(Optional.of(expense));
-        when(mockExpenseRepo.save(expense)).thenReturn(expense);
-        when(mockFamilyMemberRepo.existsByFamilyIdAndUserId(20L, 6L)).thenReturn(true);
+        when(expenseRepository.findById(6L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.save(expense)).thenReturn(expense);
+        when(familyMemberRepository.existsByFamilyIdAndUserId(20L, 6L)).thenReturn(true);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
 
         ExpenseWithLocationProjection row = mockProjection(
                 6L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 "Food", null, "manual", null,
                 null, null, null, null, null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(6L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(6L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.TEN);
@@ -823,16 +824,16 @@ class ExpenseControllerTest {
 
     @Test
     void update_parent_noAccess_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(7L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(7L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(7L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
         Family family = mock(Family.class);
@@ -841,8 +842,8 @@ class ExpenseControllerTest {
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(family);
-        when(mockExpenseRepo.findById(7L)).thenReturn(Optional.of(expense));
-        when(mockFamilyMemberRepo.existsByFamilyIdAndUserId(30L, 7L)).thenReturn(false);
+        when(expenseRepository.findById(7L)).thenReturn(Optional.of(expense));
+        when(familyMemberRepository.existsByFamilyIdAndUserId(30L, 7L)).thenReturn(false);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -856,23 +857,23 @@ class ExpenseControllerTest {
 
     @Test
     void update_parent_noFamilyOnExpense_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(8L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(8L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(8L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
 
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(null);
-        when(mockExpenseRepo.findById(8L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.findById(8L)).thenReturn(Optional.of(expense));
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -886,22 +887,22 @@ class ExpenseControllerTest {
 
     @Test
     void update_categoryNotFound_throwsBadRequest() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
+                expenseRepository, categoryRepository, familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(9L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(9L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(9L)).thenReturn(List.of());
 
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(user);
-        when(mockExpenseRepo.findById(9L)).thenReturn(Optional.of(expense));
-        when(mockCategoryRepo.findByName("Unknown")).thenReturn(Optional.empty());
+        when(expenseRepository.findById(9L)).thenReturn(Optional.of(expense));
+        when(categoryRepository.findByName("Unknown")).thenReturn(Optional.empty());
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.ONE);
@@ -915,37 +916,37 @@ class ExpenseControllerTest {
 
     @Test
     void update_withExistingLocation_updatesInPlace() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        CategoryRepository mockCategoryRepo = mock(CategoryRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
-        LocationRepository mockLocationRepo = mock(LocationRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        CategoryRepository categoryRepository = mock(CategoryRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
+        LocationRepository locationRepository = mock(LocationRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mockCategoryRepo, mockFamilyMemberRepo,
-                mockLocationRepo, mock(ApplicationEventPublisher.class), new ExpenseMapper());
+                expenseRepository, categoryRepository, familyMemberRepository,
+                locationRepository, mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(10L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(10L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(10L)).thenReturn(List.of());
 
         Location existingLocation = mock(Location.class);
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(user);
         when(expense.getLocation()).thenReturn(existingLocation);
         when(expense.getId()).thenReturn(10L);
-        when(mockExpenseRepo.findById(10L)).thenReturn(Optional.of(expense));
-        when(mockExpenseRepo.save(expense)).thenReturn(expense);
-        when(mockLocationRepo.save(existingLocation)).thenReturn(existingLocation);
+        when(expenseRepository.findById(10L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.save(expense)).thenReturn(expense);
+        when(locationRepository.save(existingLocation)).thenReturn(existingLocation);
 
         Category category = mock(Category.class);
-        when(mockCategoryRepo.findByName("Food")).thenReturn(Optional.of(category));
+        when(categoryRepository.findByName("Food")).thenReturn(Optional.of(category));
 
         ExpenseWithLocationProjection row = mockProjection(
                 10L, BigDecimal.TEN, "RON", null,
                 LocalDateTime.of(2026, 1, 1, 0, 0),
                 "Food", null, "manual", null,
                 1L, "Updated Store", null, "Cluj", null, null, null);
-        when(mockExpenseRepo.findOneWithLocation(10L)).thenReturn(row);
+        when(expenseRepository.findOneWithLocation(10L)).thenReturn(row);
 
         CreateExpenseRequest req = new CreateExpenseRequest();
         req.setAmount(BigDecimal.TEN);
@@ -956,16 +957,16 @@ class ExpenseControllerTest {
 
         ExpenseListDto result = controller.update(10L, req, auth);
         assertEquals(10L, result.id());
-        verify(mockLocationRepo).save(existingLocation);
+        verify(locationRepository).save(existingLocation);
     }
 
     // ── delete ───────────────────────────────────────────────────────────────
 
     @Test
     void delete_child_throwsForbidden() {
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mock(ExpenseRepository.class), mock(CategoryRepository.class), mockFamilyMemberRepo,
+                mock(ExpenseRepository.class), mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(1L);
@@ -974,7 +975,7 @@ class ExpenseControllerTest {
 
         FamilyMember childMember = mock(FamilyMember.class);
         when(childMember.getRole()).thenReturn("Child");
-        when(mockFamilyMemberRepo.findByUserId(1L)).thenReturn(List.of(childMember));
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(childMember));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.delete(1L, auth));
@@ -983,17 +984,17 @@ class ExpenseControllerTest {
 
     @Test
     void delete_whenNotFound_throwsNotFound() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(2L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(2L)).thenReturn(List.of());
-        when(mockExpenseRepo.findById(99L)).thenReturn(Optional.empty());
+        when(familyMemberRepository.findByUserId(2L)).thenReturn(List.of());
+        when(expenseRepository.findById(99L)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.delete(99L, auth));
@@ -1002,37 +1003,37 @@ class ExpenseControllerTest {
 
     @Test
     void delete_parent_ownExpense_succeeds() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(3L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(3L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(3L)).thenReturn(List.of());
 
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(user);
-        when(mockExpenseRepo.findById(10L)).thenReturn(Optional.of(expense));
+        when(expenseRepository.findById(10L)).thenReturn(Optional.of(expense));
 
         assertDoesNotThrow(() -> controller.delete(10L, auth));
-        verify(mockExpenseRepo).deleteById(10L);
+        verify(expenseRepository).deleteById(10L);
     }
 
     @Test
     void delete_parent_familyExpense_succeeds() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(4L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(4L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(4L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
         Family family = mock(Family.class);
@@ -1041,25 +1042,25 @@ class ExpenseControllerTest {
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(family);
-        when(mockExpenseRepo.findById(11L)).thenReturn(Optional.of(expense));
-        when(mockFamilyMemberRepo.existsByFamilyIdAndUserId(40L, 4L)).thenReturn(true);
+        when(expenseRepository.findById(11L)).thenReturn(Optional.of(expense));
+        when(familyMemberRepository.existsByFamilyIdAndUserId(40L, 4L)).thenReturn(true);
 
         assertDoesNotThrow(() -> controller.delete(11L, auth));
-        verify(mockExpenseRepo).deleteById(11L);
+        verify(expenseRepository).deleteById(11L);
     }
 
     @Test
     void delete_parent_noAccess_throwsForbidden() {
-        ExpenseRepository mockExpenseRepo = mock(ExpenseRepository.class);
-        FamilyMemberRepository mockFamilyMemberRepo = mock(FamilyMemberRepository.class);
+        ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
+        FamilyMemberRepository familyMemberRepository = mock(FamilyMemberRepository.class);
         ExpenseController controller = new ExpenseController(
-                mockExpenseRepo, mock(CategoryRepository.class), mockFamilyMemberRepo,
+                expenseRepository, mock(CategoryRepository.class), familyMemberRepository,
                 mock(LocationRepository.class), mock(ApplicationEventPublisher.class), new ExpenseMapper());
 
         User user = mockUser(5L);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
-        when(mockFamilyMemberRepo.findByUserId(5L)).thenReturn(List.of());
+        when(familyMemberRepository.findByUserId(5L)).thenReturn(List.of());
 
         User otherUser = mockUser(99L);
         Family family = mock(Family.class);
@@ -1068,8 +1069,8 @@ class ExpenseControllerTest {
         Expense expense = mock(Expense.class);
         when(expense.getUser()).thenReturn(otherUser);
         when(expense.getFamily()).thenReturn(family);
-        when(mockExpenseRepo.findById(12L)).thenReturn(Optional.of(expense));
-        when(mockFamilyMemberRepo.existsByFamilyIdAndUserId(50L, 5L)).thenReturn(false);
+        when(expenseRepository.findById(12L)).thenReturn(Optional.of(expense));
+        when(familyMemberRepository.existsByFamilyIdAndUserId(50L, 5L)).thenReturn(false);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.delete(12L, auth));
