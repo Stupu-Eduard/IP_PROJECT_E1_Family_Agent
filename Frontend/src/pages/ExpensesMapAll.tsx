@@ -601,7 +601,7 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
+                  <MarkerClusterer options={{ gridSize: 40, minimumClusterSize: 3 }}>
                     {(clusterer: any) => (
                       <>
                         {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
@@ -611,7 +611,7 @@ export default function ExpensesMapAll() {
                             clusterer={clusterer}
                             title={e.description || e.location || ''}
                             icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new (window as any).google.maps.Size(32, 32) }}
-                            label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
+                            label={e.amount ? { text: `${e.amount} RON`, fontSize: '11px', color: '#2D2926', fontWeight: '600' } : undefined}
                             onClick={() => {
                               setSelectedExpense(e);
                               setPlace(null);
