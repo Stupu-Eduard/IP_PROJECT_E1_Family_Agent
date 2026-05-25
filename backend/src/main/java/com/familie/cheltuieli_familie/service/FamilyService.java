@@ -66,6 +66,7 @@ public class FamilyService {
         return Map.of("token", newToken, "role", ROLE_PARENT, "familyId", savedFamily.getId());
     }
 
+    @Transactional
     public List<FamilyMemberDTO> getMembers(Long familyId, User requester) {
         verifyMembership(familyId, requester);
         List<FamilyMember> members = familyMemberRepository.findByFamilyId(familyId);
@@ -81,7 +82,6 @@ public class FamilyService {
             "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
     };
 
-    @Transactional
     void assignChildColorsIfMissing(List<FamilyMember> members) {
         List<FamilyMember> children = members.stream()
             .filter(m -> ROLE_CHILD.equalsIgnoreCase(normalizeRole(m.getRole())))
