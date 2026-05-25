@@ -189,7 +189,6 @@ class PdfExportControllerTest {
 
     @Test
     void exportPdf_returns500_whenRuntimeExceptionThrown() throws Exception {
-        // Acoperă ramura catch(RuntimeException) — distinctă de IOException
         when(pdfExportService.generatePdf(any(), any(), isNull(), any()))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
@@ -200,8 +199,6 @@ class PdfExportControllerTest {
 
     @Test
     void exportPdf_returns500_whenDateFormatInvalid() {
-        // DateTimeParseException (extends RuntimeException) aruncată la LocalDate.parse()
-        // — acoperă ramura catch fără a fi nevoie de mock pe service
         ResponseEntity<byte[]> response = pdfExportController.exportPdf(
                 "not-a-date", "2026-01-31", null, auth);
 
