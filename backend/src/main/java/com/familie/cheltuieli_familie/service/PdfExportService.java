@@ -35,18 +35,25 @@ public class PdfExportService {
     private final ExpenseRepository      expenseRepository;
     private final FamilyMemberRepository familyMemberRepository;
 
-    private static final DateTimeFormatter RO_DATE      = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final float             MARGIN        = 50f;
-    private static final float             PAGE_WIDTH    = PDRectangle.A4.getWidth();
-    private static final float             PAGE_HEIGHT   = PDRectangle.A4.getHeight();
-    private static final float             CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
+    private static final DateTimeFormatter RO_DATE        = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final float             MARGIN         = 50f;
+    private static final float             PAGE_WIDTH     = PDRectangle.A4.getWidth();
+    private static final float             PAGE_HEIGHT    = PDRectangle.A4.getHeight();
+    private static final float             CONTENT_WIDTH  = PAGE_WIDTH - 2 * MARGIN;
+    /** Lățimea aproximativă (px) a unui label "dd.MM" la fontSize 7 — folosit la calcul stride. */
+    private static final float             LABEL_PX_WIDTH = 22f;
 
     // ── Public entry point ────────────────────────────────────────────────────
 
     public byte[] generatePdf(LocalDate from, LocalDate to, Authentication auth) throws IOException {
-        log.info("Generating PDF for period {} - {}", from, to);
+        return generatePdf(from, to, null, auth);
+    }
 
-        List<ExpenseWithLocationProjection> filtered = fetchAndFilter(from, to, auth);
+    public byte[] generatePdf(LocalDate from, LocalDate to, String person, Authentication auth) throws IOException {
+        // S5145 — sanitizare person înainte de logare (prevenire log injection)
+        log.info("Generating PDF for period {} - {}, person={}", from, to, sanitizeForLog(person));
+
+        List<ExpenseWithLocationProjection> filtered = fetchAndFilter(from, to, person, auth);
         log.info("Found {} expenses for period {} - {}", filtered.size(), from, to);
 
         long diffDays = ChronoUnit.DAYS.between(from, to) + 1;
@@ -59,13 +66,13 @@ public class PdfExportService {
                 ? total.divide(new BigDecimal(diffDays), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        return renderPdf(from, to, filtered, labels, values, total, average);
+        return renderPdf(from, to, person, filtered, new ChartData(labels, values, total, average));
     }
 
     // ── Data fetching ─────────────────────────────────────────────────────────
 
     private List<ExpenseWithLocationProjection> fetchAndFilter(
-            LocalDate from, LocalDate to, Authentication auth) {
+            LocalDate from, LocalDate to, String person, Authentication auth) {
 
         if (auth == null || !(auth.getPrincipal() instanceof User user)) {
             return List.of();
@@ -76,7 +83,7 @@ public class PdfExportService {
                         || a.getAuthority().equals("ROLE_CO-PARENT"));
 
         List<ExpenseWithLocationProjection> all = isParent
-                ? fetchForParent(user)
+                ? fetchForParent(user, person)
                 : expenseRepository.findAllByUserFiltered(user.getId(), null, null);
 
         return all.stream()
@@ -88,11 +95,11 @@ public class PdfExportService {
                 .toList();
     }
 
-    private List<ExpenseWithLocationProjection> fetchForParent(User user) {
+    private List<ExpenseWithLocationProjection> fetchForParent(User user, String person) {
         return familyMemberRepository.findByUserId(user.getId()).stream()
                 .findFirst()
                 .map(fm -> expenseRepository.findAllByFamilyFiltered(
-                        fm.getFamily().getId(), null, null, null))
+                        fm.getFamily().getId(), null, null, person))
                 .orElseGet(() -> expenseRepository.findAllByUserFiltered(
                         user.getId(), null, null));
     }
@@ -164,11 +171,14 @@ public class PdfExportService {
 
     // ── PDF rendering ─────────────────────────────────────────────────────────
 
+    /** Grupează datele calculate pentru grafic și KPI-uri — reduce numărul de parametri din renderPdf. */
+    private record ChartData(List<String> labels, List<BigDecimal> values,
+                             BigDecimal total, BigDecimal average) {}
+
     private byte[] renderPdf(
-            LocalDate from, LocalDate to,
+            LocalDate from, LocalDate to, String person,
             List<ExpenseWithLocationProjection> expenses,
-            List<String> labels, List<BigDecimal> values,
-            BigDecimal total, BigDecimal average) throws IOException {
+            ChartData chart) throws IOException {
 
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
@@ -179,9 +189,9 @@ public class PdfExportService {
 
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float y = PAGE_HEIGHT - MARGIN;
-                y = drawHeader(cs, fontBold, fontRegular, from, to, y);
-                y = drawChart(cs, fontRegular, labels, values, y);
-                y = drawKpis(cs, fontBold, fontRegular, total, average, expenses.size(), y);
+                y = drawHeader(cs, fontBold, fontRegular, from, to, person, y);
+                y = drawChart(cs, fontRegular, chart.labels(), chart.values(), y);
+                y = drawKpis(cs, fontBold, fontRegular, chart.total(), chart.average(), expenses.size(), y);
                 drawTable(cs, fontBold, fontRegular, expenses, y);
                 drawFooter(cs, fontRegular);
             }
@@ -194,7 +204,7 @@ public class PdfExportService {
 
     private float drawHeader(PDPageContentStream cs,
                              PDType1Font fontBold, PDType1Font fontRegular,
-                             LocalDate from, LocalDate to, float y) throws IOException {
+                             LocalDate from, LocalDate to, String person, float y) throws IOException {
 
         cs.setFont(fontBold, 18);
         cs.setNonStrokingColor(0.18f, 0.18f, 0.18f);
@@ -204,11 +214,15 @@ public class PdfExportService {
         cs.endText();
         y -= 22;
 
+        String personLabel = (person != null && !person.isBlank())
+                ? normalizeRo(person)
+                : "Toti membrii";
         cs.setFont(fontRegular, 10);
         cs.setNonStrokingColor(0.5f, 0.5f, 0.5f);
         cs.beginText();
         cs.newLineAtOffset(MARGIN, y);
         cs.showText("Perioada: " + from.format(RO_DATE) + " - " + to.format(RO_DATE)
+                + "   |   Persoana: " + personLabel
                 + "   |   Generat: " + LocalDate.now().format(RO_DATE));
         cs.endText();
         y -= 6;
@@ -246,6 +260,10 @@ public class PdfExportService {
         float barWidth   = Math.min(barSpacing * 0.5f, 28f);
         float chartBaseY = y - chartH;
 
+        // La fontSize 7, un label "dd.MM" ocupă ~LABEL_PX_WIDTH px; calculăm câte bare
+        // sărim între etichete ca să nu se suprapună.
+        int labelStride = Math.max(1, (int) Math.ceil(LABEL_PX_WIDTH / barSpacing));
+
         cs.setStrokingColor(0.8f, 0.8f, 0.8f);
         cs.setLineWidth(0.5f);
         cs.moveTo(MARGIN, chartBaseY);
@@ -255,7 +273,7 @@ public class PdfExportService {
         for (int i = 0; i < barCount; i++) {
             drawBar(cs, fontRegular, new BarConfig(
                     labels.get(i), values.get(i), maxVal,
-                    chartH, chartBaseY, barSpacing, barWidth, i, barCount));
+                    chartH, chartBaseY, barSpacing, barWidth, i, barCount, labelStride));
         }
 
         return chartBaseY - 35f;
@@ -264,7 +282,8 @@ public class PdfExportService {
     private record BarConfig(
             String label, BigDecimal val, BigDecimal maxVal,
             float chartH, float chartBaseY,
-            float barSpacing, float barWidth, int index, int barCount) {}
+            float barSpacing, float barWidth, int index, int barCount,
+            int labelStride) {}
 
     private void drawBar(PDPageContentStream cs, PDType1Font fontRegular,
                          BarConfig b) throws IOException {
@@ -289,7 +308,8 @@ public class PdfExportService {
             cs.endText();
         }
 
-        if (b.barCount() <= 52) {
+        // Afișăm eticheta doar la fiecare labelStride bare, ca să nu se suprapună
+        if (b.barCount() <= 52 && b.index() % b.labelStride() == 0) {
             cs.setFont(fontRegular, 7);
             cs.setNonStrokingColor(0.55f, 0.55f, 0.55f);
             cs.beginText();
@@ -406,6 +426,11 @@ public class PdfExportService {
         cs.newLineAtOffset(MARGIN, 30);
         cs.showText("FamilyAgent - Raport generat automat | " + LocalDate.now().format(RO_DATE));
         cs.endText();
+    }
+
+    /** Elimină CR/LF/TAB din string-uri venite din input utilizator (S5145 — log injection). */
+    private static String sanitizeForLog(String value) {
+        return value != null ? value.replaceAll("[\r\n\t]", "_") : null;
     }
 
     private String truncate(String s, int max) {

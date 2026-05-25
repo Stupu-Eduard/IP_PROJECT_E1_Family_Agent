@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, RefreshCw, X, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, RefreshCw, X, AlertCircle, Download, Users } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { api } from '../services/api';
+import { api, familyApi } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { decodeJwtPayload } from '../utils/jwt';
+import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 
 interface ExpenseReportDTO {
     day: string;
@@ -97,6 +100,12 @@ function parseDate(dateStr: string): Date | null {
 export default function Reports() {
     const navigate = useNavigate();
 
+    // ── JWT — rol și familyId ──────────────────────────────────────────────
+    const token   = useAuthStore((s) => s.token);
+    const payload = decodeJwtPayload(token ?? '') as any;
+    const familyId: number | null = payload?.familyId ?? null;
+    const isParent = ['Parent', 'Co-Parent'].includes(payload?.role ?? '');
+
     // ── State ──────────────────────────────────────────────────────────────
     const [timeRange,      setTimeRange]      = useState('1M');
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -108,6 +117,10 @@ export default function Reports() {
     const [totalAmount,    setTotalAmount]    = useState(0);
     const [isExporting,    setIsExporting]    = useState(false);
 
+    // ── Filtru membri ──────────────────────────────────────────────────────
+    const [members,        setMembers]        = useState<GroupMemberDTO[]>([]);
+    const [selectedPerson, setSelectedPerson] = useState<string>('');
+
     // ── Validare date custom (NEATINSĂ) ────────────────────────────────────
     const startObj          = parseDate(startDate);
     const endObj            = parseDate(endDate);
@@ -117,12 +130,27 @@ export default function Reports() {
     const isChronologyError  = Boolean(startObj && endObj && startObj > endObj);
     const isApplyDisabled    = !startObj || !endObj || hasFormatError || isChronologyError;
 
+    // ── Fetch membri familie ───────────────────────────────────────────────
+    useEffect(() => {
+        if (!isParent || !familyId) return;
+        familyApi.getMembers(familyId)
+            .then(({ data }) => setMembers(data))
+            .catch(() => { /* ignoră erori la fetch members */ });
+    }, [familyId, isParent]);
+
     // ── Fetch date din API ────────────────────────────────────────────────
-    const fetchData = useCallback(async (from: string, to: string, signal?: AbortSignal) => {
+    const fetchData = useCallback(async (
+        from: string,
+        to: string,
+        person: string,
+        signal?: AbortSignal,
+    ) => {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const { data: expenses } = await api.get<ApiExpense[]>('/api/v1/expenses', { signal });
+            const params: Record<string, string> = {};
+            if (person) params.person = person;
+            const { data: expenses } = await api.get<ApiExpense[]>('/api/v1/expenses', { params, signal });
             const grouped = groupByDay(expenses, from, to);
             setData(grouped);
             setTotalAmount(
@@ -137,14 +165,14 @@ export default function Reports() {
         }
     }, []);
 
-    // ── Refetch la schimbarea timeRange (nu la CUSTOM) ────────────────────
+    // ── Refetch la schimbarea timeRange sau a persoanei selectate ─────────
     useEffect(() => {
         if (timeRange === 'CUSTOM') return;
         const controller = new AbortController();
         const { from, to } = getRangeDates(timeRange);
-        void fetchData(from, to, controller.signal);
+        void fetchData(from, to, selectedPerson, controller.signal);
         return () => controller.abort();
-    }, [timeRange, fetchData]);
+    }, [timeRange, selectedPerson, fetchData]);
 
     // ── Handlers (NEATINSE) ────────────────────────────────────────────────
     const handleApplyCustomDate = () => {
@@ -152,7 +180,7 @@ export default function Reports() {
         const from = startObj.toISOString().slice(0, 10);
         const to   = endObj.toISOString().slice(0, 10);
         setTimeRange('CUSTOM');
-        void fetchData(from, to);
+        void fetchData(from, to, selectedPerson);
     };
 
     const handleCloseCustomDate = () => {
@@ -169,14 +197,18 @@ export default function Reports() {
                 ? { from: startObj.toISOString().slice(0, 10), to: endObj.toISOString().slice(0, 10) }
                 : getRangeDates(timeRange);
 
+            const params: Record<string, string> = { from, to };
+            if (selectedPerson) params.person = selectedPerson;
+
             const response = await api.get('/api/v1/expenses/export/pdf', {
-                params: { from, to },
+                params,
                 responseType: 'blob',
             });
+            const personSuffix = selectedPerson ? `-${selectedPerson.replace(/\s+/g, '-')}` : '';
             const url     = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
             const link    = document.createElement('a');
             link.href     = url;
-            link.download = `evolutie-cheltuieli-${from}-${to}.pdf`;
+            link.download = `evolutie-cheltuieli-${from}-${to}${personSuffix}.pdf`;
             link.click();
             window.URL.revokeObjectURL(url);
         } catch (err) {
@@ -214,8 +246,10 @@ export default function Reports() {
             )}
 
             {/* ── Filtre + Total ───────────────────────────────────────────── */}
-            <div className="card fade-up" style={{ padding: '12px 16px', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div className="card fade-up" style={{ padding: '14px 16px', marginBottom: 12 }}>
+
+                {/* Rând 1: filtre temporale + persoane */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
 
                     {/* Toggle preset (NEATINS) */}
                     <div className="tabs">
@@ -244,20 +278,66 @@ export default function Reports() {
                         <Calendar size={14} /> Interval Custom
                     </button>
 
-                    {/* Total perioadă — acum din date reale */}
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button
-                            className="btn btn-ghost"
-                            style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
-                            onClick={handleExportPdf}
-                            disabled={isExporting || isLoading || data.length === 0}
-                            title="Exportă perioada curentă ca PDF"
-                        >
-                            {isExporting
-                                ? <><RefreshCw size={13} style={{ animation: 'ring-rotate 0.9s linear infinite' }} /> Se generează...</>
-                                : <><Download size={13} /> Export PDF</>
-                            }
-                        </button>
+                    {/* Dropdown Persoane — vizibil doar dacă e parent cu familie */}
+                    {isParent && members.length > 0 && (
+                        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                            <Users size={14} style={{
+                                position: 'absolute', left: 10, pointerEvents: 'none',
+                                color: selectedPerson ? 'var(--color-primary)' : 'var(--color-muted)',
+                            }} />
+                            <select
+                                value={selectedPerson}
+                                onChange={(e) => {
+                                    setSelectedPerson(e.target.value);
+                                    if (timeRange === 'CUSTOM' && startObj && endObj) {
+                                        const from = startObj.toISOString().slice(0, 10);
+                                        const to   = endObj.toISOString().slice(0, 10);
+                                        void fetchData(from, to, e.target.value);
+                                    }
+                                }}
+                                className="btn btn-ghost"
+                                style={{
+                                    fontSize: 13,
+                                    paddingLeft: 30,
+                                    paddingRight: 28,
+                                    appearance: 'none',
+                                    cursor: 'pointer',
+                                    ...(selectedPerson
+                                        ? { background: 'var(--color-primary-tint)', color: 'var(--color-primary)', borderColor: 'var(--color-primary-edge)' }
+                                        : {}),
+                                }}
+                            >
+                                <option value="">Toți membrii</option>
+                                {members.map((m) => (
+                                    <option key={m.id} value={m.name}>{m.name}</option>
+                                ))}
+                            </select>
+                            <span style={{
+                                position: 'absolute', right: 9, pointerEvents: 'none',
+                                fontSize: 10, color: 'var(--color-muted)',
+                            }}>▾</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Separator */}
+                <div style={{ height: 1, background: 'var(--color-border)', margin: '12px 0' }} />
+
+                {/* Rând 2: export PDF (stânga) + total (dreapta) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button
+                        className="btn btn-ghost"
+                        style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={handleExportPdf}
+                        disabled={isExporting || isLoading || data.length === 0}
+                        title="Exportă perioada curentă ca PDF"
+                    >
+                        {isExporting
+                            ? <><RefreshCw size={13} style={{ animation: 'ring-rotate 0.9s linear infinite' }} /> Se generează...</>
+                            : <><Download size={13} /> Export PDF</>
+                        }
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 1, height: 28, background: 'var(--color-border)' }} />
                         <div>
                             <div className="label" style={{ marginBottom: 2 }}>TOTAL PERIOADĂ</div>
@@ -364,7 +444,7 @@ export default function Reports() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDE9E3" />
-                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#B8A99A' }} dy={10} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={false} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#B8A99A' }} />
                                 <Tooltip
                                     contentStyle={{ borderRadius: 12, border: '1px solid #EDE9E3', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', backgroundColor: '#fff' }}
