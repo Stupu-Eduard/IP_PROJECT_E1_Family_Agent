@@ -23,6 +23,7 @@ import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } f
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames } from '../services/lookups';
 import { familyApi } from '../services/api';
+import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 import { decodeJwtPayload } from '../utils/jwt';
 import { saveGeofenceZone, getMyGeofenceZone, deleteGeofenceZone, type LatLng } from '../services/geofencing';
 
@@ -106,6 +107,7 @@ export default function ExpensesMapAll() {
   const [endDate, setEndDate] = useState(filters.endDate || '');
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [availablePeople, setAvailablePeople] = useState<string[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<GroupMemberDTO[]>([]);
 
   const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
@@ -120,7 +122,7 @@ export default function ExpensesMapAll() {
         const catsPromise = fetchCategoryNames(controller.signal);
         // If user has a family, fetch family members; otherwise do not fetch global user list.
         const peoplePromise = familyId
-          ? familyApi.getMembers(familyId).then(r => r.data.map((m: any) => m.name).filter(Boolean))
+          ? familyApi.getMembers(familyId).then(r => { setFamilyMembers(r.data); return r.data.map((m: any) => m.name).filter(Boolean) })
           : Promise.resolve([] as string[]);
 
         const [cats, people] = await Promise.all([catsPromise, peoplePromise]);
@@ -169,6 +171,11 @@ export default function ExpensesMapAll() {
       controller.abort();
     };
   }, [hasInjectedExpenses]);
+
+  // helper to create colored pin URL
+  function getColoredPin(color: string) {
+    return `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z' fill='${encodeURIComponent(color)}'/><circle cx='16' cy='13' r='4' fill='white'/></svg>`
+  }
 
   // polygon drawing state (expense filter)
   const polygonRef = useRef<any>(null);
@@ -610,7 +617,12 @@ export default function ExpensesMapAll() {
                             position={{ lat: e.lat, lng: e.lng }}
                             clusterer={clusterer}
                             title={e.description || e.location || ''}
-                            icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new (window as any).google.maps.Size(32, 32) }}
+                            icon={(() => {
+                              const personName = e.person ?? ''
+                              const member = familyMembers.find(m => m.name === personName)
+                              const color = member?.markerColor ?? '#FF0000'
+                              return { url: getColoredPin(color), scaledSize: new (window as any).google.maps.Size(32, 32) }
+                            })()}
                             label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
                             onClick={() => {
                               setSelectedExpense(e);
@@ -672,6 +684,18 @@ export default function ExpensesMapAll() {
                 </GoogleMap>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Legend: person colors */}
+        {familyMembers.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+            {familyMembers.map(m => (
+              <div key={m.userId} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+                <span style={{ width: 12, height: 12, borderRadius: 4, background: m.markerColor ?? '#FF0000' }} />
+                <span style={{ color: '#9A8A7C' }}>{m.name}</span>
+              </div>
+            ))}
           </div>
         )}
 

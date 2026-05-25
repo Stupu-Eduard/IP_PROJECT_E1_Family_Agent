@@ -4,5 +4,6 @@ export interface GroupMemberDTO {
     name: string;
     email: string;
     role: 'Parent' | 'Co-Parent' | 'Adult' | 'Child';
+    markerColor?: string;
     owner: boolean;
 }
