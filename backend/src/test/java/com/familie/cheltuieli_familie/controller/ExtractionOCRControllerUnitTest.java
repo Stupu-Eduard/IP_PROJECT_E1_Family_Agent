@@ -13,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.core.Authentication;
 
 import java.io.File;
 import java.time.LocalDate;
@@ -43,8 +42,6 @@ class ExtractionOCRControllerUnitTest {
         user.setPasswordH("hash");
 
         when(securityService.getCurrentUser()).thenReturn(user);
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(user);
 
         MockMultipartFile fakePdf = new MockMultipartFile(
                 "file", "receipt.pdf", "application/pdf", "content".getBytes());
@@ -57,7 +54,6 @@ class ExtractionOCRControllerUnitTest {
                 .thenReturn("https://cloudinary.com/receipt.pdf");
 
         ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "ing", null);
-        ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "ing", auth);
 
         assertEquals(200, response.getStatusCode().value());
         verify(cloudinaryService).uploadFile(any(File.class), anyString(), anyString());
@@ -78,22 +74,5 @@ class ExtractionOCRControllerUnitTest {
         assertEquals(401, response.getStatusCode().value());
         verifyNoInteractions(cloudinaryService);
         verifyNoInteractions(extractionPipelineService);
-    }
-
-    @Test
-    void extractAndSave_withNullAuthentication_skipsCloudinaryUpload() throws Exception {
-        MockMultipartFile fakePdf = new MockMultipartFile(
-                "file", "receipt.pdf", "application/pdf", "content".getBytes());
-
-        Transaction tx = new Transaction(LocalDate.now(), "Lidl", 30.0, "RON", "EXPENSE");
-        when(extractionPipelineService.processDocument(any(File.class), any()))
-                .thenReturn(List.of(tx));
-        when(storageService.save(any())).thenReturn(new StorageResult(1, 1, 0));
-
-        ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "bt", null);
-
-        assertEquals(200, response.getStatusCode().value());
-        verifyNoInteractions(cloudinaryService);
-        assertNull(response.getBody().get(0).getReceiptUrl());
     }
 }

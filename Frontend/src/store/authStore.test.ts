@@ -5,6 +5,7 @@ import { useAuthStore, AUTH_TOKEN_STORAGE_KEY, AVATAR_STORAGE_KEY } from './auth
 
 describe('AuthStore - Zustand & Persistență', () => {
     beforeEach(() => {
+        // Clear sessionStorage by removing all items
         Object.keys(sessionStorage).forEach(key => {
             sessionStorage.removeItem(key)
         })
@@ -13,6 +14,7 @@ describe('AuthStore - Zustand & Persistență', () => {
     })
 
     afterEach(() => {
+        // Clean up after each test
         Object.keys(sessionStorage).forEach(key => {
             sessionStorage.removeItem(key)
         })

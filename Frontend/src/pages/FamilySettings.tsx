@@ -31,10 +31,10 @@ export default function FamilySettings() {
     const token = useAuthStore((state) => state.token);
     const navigate = useNavigate();
 
-    const payload = token ? decodeJwtPayload(token) as JwtPayload : null;
-    const currentUserRole = payload?.role ?? 'Child';
-    const currentUserId: number = payload?.userId ?? 0;
-    const familyId: number | null = payload?.familyId ?? null;
+    const payload = token ? decodeJwtPayload(token) : null;
+    const currentUserRole = (payload as any)?.role ?? 'Child';
+    const currentUserId: number = (payload as any)?.userId;
+    const familyId: number | null = (payload as any)?.familyId ?? null;
     const canManage = currentUserRole === 'Parent' || currentUserRole === 'Co-Parent';
     const isChild = currentUserRole === 'Child';
 

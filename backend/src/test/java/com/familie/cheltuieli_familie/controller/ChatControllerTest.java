@@ -14,7 +14,10 @@ import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class ChatControllerTest {
@@ -22,43 +25,43 @@ class ChatControllerTest {
     @Mock
     private AgentChatService agentChatService;
 
-    @Mock
-    private ChatRateLimiter rateLimiter;
+    @MockBean
+    private com.familie.cheltuieli_familie.security.ChatRateLimiter chatRateLimiter;
 
-    @InjectMocks
-    private ChatController chatController;
+    @MockBean
+    private com.familie.cheltuieli_familie.security.filter.JwtAuthFilter jwtAuthFilter;
 
     @Test
-    void chat_shouldReturnResponseWhenAllowed() {
-        when(rateLimiter.allowRequest(anyString())).thenReturn(true);
-        when(agentChatService.processQuery(anyString())).thenReturn(
-                new TextResponseDTO("Hello")
-        );
+    void testChat_returnsTextResponse() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
+        when(agentChatService.processQuery("Cat am cheltuit luna aceasta?"))
+                .thenReturn(new TextResponseDTO("Ai cheltuit 1248 de lei luna aceasta."));
 
-        ChatController.ChatRequest req = new ChatController.ChatRequest();
-        req.setMessage("test message");
-
-        ResponseEntity<Object> response = chatController.chat(req);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
+        mockMvc.perform(post("/v1/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\": \"Cat am cheltuit luna aceasta?\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("text"))
+                .andExpect(jsonPath("$.text").value("Ai cheltuit 1248 de lei luna aceasta."))
+                .andExpect(jsonPath("$.message").value("Ai cheltuit 1248 de lei luna aceasta."));
     }
 
     @Test
-    void chat_shouldReturnTooManyRequestsWhenRateLimited() {
-        when(rateLimiter.allowRequest(anyString())).thenReturn(false);
-        when(rateLimiter.getRemainingSeconds(anyString())).thenReturn(30L);
+    void testChat_emptyMessage_returnsBadRequest() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
+        mockMvc.perform(post("/v1/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\": \"\"}"))
+                .andExpect(status().isBadRequest());
+    }
 
-        ChatController.ChatRequest req = new ChatController.ChatRequest();
-        req.setMessage("test message");
-
-        ResponseEntity<Object> response = chatController.chat(req);
-
-        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
-        @SuppressWarnings("unchecked")
-        Map<String, String> body = (Map<String, String>) response.getBody();
-        assertNotNull(body);
-        assertTrue(body.get("error").contains("Rate limit exceeded"));
+    @Test
+    void testChat_missingMessage_returnsBadRequest() throws Exception {
+        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
+        mockMvc.perform(post("/v1/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

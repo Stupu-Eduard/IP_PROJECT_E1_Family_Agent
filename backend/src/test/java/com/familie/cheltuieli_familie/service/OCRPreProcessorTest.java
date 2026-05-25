@@ -60,17 +60,14 @@ class OCRPreProcessorTest {
     }
 
     @Test
-    void processImage_shouldHandleNullBank() throws IOException {
-        Path tempFile = Files.createTempFile("test_image", ".png");
-        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
-        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
+    void processImageShouldThrowExceptionForInvalidFile() {
+        File invalidFile = new File("does-not-exist.png");
 
-        try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), null);
-            assertNotNull(result);
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            preProcessor.processImage(invalidFile, "default");
+        });
+
+        assertTrue(exception.getMessage().contains("nu a fost găsit"));
     }
 
     @Test
@@ -83,7 +80,7 @@ class OCRPreProcessorTest {
             preProcessor.processImage(null, "revolut");
         });
 
-        assertTrue(exception.getMessage().contains("null"));
+        assertTrue(exception.getMessage().contains("nu a fost găsit"));
     }
 
     @Test

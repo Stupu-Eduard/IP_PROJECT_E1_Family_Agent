@@ -1,5 +1,6 @@
 package com.familie.cheltuieli_familie.service;
 
+import com.familie.cheltuieli_familie.model.FamilyMember;
 import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.ExpenseItemRepository;
 import com.familie.cheltuieli_familie.repository.ExpenseJpaRepository;
@@ -30,20 +31,11 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ExpenseToolsTest {
 
-    @Mock
-    private ExpenseAnalyticsService analyticsService;
-
-    @Mock
-    private FamilyMemberRepository familyMemberRepository;
-
-    @Mock
-    private ExpenseItemRepository expenseItemRepository;
-
-    @Mock
-    private ExpenseJpaRepository expenseJpaRepository;
-
-    @Mock
-    private SecurityService securityService;
+    @Mock private ExpenseAnalyticsService analyticsService;
+    @Mock private FamilyMemberRepository familyMemberRepository;
+    @Mock private ExpenseItemRepository expenseItemRepository;
+    @Mock private com.familie.cheltuieli_familie.repository.ExpenseJpaRepository expenseJpaRepository;
+    @Mock private SecurityService securityService;
 
     @InjectMocks
     private ExpenseTools expenseTools;
@@ -60,9 +52,10 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void listCategories_shouldReturnCategories() {
-        when(analyticsService.findCategoriesUsedByFamily(1L, 2L))
-                .thenReturn(List.of("Food", "Transport"));
+    void listCategories_shouldReturnJoinedNames() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
+        when(analyticsService.findCategoriesUsedByFamily(any(), any()))
+                .thenReturn(List.of("Food", "Car"));
 
         String result = expenseTools.listCategories();
 
@@ -286,11 +279,20 @@ class ExpenseToolsTest {
     }
 
     @Test
-    void getExpenseItems_shouldReturnItems() {
-        com.familie.cheltuieli_familie.model.ExpenseItem item = new com.familie.cheltuieli_familie.model.ExpenseItem();
-        item.setItemName("Milk");
-        item.setQuantity(new BigDecimal("2"));
-        item.setAmount(new BigDecimal("10.00"));
+    void getExpenseItems_shouldReturnJoinedNames() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{10L, 1L});
+
+        var mockExpense = new com.familie.cheltuieli_familie.model.ExpenseEntity();
+        mockExpense.setId(123L);
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
+                .thenReturn(java.util.Optional.of(mockExpense));
+
+        var mockItem = mock(com.familie.cheltuieli_familie.model.ExpenseItem.class);
+        when(mockItem.getItemName()).thenReturn("Milk");
+        when(mockItem.getQuantity()).thenReturn(new BigDecimal("2"));
+        when(mockItem.getAmount()).thenReturn(new BigDecimal("5.5"));
+        
+        when(expenseItemRepository.findByExpenseId(anyLong())).thenReturn(List.of(mockItem));
 
         when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
                 .thenReturn(Optional.of(new com.familie.cheltuieli_familie.model.ExpenseEntity()));
