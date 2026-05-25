@@ -528,6 +528,10 @@ export default function ExpensesMapAll() {
 
               {selectedExpense && (
                 <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[13px] text-[#9A8A7C]">Detalii cheltuială</span>
+                    <button onClick={() => { setSelectedExpense(null); setPlace(null); setGoogleMapsUri(null); setMessage(null); }} className="text-[12px] text-[#9A8A7C] hover:text-[#2D2926]">✕</button>
+                  </div>
                   <div>
                     {placePhotoSrc && (
                       <div className="mb-4 overflow-hidden rounded-[12px] border border-[#EDE9E3] bg-[#FAF8F5]">
