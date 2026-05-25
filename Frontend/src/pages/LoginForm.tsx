@@ -4,6 +4,7 @@ import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { isTokenExpired } from '../utils/jwt';
 import { getLoginErrorMessage, loginWithEmailPassword } from '../services/auth';
+import { profileApi } from '../services/api';
 
 const loginSchema = yup.object().shape({
   email: yup.string().required('Adresa de email este obligatorie.').email('Te rugăm să introduci o adresă de email validă.'),
@@ -21,6 +22,7 @@ export default function Login() {
   const token           = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const loginStore      = useAuthStore((state) => state.login);
+  const setAvatar       = useAuthStore((state) => state.setAvatar);
 
   if (isAuthenticated && token && !isTokenExpired(token)) {
     const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
@@ -39,6 +41,9 @@ export default function Login() {
       
       if (response.token) {
         loginStore(response.token);
+        profileApi.getAvatar().then((res) => {
+          if (res.data.avatarUrl) setAvatar(res.data.avatarUrl);
+        }).catch(() => {});
         const dest = response.role === 'Child' ? '/kid-dashboard' : '/dashboard';
         navigate(dest, { replace: true });
       } else {

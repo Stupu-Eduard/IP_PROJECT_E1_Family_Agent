@@ -91,6 +91,9 @@ export interface AvatarResponseDTO {
 }
 
 export const profileApi = {
+  getAvatar: () =>
+    api.get<AvatarResponseDTO>('/api/v1/profile/avatar'),
+
   updatePredefinedAvatar: (avatarId: string) =>
     api.patch<AvatarResponseDTO>('/api/v1/profile/avatar', { avatarId }),
 

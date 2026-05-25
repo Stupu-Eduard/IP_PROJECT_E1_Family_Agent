@@ -23,6 +23,15 @@ public class ProfileController {
     private final ProfileService  profileService;
     private final SecurityService securityService;
 
+    // ── GET /api/v1/profile/avatar ────────────────────────────────────────────
+    // Returnează avatarul curent al utilizatorului autentificat
+
+    @GetMapping("/avatar")
+    public ResponseEntity<AvatarResponseDTO> getAvatar() {
+        User user = requireCurrentUser();
+        return ResponseEntity.ok(profileService.getAvatar(user));
+    }
+
     // ── PATCH /api/v1/profile/avatar ──────────────────────────────────────────
     // Salvează un avatar predefinit (ex: "av_f_pink") în DB
 

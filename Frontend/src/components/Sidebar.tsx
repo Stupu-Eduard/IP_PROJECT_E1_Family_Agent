@@ -154,10 +154,13 @@ export default function Sidebar() {
             <div style={{ flex: 1 }} />
 
             {/* User footer — click navigheaza la /profile */}
-            <button
+            <div
                 className="fa-sidebar-footer"
                 onClick={() => navigate('/profile')}
-                style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, width: '100%', textAlign: 'left' }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/profile') }}
+                role="button"
+                tabIndex={0}
+                style={{ cursor: 'pointer' }}
             >
                 <div
                     className="fa-sidebar-avatar"
@@ -179,7 +182,7 @@ export default function Sidebar() {
                         <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
                     </svg>
                 </button>
-            </button>
+            </div>
         </aside>
     )
 }
