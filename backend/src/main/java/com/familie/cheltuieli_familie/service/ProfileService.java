@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -39,19 +40,15 @@ public class ProfileService {
     private final AnswerRepository           answerRepository;
     private final FamilyInvitationRepository familyInvitationRepository;
 
-    // ── Security: whitelist avatar IDs + content types ──────────────────────
-
     private static final Set<String> ALLOWED_AVATAR_IDS = Set.of(
-        "av_f_pink", "av_m_pink", "av_f_purple", "av_m_purple",
-        "av_f_blue", "av_m_blue", "av_f_dark", "av_m_dark",
-        "av_f_yellow", "av_m_yellow"
+            "av_f_pink", "av_m_pink", "av_f_purple", "av_m_purple",
+            "av_f_blue", "av_m_blue", "av_f_dark", "av_m_dark",
+            "av_f_yellow", "av_m_yellow"
     );
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-        "image/jpeg", "image/png", "image/webp", "image/gif"
+            "image/jpeg", "image/png", "image/webp", "image/gif"
     );
-
-    // ── Avatar predefinit ─────────────────────────────────────────────────────
 
     @Transactional
     public AvatarResponseDTO updatePredefinedAvatar(String avatarId, User user) {
@@ -63,11 +60,9 @@ public class ProfileService {
         }
         user.setAvatarUrl(avatarId);
         userRepository.save(user);
-        log.info("Avatar predefinit actualizat pentru {}: {}", sanitizeForLog(user.getEmail()), sanitizeForLog(avatarId));
+        log.info("Avatar predefinit actualizat pentru userId={}", user.getId());
         return new AvatarResponseDTO(avatarId);
     }
-
-    // ── Upload poză Cloudinary ────────────────────────────────────────────────
 
     @Transactional
     public AvatarResponseDTO uploadAvatarFile(MultipartFile file, User user) {
@@ -81,20 +76,22 @@ public class ProfileService {
                     "Format nepermis. Acceptă doar: JPEG, PNG, WEBP, GIF.");
         }
 
+        // S2083 fix: prefix/suffix fix, fără date din user în numele fișierului temporar
         Path tempPath = null;
         try {
-            tempPath = Files.createTempFile("avatar_" + user.getId() + "_", ".tmp");
+            tempPath = Files.createTempFile("avatar-upload-", "-" + UUID.randomUUID().toString() + ".tmp");
             file.transferTo(tempPath);
 
-            String url = cloudinaryService.uploadFile(tempPath.toFile(), "avatars", "user_" + user.getId() + "_avatar");
+            String publicId = "user_" + user.getId() + "_avatar";
+            String url = cloudinaryService.uploadFile(tempPath.toFile(), "avatars", publicId);
 
             user.setAvatarUrl(url);
             userRepository.save(user);
-            log.info("Avatar uploadat pe Cloudinary pentru {}", sanitizeForLog(user.getEmail()));
+            log.info("Avatar uploadat pe Cloudinary pentru userId={}", user.getId());
             return new AvatarResponseDTO(url);
 
         } catch (IOException e) {
-            log.error("Eroare la upload avatar pentru {}", sanitizeForLog(user.getEmail()), e);
+            log.error("Eroare la upload avatar pentru userId={}", user.getId(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Eroare la procesarea fișierului.");
         } finally {
@@ -102,13 +99,11 @@ public class ProfileService {
                 try {
                     Files.deleteIfExists(tempPath);
                 } catch (IOException ex) {
-                    log.warn("Nu s-a putut șterge fișierul temporar: {}", tempPath.getFileName());
+                    log.warn("Nu s-a putut șterge fișierul temporar");
                 }
             }
         }
     }
-
-    // ── Ștergere cont ─────────────────────────────────────────────────────────
 
     @Transactional
     public void deleteAccount(User user) {
@@ -144,12 +139,6 @@ public class ProfileService {
         log.info("Cont șters complet: userId={}", userId);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /**
-     * S5145 – Log Injection: sanitizează valorile provenite din input extern
-     * înainte de a fi scrise în log, eliminând caracterele CR/LF.
-     */
     static String sanitizeForLog(String input) {
         if (input == null) return "null";
         return input.replace('\n', '_').replace('\r', '_');

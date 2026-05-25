@@ -7,7 +7,6 @@ import com.familie.cheltuieli_familie.model.User;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
-import com.familie.cheltuieli_familie.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -54,7 +53,7 @@ public class FamilyService {
         familyMemberRepository.save(member);
         expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
-        log.info("Familie nouă creată: '{}' (id={}) de către {}", sanitizeForLog(savedFamily.getName()), savedFamily.getId(), sanitizeForLog(requester.getEmail()));
+        log.info("Familie nouă creată: id={}", savedFamily.getId());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",   requester.getId());
@@ -97,7 +96,7 @@ public class FamilyService {
         budgetRepository.clearFamilyFromBudgets(familyId);
         familyMemberRepository.deleteAll(allMembers);
         familyRepository.delete(family);
-        log.info("Familie ștearsă: id={} de către {}", familyId, sanitizeForLog(requester.getEmail()));
+        log.info("Familie ștearsă: id={}", familyId);
     }
 
     public void leaveFamily(Long familyId, User requester) {
@@ -147,7 +146,6 @@ public class FamilyService {
             return toDTO(member);
         }
 
-        // guard: nu putem scoate ultimul Parent
         if (isParentRole(member.getRole()) && !isParentRole(normalized)) {
             long parentCount = familyMemberRepository.findByFamilyId(familyId).stream()
                     .filter(m -> isParentRole(m.getRole()))
@@ -160,16 +158,14 @@ public class FamilyService {
 
         member.setRole(normalized);
         familyMemberRepository.save(member);
-        log.info("Rol schimbat: membrul {} → {} de către {}", sanitizeForLog(member.getUser().getEmail()), normalized, sanitizeForLog(requester.getEmail()));
+        log.info("Rol schimbat pentru memberId={} la rol={}", memberId, normalized);
         return toDTO(member);
     }
 
     @Transactional
     public void deleteChildAccount(Long familyId, Long memberId, User requester) {
-        // 1. Verificăm că solicitantul e Părinte/Co-Părinte în familie
         verifyAdultRole(familyId, requester);
 
-        // 2. Găsim membrul țintă
         FamilyMember member = familyMemberRepository.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
 
@@ -177,22 +173,20 @@ public class FamilyService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
         }
 
-        // 3. Nu permitem ștergerea unui alt Părinte/Co-Părinte
         if (isParentRole(member.getRole())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Nu poți șterge contul unui alt administrator. Poți șterge doar conturi de copil.");
         }
 
-        // 4. Nu permitem ștergerea propriului cont pe această rută
         if (member.getUser().getId().equals(requester.getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Folosește /api/v1/profile/account pentru a-ți șterge propriul cont.");
         }
 
         User targetUser = member.getUser();
-        log.info("Părinte {} șterge contul copilului {} din familia {}", sanitizeForLog(requester.getEmail()), sanitizeForLog(targetUser.getEmail()), familyId);
+        log.info("Părinte cu id={} șterge contul copilului cu id={} din familia id={}",
+                requester.getId(), targetUser.getId(), familyId);
 
-        // 5. Ștergem complet contul copilului
         profileService.deleteAccount(targetUser);
     }
 
@@ -222,8 +216,6 @@ public class FamilyService {
 
         familyMemberRepository.delete(member);
     }
-
-    // ── helpers ──────────────────────────────────────────────────────────────
 
     private void verifyMembership(Long familyId, User requester) {
         if (!familyMemberRepository.existsByFamilyIdAndUserId(familyId, requester.getId())) {
@@ -268,7 +260,6 @@ public class FamilyService {
         };
     }
 
-    // ── S5145 Log Injection prevention ─────────────────────────────────────
     private static String sanitizeForLog(String input) {
         if (input == null) return "null";
         return input.replace('\n', '_').replace('\r', '_');
