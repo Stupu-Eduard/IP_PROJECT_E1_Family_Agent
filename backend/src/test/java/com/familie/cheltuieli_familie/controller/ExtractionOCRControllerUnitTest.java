@@ -42,6 +42,7 @@ class ExtractionOCRControllerUnitTest {
         user.setPasswordH("hash");
 
         when(securityService.getCurrentUser()).thenReturn(user);
+        when(securityService.resolveScope()).thenReturn(new Long[]{null, 42L});
 
         MockMultipartFile fakePdf = new MockMultipartFile(
                 "file", "receipt.pdf", "application/pdf", "content".getBytes());

@@ -74,11 +74,8 @@ export default function ExpensesMapAll() {
     console.log('📡 HARTA LIVE: Se inițializează fluxul live prin THE PIPE...');
 
     const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
-    const wsUrl = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
-
-    // Send token via Sec-WebSocket-Protocol header instead of query param
-    const protocols = token ? [`auth-${token}`] : [];
-    const socket = new WebSocket(wsUrl + '/locatie', protocols);
+    const wsBase = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host;
+    const socket = new WebSocket(`${wsBase}/locatie?token=${encodeURIComponent(token)}`);
     socket.onopen = () => console.log('🟢 HARTA LIVE: Conectat la fluxul live!');
     socket.onmessage = (event) => {
       try {

@@ -67,11 +67,11 @@ public class ExtractionOCRController {
             cloudinaryUrl = cloudinaryService.uploadFile(tempFile, folder, publicId);
 
             List<Transaction> transactions = extractionPipelineService.processDocument(tempFile, bank);
-            
-            // Enforce ownership on all extracted transactions
+            Long[] scope = securityService.resolveScope();
+            Long familyId = scope[0];
+
             for (Transaction t : transactions) {
                 t.setUserId(currentUser.getId());
-                Long familyId = currentUser.getFamily() != null ? currentUser.getFamily().getId() : null;
                 t.setFamilyId(familyId);
                 if (cloudinaryUrl != null) {
                     t.setReceiptUrl(cloudinaryUrl);

@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.repository.LocationRepository;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import com.familie.cheltuieli_familie.security.service.LocationValidationService;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +15,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.filter.CharacterEncodingFilter;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,21 +34,25 @@ class ChildLocationControllerTest {
     @Mock
     private LocationValidationService locationValidationService;
     @Mock
-    private LocationRepository locationRepository; // import direct, nu fully-qualified
+    private LocationRepository locationRepository;
+    @Mock
+    private SecurityService securityService;
 
     @InjectMocks
     private ChildLocationController childLocationController;
 
     @BeforeEach
     void setUp() {
-        // MockitoAnnotations.openMocks(this) -- scoate asta, @ExtendWith face asta automat
-        mockMvc = MockMvcBuilders.standaloneSetup(childLocationController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(childLocationController)
+                .addFilter(new CharacterEncodingFilter("UTF-8", true))
+                .build();
     }
 
     @Test
     void testSyncLocationSuccess() throws Exception {
         Mockito.when(locationValidationService.isLocationValid(44.4268, 26.1025)).thenReturn(true);
-        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025)).thenReturn(1); // mock și repository-ul
+        Mockito.when(securityService.resolveScope()).thenReturn(new Long[]{2L, 1L}); // familyId=2, childId=1
+        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025)).thenReturn(1);
 
         String json = "{\"childId\":1,\"parentId\":2,\"latitude\":44.4268,\"longitude\":26.1025,\"placeTypes\":[]}";
 
@@ -67,5 +74,50 @@ class ChildLocationControllerTest {
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Eroare: Locatie GPS invalida (ex: 0,0). Sincronizare oprita."));
+    }
+
+    @Test
+    void testSyncLocation_unauthenticated() throws Exception {
+        Mockito.when(locationValidationService.isLocationValid(44.4268, 26.1025)).thenReturn(true);
+        Mockito.when(securityService.resolveScope()).thenReturn(new Long[]{null, null});
+
+        String json = "{\"childId\":1,\"parentId\":2,\"latitude\":44.4268,\"longitude\":26.1025,\"placeTypes\":[]}";
+
+        mockMvc.perform(post("/api/v1/child/location/sync")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string("Neautorizat."));
+    }
+
+    @Test
+    void testSyncLocation_childWithoutFamily() throws Exception {
+        Mockito.when(locationValidationService.isLocationValid(44.4268, 26.1025)).thenReturn(true);
+        Mockito.when(securityService.resolveScope()).thenReturn(new Long[]{null, 1L});
+        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025)).thenReturn(1);
+
+        String json = "{\"childId\":1,\"parentId\":2,\"latitude\":44.4268,\"longitude\":26.1025,\"placeTypes\":[]}";
+
+        mockMvc.perform(post("/api/v1/child/location/sync")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("familii.")));
+    }
+
+    @Test
+    void testSyncLocation_dbFailureStillSucceeds() throws Exception {
+        Mockito.when(locationValidationService.isLocationValid(44.4268, 26.1025)).thenReturn(true);
+        Mockito.when(securityService.resolveScope()).thenReturn(new Long[]{2L, 1L});
+        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025))
+                .thenThrow(new RuntimeException("DB error"));
+
+        String json = "{\"childId\":1,\"parentId\":2,\"latitude\":44.4268,\"longitude\":26.1025,\"placeTypes\":[]}";
+
+        mockMvc.perform(post("/api/v1/child/location/sync")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Locatie sincronizata cu succes."));
     }
 }
