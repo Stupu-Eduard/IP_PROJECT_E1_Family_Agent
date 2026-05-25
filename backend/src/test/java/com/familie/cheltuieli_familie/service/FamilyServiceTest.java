@@ -30,6 +30,50 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FamilyServiceTest {
+        @Test
+        void assignChildColorsIfMissing_assignsColorsAndCyclesPalette() {
+                // Create 12 children, some with markerColor, some without
+                List<FamilyMember> children = new java.util.ArrayList<>();
+                for (int i = 0; i < 12; i++) {
+                        FamilyMember child = new FamilyMember();
+                        child.setId((long) (200 + i));
+                        child.setRole("Child");
+                        child.setFamily(family);
+                        child.setUser(new User());
+                        // Set markerColor for even indices only
+                        if (i % 2 == 0) {
+                                child.setMarkerColor("#custom" + i);
+                        }
+                        children.add(child);
+                }
+
+                // Spy the service to call real method
+                FamilyService spyService = org.mockito.Mockito.spy(familyService);
+
+                // Call the method under test
+                spyService.assignChildColorsIfMissing(children);
+
+                // Verify that only children without markerColor got a color from the palette and were saved
+                String[] palette = {
+                        "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
+                        "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
+                };
+                int paletteIdx = 0;
+                for (int i = 0; i < children.size(); i++) {
+                        FamilyMember child = children.get(i);
+                        if (i % 2 == 0) {
+                                // Should keep custom color
+                                assertTrue(child.getMarkerColor().startsWith("#custom"));
+                        } else {
+                                // Should be assigned from palette, cycling if needed
+                                String expected = palette[paletteIdx % palette.length];
+                                assertEquals(expected, child.getMarkerColor());
+                                paletteIdx++;
+                                // Should be saved
+                                verify(familyMemberRepository).save(child);
+                        }
+                }
+        }
 
     @Mock private FamilyMemberRepository familyMemberRepository;
     @Mock private FamilyRepository familyRepository;
