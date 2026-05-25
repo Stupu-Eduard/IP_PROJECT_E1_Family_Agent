@@ -295,6 +295,18 @@ export default function ExpensesMapAll() {
   );
   const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 47.1585, lng: 27.6014 };
 
+  // Group expenses by exact lat/lng — multiple at same spot → single pin with total
+  const locationGroups = (() => {
+    const map = new Map<string, (MapExpense & { lat: number; lng: number })[]>();
+    filteredExpenses.forEach((e: any) => {
+      if (typeof e.lat !== 'number' || typeof e.lng !== 'number') return;
+      const key = `${e.lat},${e.lng}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    });
+    return Array.from(map.values());
+  })();
+
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
       <nav className="sticky top-0 z-10 bg-[#FAF8F5] border-b border-[#EDE9E3] px-6 lg:px-10 py-4 flex items-center gap-4">
@@ -636,26 +648,38 @@ export default function ExpensesMapAll() {
                   )}
 
                   <>
-                    {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => {
-                      const member = familyMembers.find(m => m.name === (e.person ?? ''));
+                    {locationGroups.map((group) => {
+                      const first = group[0];
+                      const isGroup = group.length > 1;
+                      const total = group.reduce((s, e) => s + (e.amount ?? 0), 0);
+                      const member = familyMembers.find(m => m.name === (first.person ?? ''));
                       const pinColor = member?.markerColor ?? '#FF0000';
+                      const labelText = isGroup
+                        ? (total >= 1000 ? `${(total / 1000).toFixed(1)}k RON` : `${Math.round(total)} RON`)
+                        : (first.amount ? `${first.amount} RON` : '');
                       return (
                         <Marker
-                          key={e.id}
-                          position={{ lat: e.lat, lng: e.lng }}
-                          title={e.description || e.location || ''}
+                          key={`${first.lat},${first.lng}`}
+                          position={{ lat: first.lat, lng: first.lng }}
+                          title={isGroup ? `${group.length} cheltuieli — ${Math.round(total)} RON` : (first.description || first.location || '')}
                           icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
-                          label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
-                            onClick={() => {
-                              setSelectedExpense(e);
+                          label={{ text: labelText, className: 'text-xs' }}
+                          onClick={() => {
+                              if (isGroup) {
+                                setClusterExpenses(group);
+                                setSelectedExpense(null);
+                                setPlace(null);
+                                return;
+                              }
+                              setSelectedExpense(first);
+                              setClusterExpenses([]);
                               setPlace(null);
                               setGoogleMapsUri(null);
                               setMessage(null);
-                              // fetch nearby place details (best-effort)
                               (async () => {
                                 try {
                                   if (!mapsApiKey) return;
-                                  const textQuery = (e.location || e.description || '').toString();
+                                  const textQuery = (first.location || first.description || '').toString();
                                   const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
                                     method: 'POST',
                                     headers: {
@@ -663,15 +687,15 @@ export default function ExpensesMapAll() {
                                       'X-Goog-Api-Key': mapsApiKey,
                                       'X-Goog-FieldMask': 'places.id,places.googleMapsUri',
                                     },
-                                    body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: e.lat, longitude: e.lng }, radius: 800 } } }),
+                                    body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: first.lat, longitude: first.lng }, radius: 800 } } }),
                                   });
                                   if (!res.ok) return;
                                   const data: any = await res.json();
-                                  const first = data?.places?.[0];
-                                  if (!first?.id) return;
-                                  setPlaceId(first.id);
-                                  setGoogleMapsUri(first.googleMapsUri ?? null);
-                                  const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(first.id)}`, {
+                                  const place0 = data?.places?.[0];
+                                  if (!place0?.id) return;
+                                  setPlaceId(place0.id);
+                                  setGoogleMapsUri(place0.googleMapsUri ?? null);
+                                  const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(place0.id)}`, {
                                     method: 'GET',
                                     headers: {
                                       'X-Goog-Api-Key': mapsApiKey,
