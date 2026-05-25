@@ -60,10 +60,10 @@ public class OcrController {
 
         try {
             File file = tempFilePath.toFile();
-            
+
             // Upload to Cloudinary FIRST so we have the photo even if OCR fails
             String cloudinaryUrl = uploadReceipt(file, user);
-            
+
             OcrResult ocrResult = extractOcrText(file, extension, originalName);
             String ocrText = ocrResult.text();
             double confidence = ocrResult.confidence();

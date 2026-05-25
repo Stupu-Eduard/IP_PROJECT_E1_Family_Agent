@@ -253,16 +253,18 @@ export default function Dashboard() {
     useEffect(() => {
         if (userRole === 'Child') return
         const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host
-        const wsUrl =
+        const wsBase =
             import.meta.env.VITE_WS_BASE_URL ||
             (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host
-        
-        // Send token via Sec-WebSocket-Protocol header instead of query param
-        const token = useAuthStore.getState().token
-        const protocols = token ? [`auth-${token}`] : []
-        const socket = new WebSocket(wsUrl + '/locatie', protocols)
-        
+        const currentToken = useAuthStore.getState().token
+        if (!currentToken) return
+        const wsUrl = `${wsBase}/locatie?token=${encodeURIComponent(currentToken)}`
+
+        let active = true
+        const socket = new WebSocket(wsUrl)
+
         socket.onmessage = (event) => {
+            if (!active) return
             try {
                 const data = JSON.parse(event.data)
                 if (data.lat !== undefined && data.lng !== undefined && data.childId !== undefined) {
@@ -271,7 +273,12 @@ export default function Dashboard() {
                 }
             } catch { /* ignoram */ }
         }
-        return () => socket.close()
+
+        return () => {
+            active = false
+            socket.onmessage = null
+            socket.close()
+        }
     }, [userRole, token])
 
     const handleKpiMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
