@@ -609,31 +609,47 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer options={{
-                    gridSize: 30,
-                    styles: [1, 2, 3].map(size => ({
-                      textColor: 'white',
-                      textSize: 13,
-                      width: 40,
-                      height: 40,
-                      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="#E53E3E" stroke="white" stroke-width="2"/></svg>`)}`,
-                    })),
-                  }}>
+                  <MarkerClusterer
+                    onLoad={(clustererInstance: any) => {
+                      clustererInstance.addListener('clusteringend', () => {
+                        clustererInstance.getClusters().forEach((cluster: any) => {
+                          if (cluster.getMarkers().length > 1) {
+                            const color = cluster.getMarkers()[0]?._expenseColor ?? '#E53E3E';
+                            const svg = `<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/></svg>`;
+                            const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+                            if (cluster.clusterIcon_?.div_) {
+                              cluster.clusterIcon_.div_.style.backgroundImage = `url("${url}")`;
+                              cluster.clusterIcon_.div_.style.backgroundSize = '40px 40px';
+                            }
+                          }
+                        });
+                      });
+                    }}
+                    options={{
+                      gridSize: 30,
+                      styles: [1, 2, 3].map(() => ({
+                        textColor: 'white',
+                        textSize: 13,
+                        width: 40,
+                        height: 40,
+                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="#9A8A7C" stroke="white" stroke-width="2"/></svg>')}`,
+                      })),
+                    }}
+                  >
                     {(clusterer: any) => (
                       <>
-                        {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
+                        {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => {
+                          const member = familyMembers.find(m => m.name === (e.person ?? ''));
+                          const pinColor = member?.markerColor ?? '#FF0000';
+                          return (
                           <Marker
                             key={e.id}
                             position={{ lat: e.lat, lng: e.lng }}
                             clusterer={clusterer}
                             title={e.description || e.location || ''}
-                            icon={(() => {
-                              const personName = e.person ?? ''
-                              const member = familyMembers.find(m => m.name === personName)
-                              const color = member?.markerColor ?? '#FF0000'
-                              return { url: getColoredPin(color), scaledSize: new (window as any).google.maps.Size(32, 32) }
-                            })()}
+                            icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
                             label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
+                            onLoad={(markerInstance: any) => { markerInstance._expenseColor = pinColor; }}
                             onClick={() => {
                               setSelectedExpense(e);
                               setPlace(null);
@@ -687,7 +703,8 @@ export default function ExpensesMapAll() {
                               })();
                             }}
                           />
-                        ))}
+                          );
+                        })}
                       </>
                     )}
                   </MarkerClusterer>
