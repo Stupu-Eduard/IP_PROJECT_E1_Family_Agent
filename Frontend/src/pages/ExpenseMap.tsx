@@ -47,7 +47,7 @@ export default function ExpenseMap() {
     libraries: ['drawing', 'geometry'],
   })
 
-  const [center, setCenter] = useState<LatLng>({ lat: 44.4268, lng: 26.1025 })
+  const [center, setCenter] = useState<LatLng>({ lat: 47.1585, lng: 27.6014 })
   const [marker, setMarker] = useState<LatLng | null>(null)
   const [infoOpen, setInfoOpen] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
