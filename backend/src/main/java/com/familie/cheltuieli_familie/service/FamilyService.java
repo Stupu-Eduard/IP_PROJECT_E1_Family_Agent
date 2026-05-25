@@ -55,7 +55,11 @@ public class FamilyService {
         familyMemberRepository.save(member);
         expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
+<<<<<<< Updated upstream
         log.info("Familie nouă creată: id={}", savedFamily.getId());
+=======
+        log.info("Familie nouă creată: '{}' (id={}) de către {}", sanitizeForLog(savedFamily.getName()), savedFamily.getId(), requester.getEmail());
+>>>>>>> Stashed changes
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",   requester.getId());
@@ -287,4 +291,17 @@ public class FamilyService {
             default          -> ROLE_CHILD;
         };
     }
+<<<<<<< Updated upstream
 }
+=======
+
+    /**
+     * S5145 – Log Injection: sanitizează valorile provenite din input extern
+     * înainte de a fi scrise în log, eliminând caracterele CR/LF.
+     */
+    private static String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replace('\n', '_').replace('\r', '_');
+    }
+}
+>>>>>>> Stashed changes

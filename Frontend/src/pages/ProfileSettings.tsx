@@ -4,19 +4,11 @@ import { useAuthStore } from '../store/authStore'
 import { PREDEFINED_AVATARS, findPredefinedAvatar, isRemoteAvatarUrl } from '../utils/avatars'
 import PersonSvg from '../components/PersonSvg'
 import { profileApi } from '../services/api'
+import { decodeJwtPayload } from '../utils/jwt'
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const DELETE_CONFIRMATION_PHRASE = 'STERGE CONT'
-
-// ── Helpers JWT ───────────────────────────────────────────────────────────────
-function decodeJwtPayload(token: string): Record<string, string> {
-    try {
-        return JSON.parse(atob(token.split('.')[1]))
-    } catch {
-        return {}
-    }
-}
 
 // ── Modal confirmare ștergere cont ────────────────────────────────────────────
 interface DeleteAccountModalProps {
@@ -305,9 +297,9 @@ export default function ProfileSettings() {
     let userName = 'Utilizator'
 
     if (token) {
-        const payload = decodeJwtPayload(token)
-        userRole = payload.role || 'Parent'
-        const fullName = payload.name || payload.sub || ''
+        const payload = decodeJwtPayload(token) as { role?: string; name?: string; sub?: string } | null
+        userRole = payload?.role || 'Parent'
+        const fullName = payload?.name || payload?.sub || ''
         if (fullName) {
             const parts = fullName.split(' ')
             userName = parts[0] || fullName

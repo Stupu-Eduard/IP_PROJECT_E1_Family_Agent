@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import PersonSvg from './PersonSvg'
 import { findPredefinedAvatar, isRemoteAvatarUrl } from '../utils/avatars'
+import { decodeJwtPayload } from '../utils/jwt'
 
 // ── Nav items Părinte ──────────────────────────────────────────────────────
 const parentNavItems = [
@@ -55,8 +56,8 @@ export default function Sidebar() {
     let familyLabel   = 'Family Agent'
 
     if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]))
+        const payload = decodeJwtPayload(token) as { role?: string; name?: string; sub?: string; familyName?: string } | null
+        if (payload) {
             userRole = payload.role || 'Parent'
 
             // Extragem numele din câmpul name sau sub (email)
@@ -74,7 +75,7 @@ export default function Sidebar() {
             }
 
             userRoleLabel = userRole === 'Child' ? 'Copil · Activ' : 'Părinte · Activ'
-        } catch { /* ignore JWT parse error */ }
+        }
     }
 
     const isChild  = userRole === 'Child'
