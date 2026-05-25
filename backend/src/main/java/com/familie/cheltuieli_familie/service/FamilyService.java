@@ -25,6 +25,7 @@ import java.util.Map;
 public class FamilyService {
 
     private static final String ROLE_PARENT    = "Parent";
+    private static final String ROLE_CHILD     = "Child";
     private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
 
     private final FamilyMemberRepository familyMemberRepository;
@@ -83,9 +84,9 @@ public class FamilyService {
     @Transactional
     void assignChildColorsIfMissing(List<FamilyMember> members) {
         List<FamilyMember> children = members.stream()
-                .filter(m -> "Child".equalsIgnoreCase(normalizeRole(m.getRole())))
-                .sorted((a, b) -> Long.compare(a.getId() == null ? 0L : a.getId(), b.getId() == null ? 0L : b.getId()))
-                .toList();
+            .filter(m -> ROLE_CHILD.equalsIgnoreCase(normalizeRole(m.getRole())))
+            .sorted((a, b) -> Long.compare(a.getId() == null ? 0L : a.getId(), b.getId() == null ? 0L : b.getId()))
+            .toList();
 
         for (int i = 0; i < children.size(); i++) {
             FamilyMember child = children.get(i);
@@ -251,12 +252,12 @@ public class FamilyService {
     }
 
     private String normalizeRole(String role) {
-        if (role == null) return "Child";
+        if (role == null) return ROLE_CHILD;
         return switch (role.toLowerCase()) {
             case "parent"    -> ROLE_PARENT;
             case "co-parent" -> "Co-Parent";
             case "adult"     -> "Adult";
-            default          -> "Child";
+            default          -> ROLE_CHILD;
         };
     }
 }
