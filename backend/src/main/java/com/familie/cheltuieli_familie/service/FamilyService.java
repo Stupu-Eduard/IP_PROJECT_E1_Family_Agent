@@ -26,6 +26,7 @@ public class FamilyService {
 
     private static final String ROLE_PARENT    = "Parent";
     private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
+    private static final String ERR_MEMBER_NOT_FOUND = "Membrul nu există.";
 
     private final FamilyMemberRepository familyMemberRepository;
     private final FamilyRepository       familyRepository;
@@ -126,7 +127,7 @@ public class FamilyService {
         }
 
         FamilyMember member = familyMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
@@ -167,7 +168,7 @@ public class FamilyService {
         verifyAdultRole(familyId, requester);
 
         FamilyMember member = familyMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
@@ -194,7 +195,7 @@ public class FamilyService {
         verifyAdultRole(familyId, requester);
 
         FamilyMember member = familyMemberRepository.findById(memberId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membrul nu există."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ERR_MEMBER_NOT_FOUND));
 
         if (!member.getFamily().getId().equals(familyId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Membrul nu aparține acestei familii.");
