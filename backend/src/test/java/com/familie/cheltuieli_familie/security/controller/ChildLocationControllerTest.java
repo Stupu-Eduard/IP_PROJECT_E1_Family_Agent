@@ -4,6 +4,7 @@ import com.familie.cheltuieli_familie.repository.LocationRepository;
 import com.familie.cheltuieli_familie.security.service.LocationStreamService;
 import com.familie.cheltuieli_familie.security.service.LocationValidationService;
 import com.familie.cheltuieli_familie.security.service.MinorSafetyFilterService;
+import com.familie.cheltuieli_familie.security.util.SecurityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,9 @@ class ChildLocationControllerTest {
     @Mock
     private LocationValidationService locationValidationService;
     @Mock
-    private LocationRepository locationRepository; // import direct, nu fully-qualified
+    private LocationRepository locationRepository;
+    @Mock
+    private SecurityService securityService;
 
     @InjectMocks
     private ChildLocationController childLocationController;
@@ -45,7 +48,8 @@ class ChildLocationControllerTest {
     @Test
     void testSyncLocationSuccess() throws Exception {
         Mockito.when(locationValidationService.isLocationValid(44.4268, 26.1025)).thenReturn(true);
-        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025)).thenReturn(1); // mock și repository-ul
+        Mockito.when(securityService.resolveScope()).thenReturn(new Long[]{2L, 1L}); // familyId=2, childId=1
+        Mockito.when(locationRepository.updateCoordinates(1L, 44.4268, 26.1025)).thenReturn(1);
 
         String json = "{\"childId\":1,\"parentId\":2,\"latitude\":44.4268,\"longitude\":26.1025,\"placeTypes\":[]}";
 
