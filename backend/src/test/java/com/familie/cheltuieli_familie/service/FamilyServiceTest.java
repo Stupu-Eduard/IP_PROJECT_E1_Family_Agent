@@ -33,7 +33,6 @@ import static org.mockito.Mockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class FamilyServiceTest {
 
-
     @Mock
     private FamilyMemberRepository familyMemberRepository;
 
@@ -49,7 +48,6 @@ class FamilyServiceTest {
     @Mock
     private BudgetRepository budgetRepository;
 
-    // Am adăugat mock-ul lipsă pentru profileService
     @Mock
     private ProfileService profileService;
 
@@ -87,7 +85,6 @@ class FamilyServiceTest {
 
     @Test
     void assignChildColorsIfMissing_assignsColorsAndCyclesPalette() {
-        // Create 12 children, some with markerColor, some without
         List<FamilyMember> children = new java.util.ArrayList<>();
         for (int i = 0; i < 12; i++) {
             FamilyMember child = new FamilyMember();
@@ -95,35 +92,27 @@ class FamilyServiceTest {
             child.setRole("Child");
             child.setFamily(family);
             child.setUser(new User());
-            // Set markerColor for even indices only
             if (i % 2 == 0) {
                 child.setMarkerColor("#custom" + i);
             }
             children.add(child);
         }
 
-        // Spy the service to call real method
         FamilyService spyService = org.mockito.Mockito.spy(familyService);
-
-        // Call the method under test
         spyService.assignChildColorsIfMissing(children);
 
-        // Verify that only children without markerColor got a color from the palette and were saved, in sorted order by ID
         String[] palette = {
                 "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
                 "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
         };
-        // Sort all children by ID to match service logic
         List<FamilyMember> sortedChildren = new java.util.ArrayList<>(children);
         sortedChildren.sort((a, b) -> Long.compare(a.getId(), b.getId()));
         for (int i = 0; i < sortedChildren.size(); i++) {
             FamilyMember child = sortedChildren.get(i);
             String expectedColor = palette[i % palette.length];
             if ((child.getId() - 200) % 2 == 0) {
-                // Even index: should keep custom color
                 assertTrue(child.getMarkerColor().startsWith("#custom"));
             } else {
-                // Odd index: should be assigned from palette
                 assertEquals(expectedColor, child.getMarkerColor());
                 verify(familyMemberRepository).save(child);
             }
@@ -285,8 +274,10 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
 
+        // Pregătim argumentele înainte de lambda — o singură invocare throwing
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.updateMemberRole(family.getId(), 200L, "child", requester));
+                () -> familyService.updateMemberRole(familyId, 200L, "child", requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         assertTrue(ex.getReason().contains("fondatorului"));
     }
@@ -326,7 +317,9 @@ class FamilyServiceTest {
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(targetMember));
         when(familyMemberRepository.save(any())).thenReturn(targetMember);
 
-        FamilyMemberDTO result = familyService.updateMemberRole(family.getId(), 200L, null, requester);
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
+        FamilyMemberDTO result = familyService.updateMemberRole(familyId, 200L, null, requester);
 
         assertEquals("Child", result.getRole());
         verify(familyMemberRepository).save(any());
@@ -384,8 +377,10 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(ownerMember));
 
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.removeMember(family.getId(), 200L, requester));
+                () -> familyService.removeMember(familyId, 200L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         assertTrue(ex.getReason().contains("Fondatorul"));
     }
@@ -405,10 +400,7 @@ class FamilyServiceTest {
         when(familyMemberRepository.findByFamilyIdAndUserId(10L, 1L)).thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(20L)).thenReturn(Optional.of(childMember));
 
-        // Corectat ca să apeleze deleteChildAccount în loc de removeMember
         assertDoesNotThrow(() -> familyService.deleteChildAccount(10L, 20L, requester));
-        
-        // Verificăm dacă serviciul de profile este apelat să șteargă copilul
         verify(profileService).deleteAccount(childUser);
     }
 
@@ -426,8 +418,10 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(300L)).thenReturn(Optional.of(parentMember));
 
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteChildAccount(family.getId(), 300L, requester));
+                () -> familyService.deleteChildAccount(familyId, 300L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(profileService, never()).deleteAccount(any());
     }
@@ -444,8 +438,10 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(100L)).thenReturn(Optional.of(selfMember));
 
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteChildAccount(family.getId(), 100L, requester));
+                () -> familyService.deleteChildAccount(familyId, 100L, requester));
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         verify(profileService, never()).deleteAccount(any());
     }
@@ -467,8 +463,10 @@ class FamilyServiceTest {
                 .thenReturn(Optional.of(parentMembership));
         when(familyMemberRepository.findById(200L)).thenReturn(Optional.of(memberOfOtherFamily));
 
+        // O singură invocare throwing în lambda
+        Long familyId = family.getId();
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> familyService.deleteChildAccount(family.getId(), 200L, requester));
+                () -> familyService.deleteChildAccount(familyId, 200L, requester));
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 }
