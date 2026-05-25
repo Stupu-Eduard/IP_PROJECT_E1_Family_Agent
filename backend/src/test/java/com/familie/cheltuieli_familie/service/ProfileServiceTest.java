@@ -119,7 +119,7 @@ class ProfileServiceTest {
     }
 
     @Test
-    void uploadAvatarFile_success_jpgExtension() throws Exception {
+    void uploadAvatarFile_success_jpgExtension()  {
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
         when(cloudinaryService.uploadFile(any(File.class), eq("avatars"), eq("user_1_avatar")))
                 .thenReturn("https://cloudinary.com/user_1_avatar");
@@ -133,7 +133,7 @@ class ProfileServiceTest {
     }
 
     @Test
-    void uploadAvatarFile_success_noExtension_defaultsToJpg() throws Exception {
+    void uploadAvatarFile_success_noExtension_defaultsToJpg()  {
         // Fără extensie dar cu content type valid → acceptat
         MockMultipartFile file = new MockMultipartFile("file", "photo", "image/jpeg", "data".getBytes());
         when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))

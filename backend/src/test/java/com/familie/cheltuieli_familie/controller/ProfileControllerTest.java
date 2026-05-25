@@ -56,8 +56,11 @@ class ProfileControllerTest {
     void updatePredefinedAvatar_throwsUnauthorized_whenUserIsNull() {
         when(securityService.getCurrentUser()).thenReturn(null);
 
+        // Extragem Map-ul în afara expresiei lambda pentru a satisface SonarQube
+        Map<String, String> requestBody = Map.of("avatarId", "av_f_pink");
+
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.updatePredefinedAvatar(Map.of("avatarId", "av_f_pink")));
+                () -> controller.updatePredefinedAvatar(requestBody));
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
         verify(profileService, never()).updatePredefinedAvatar(any(), any());

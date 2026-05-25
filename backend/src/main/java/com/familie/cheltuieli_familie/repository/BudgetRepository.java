@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.repository;
 
 import com.familie.cheltuieli_familie.model.Budget;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;

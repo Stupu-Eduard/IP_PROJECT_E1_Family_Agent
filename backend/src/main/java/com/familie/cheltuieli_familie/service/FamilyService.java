@@ -138,7 +138,7 @@ public class FamilyService {
         }
 
         Long ownerId = member.getFamily().getOwnerId();
-        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
+        if (member.getUser().getId().equals(ownerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rolul fondatorului familiei nu poate fi modificat.");
         }
 
@@ -202,7 +202,7 @@ public class FamilyService {
         }
 
         Long ownerId = member.getFamily().getOwnerId();
-        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
+        if (member.getUser().getId().equals(ownerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Fondatorul familiei nu poate fi eliminat.");
         }
 
@@ -240,7 +240,7 @@ public class FamilyService {
 
     private FamilyMemberDTO toDTO(FamilyMember m) {
         Long ownerId = m.getFamily().getOwnerId();
-        boolean isOwner = ownerId != null && m.getUser().getId().equals(ownerId);
+        boolean isOwner = m.getUser().getId().equals(ownerId);
         return new FamilyMemberDTO(
                 m.getId(),
                 m.getUser().getId(),
@@ -259,10 +259,5 @@ public class FamilyService {
             case "adult"     -> "Adult";
             default          -> "Child";
         };
-    }
-
-    private static String sanitizeForLog(String input) {
-        if (input == null) return "null";
-        return input.replace('\n', '_').replace('\r', '_');
     }
 }
