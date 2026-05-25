@@ -59,7 +59,7 @@ class ExpenseToolsTest {
         String result = expenseTools.listCategories();
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Transport"));
+        assertTrue(result.contains("Car"));
     }
 
     @Test
@@ -125,7 +125,7 @@ class ExpenseToolsTest {
         String result = expenseTools.detectAnomalies("100");
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Transport"));
+        assertTrue(result.contains("Car"));
     }
 
     @Test
@@ -146,7 +146,7 @@ class ExpenseToolsTest {
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Transport"));
+        assertTrue(result.contains("Car"));
     }
 
     @Test

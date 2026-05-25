@@ -109,6 +109,16 @@ class ProfileServiceTest {
     }
 
     @Test
+    void uploadAvatarFile_throwsBadRequest_whenContentTypeNotAllowed() {
+        // .sh cu text/plain nu este permis — serviciul aruncă 400
+        MockMultipartFile file = new MockMultipartFile("file", "malicious.sh", "text/plain", "data".getBytes());
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> profileService.uploadAvatarFile(file, user));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verifyNoInteractions(cloudinaryService, userRepository);
+    }
+
+    @Test
     void uploadAvatarFile_success_jpgExtension() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "data".getBytes());
         when(cloudinaryService.uploadFile(any(File.class), eq("avatars"), eq("user_1_avatar")))
@@ -124,6 +134,7 @@ class ProfileServiceTest {
 
     @Test
     void uploadAvatarFile_success_noExtension_defaultsToJpg() throws Exception {
+        // Fără extensie dar cu content type valid → acceptat
         MockMultipartFile file = new MockMultipartFile("file", "photo", "image/jpeg", "data".getBytes());
         when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))
                 .thenReturn("https://cloudinary.com/avatar");
@@ -134,20 +145,11 @@ class ProfileServiceTest {
     }
 
     @Test
-    void uploadAvatarFile_success_unsafeExtension_defaultsToJpg() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("file", "malicious.sh", "text/plain", "data".getBytes());
-        when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))
-                .thenReturn("https://cloudinary.com/avatar");
-        when(userRepository.save(user)).thenReturn(user);
-
-        AvatarResponseDTO result = profileService.uploadAvatarFile(file, user);
-        assertNotNull(result.getAvatarUrl());
-    }
-
-    @Test
     void uploadAvatarFile_throwsInternalServerError_whenTransferFails() throws Exception {
+        // Content type valid, dar transferTo aruncă IOException → 500
         MultipartFile mockFile = mock(MultipartFile.class);
         when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getContentType()).thenReturn("image/jpeg");
         doThrow(new IOException("disk full")).when(mockFile).transferTo(any(java.nio.file.Path.class));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
@@ -222,9 +224,7 @@ class ProfileServiceTest {
 
         profileService.deleteAccount(user);
 
-        // Familia NU e ștearsă
         verify(familyRepository, never()).delete(any());
-        // Membrul e scos
         verify(familyMemberRepository).delete(myMembership);
         verify(userRepository).delete(user);
     }

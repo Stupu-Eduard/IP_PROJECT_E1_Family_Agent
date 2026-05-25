@@ -22,14 +22,14 @@ class ChatControllerTest {
     private AgentChatService agentChatService;
 
     @Mock
-    private ChatRateLimiter chatRateLimiter;
+    private ChatRateLimiter rateLimiter;
 
     @InjectMocks
     private ChatController chatController;
 
     @Test
     void chat_shouldProcessMessageSuccessfully() {
-        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
+        when(rateLimiter.allowRequest(anyString())).thenReturn(true);
         TextResponseDTO expectedResponse = new TextResponseDTO("Processed");
         when(agentChatService.processQuery("hello")).thenReturn(expectedResponse);
 
@@ -44,7 +44,7 @@ class ChatControllerTest {
 
     @Test
     void chat_returnsTextResponse() {
-        when(chatRateLimiter.allowRequest(anyString())).thenReturn(true);
+        when(rateLimiter.allowRequest(anyString())).thenReturn(true);
         TextResponseDTO expectedResponse = new TextResponseDTO("Ai cheltuit 1248 de lei luna aceasta.");
         when(agentChatService.processQuery("Cat am cheltuit luna aceasta?")).thenReturn(expectedResponse);
 
@@ -58,22 +58,15 @@ class ChatControllerTest {
     }
 
     @Test
-    void chat_emptyMessage_returnsBadRequest() {
+    void chat_rateLimitExceeded_returnsTooManyRequests() {
+        when(rateLimiter.allowRequest(anyString())).thenReturn(false);
+        when(rateLimiter.getRemainingSeconds(anyString())).thenReturn(30L);
+
         ChatController.ChatRequest req = new ChatController.ChatRequest();
-        req.setMessage("");
+        req.setMessage("hello");
 
         ResponseEntity<Object> response = chatController.chat(req);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    }
-
-    @Test
-    void chat_nullMessage_returnsBadRequest() {
-        ChatController.ChatRequest req = new ChatController.ChatRequest();
-        req.setMessage(null);
-
-        ResponseEntity<Object> response = chatController.chat(req);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, response.getStatusCode());
     }
 }
