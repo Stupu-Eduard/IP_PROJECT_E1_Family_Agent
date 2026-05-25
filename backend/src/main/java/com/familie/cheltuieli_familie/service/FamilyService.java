@@ -24,9 +24,9 @@ import java.util.Map;
 @Slf4j
 public class FamilyService {
 
-    private static final String ROLE_PARENT    = "Parent";
-    private static final String ROLE_CHILD     = "Child";
-    private static final String ERR_NOT_MEMBER = "Nu ești membru al acestei familii.";
+    private static final String ROLE_PARENT       = "Parent";
+    private static final String ROLE_CHILD        = "Child";
+    private static final String ERR_NOT_MEMBER    = "Nu ești membru al acestei familii.";
     private static final String ERR_MEMBER_NOT_FOUND = "Membrul nu există.";
 
     private final FamilyMemberRepository familyMemberRepository;
@@ -55,17 +55,13 @@ public class FamilyService {
         familyMemberRepository.save(member);
         expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
-<<<<<<< Updated upstream
-        log.info("Familie nouă creată: id={}", savedFamily.getId());
-=======
-        log.info("Familie nouă creată: '{}' (id={}) de către {}", sanitizeForLog(savedFamily.getName()), savedFamily.getId(), requester.getEmail());
->>>>>>> Stashed changes
+        log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId",   requester.getId());
-        claims.put("role",     ROLE_PARENT);
-        claims.put("name",     requester.getName());
-        claims.put("familyId", savedFamily.getId());
+        claims.put("userId",     requester.getId());
+        claims.put("role",       ROLE_PARENT);
+        claims.put("name",       requester.getName());
+        claims.put("familyId",   savedFamily.getId());
         claims.put("familyName", savedFamily.getName());
         String newToken = jwtUtil.generateToken(requester.getEmail(), claims);
 
@@ -127,7 +123,7 @@ public class FamilyService {
         budgetRepository.clearFamilyFromBudgets(familyId);
         familyMemberRepository.deleteAll(allMembers);
         familyRepository.delete(family);
-        log.info("Familie ștearsă: id={}", familyId);
+        log.info("Familie ștearsă: id={} de către {}", familyId, requester.getEmail());
     }
 
     public void leaveFamily(Long familyId, User requester) {
@@ -168,7 +164,7 @@ public class FamilyService {
         }
 
         Long ownerId = member.getFamily().getOwnerId();
-        if (member.getUser().getId().equals(ownerId)) {
+        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rolul fondatorului familiei nu poate fi modificat.");
         }
 
@@ -177,6 +173,7 @@ public class FamilyService {
             return toDTO(member);
         }
 
+        // guard: nu putem scoate ultimul Parent
         if (isParentRole(member.getRole()) && !isParentRole(normalized)) {
             long parentCount = familyMemberRepository.findByFamilyId(familyId).stream()
                     .filter(m -> isParentRole(m.getRole()))
@@ -189,7 +186,7 @@ public class FamilyService {
 
         member.setRole(normalized);
         familyMemberRepository.save(member);
-        log.info("Rol schimbat pentru memberId={} la rol={}", memberId, normalized);
+        log.info("Rol schimbat: membrul {} → {} de către {}", member.getUser().getEmail(), normalized, requester.getEmail());
         return toDTO(member);
     }
 
@@ -232,7 +229,7 @@ public class FamilyService {
         }
 
         Long ownerId = member.getFamily().getOwnerId();
-        if (member.getUser().getId().equals(ownerId)) {
+        if (ownerId != null && member.getUser().getId().equals(ownerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Fondatorul familiei nu poate fi eliminat.");
         }
 
@@ -247,6 +244,8 @@ public class FamilyService {
 
         familyMemberRepository.delete(member);
     }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     private void verifyMembership(Long familyId, User requester) {
         if (!familyMemberRepository.existsByFamilyIdAndUserId(familyId, requester.getId())) {
@@ -270,7 +269,7 @@ public class FamilyService {
 
     private FamilyMemberDTO toDTO(FamilyMember m) {
         Long ownerId = m.getFamily().getOwnerId();
-        boolean isOwner = m.getUser().getId().equals(ownerId);
+        boolean isOwner = ownerId != null && m.getUser().getId().equals(ownerId);
         return new FamilyMemberDTO(
                 m.getId(),
                 m.getUser().getId(),
@@ -291,17 +290,4 @@ public class FamilyService {
             default          -> ROLE_CHILD;
         };
     }
-<<<<<<< Updated upstream
 }
-=======
-
-    /**
-     * S5145 – Log Injection: sanitizează valorile provenite din input extern
-     * înainte de a fi scrise în log, eliminând caracterele CR/LF.
-     */
-    private static String sanitizeForLog(String input) {
-        if (input == null) return "null";
-        return input.replace('\n', '_').replace('\r', '_');
-    }
-}
->>>>>>> Stashed changes

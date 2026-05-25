@@ -2,10 +2,8 @@ package com.familie.cheltuieli_familie.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString; 
+
 import java.time.LocalDate;
-import java.util.List;
 
 @Entity
 @Table(name = "families")
@@ -23,9 +21,4 @@ public class Family {
 
     @Column(name = "owner_id")
     private Long ownerId;
-
-    @OneToMany(mappedBy = "family", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<User> members;
 }
