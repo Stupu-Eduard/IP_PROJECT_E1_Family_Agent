@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,18 @@ public class ProfileService {
     private final AnswerRepository           answerRepository;
     private final FamilyInvitationRepository familyInvitationRepository;
 
+    // ── Security: whitelist avatar IDs + content types ──────────────────────
+
+    private static final Set<String> ALLOWED_AVATAR_IDS = Set.of(
+        "av_f_pink", "av_m_pink", "av_f_purple", "av_m_purple",
+        "av_f_blue", "av_m_blue", "av_f_dark", "av_m_dark",
+        "av_f_yellow", "av_m_yellow"
+    );
+
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+        "image/jpeg", "image/png", "image/webp", "image/gif"
+    );
+
     // ── Avatar predefinit ─────────────────────────────────────────────────────
 
     @Transactional
@@ -45,9 +58,12 @@ public class ProfileService {
         if (avatarId == null || avatarId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "avatarId este obligatoriu.");
         }
+        if (!ALLOWED_AVATAR_IDS.contains(avatarId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Avatar ID invalid.");
+        }
         user.setAvatarUrl(avatarId);
         userRepository.save(user);
-        log.info("Avatar predefinit actualizat pentru {}: {}", user.getEmail(), sanitizeForLog(avatarId));
+        log.info("Avatar predefinit actualizat pentru {}: {}", sanitizeForLog(user.getEmail()), sanitizeForLog(avatarId));
         return new AvatarResponseDTO(avatarId);
     }
 
@@ -59,11 +75,14 @@ public class ProfileService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Fișierul este gol.");
         }
 
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Format nepermis. Acceptă doar: JPEG, PNG, WEBP, GIF.");
+        }
+
         Path tempPath = null;
         try {
-            // S2083: never derive temp-file path from getOriginalFilename() (user-controlled).
-            // Cloudinary auto-detects image format from file content, so a fixed suffix is sufficient.
-            // S5443: Files.createTempFile (NIO2) creates the file with owner-only permissions.
             tempPath = Files.createTempFile("avatar_" + user.getId() + "_", ".tmp");
             file.transferTo(tempPath);
 
@@ -71,11 +90,11 @@ public class ProfileService {
 
             user.setAvatarUrl(url);
             userRepository.save(user);
-            log.info("Avatar uploadat pe Cloudinary pentru {}: {}", user.getEmail(), url);
+            log.info("Avatar uploadat pe Cloudinary pentru {}", sanitizeForLog(user.getEmail()));
             return new AvatarResponseDTO(url);
 
         } catch (IOException e) {
-            log.error("Eroare la upload avatar pentru {}", user.getEmail(), e);
+            log.error("Eroare la upload avatar pentru {}", sanitizeForLog(user.getEmail()), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Eroare la procesarea fișierului.");
         } finally {
@@ -94,9 +113,8 @@ public class ProfileService {
     @Transactional
     public void deleteAccount(User user) {
         Long userId = user.getId();
-        log.info("Început ștergere cont pentru userId={}, email={}", userId, user.getEmail());
+        log.info("Început ștergere cont pentru userId={}", userId);
 
-        // 1. Gestionăm familiile
         List<FamilyMember> memberships = familyMemberRepository.findByUserId(userId);
         for (FamilyMember membership : memberships) {
             Family family = membership.getFamily();
@@ -106,30 +124,22 @@ public class ProfileService {
             List<FamilyMember> allMembers = familyMemberRepository.findByFamilyId(familyId);
 
             if (allMembers.size() == 1) {
-                // Singurul membru — ștergem toată familia
                 expenseRepository.clearFamilyFromExpenses(familyId);
                 budgetRepository.clearFamilyFromBudgets(familyId);
                 familyMemberRepository.deleteAll(allMembers);
                 familyRepository.delete(family);
                 log.info("Familie ștearsă (singur membru): familyId={}", familyId);
             } else {
-                // Există și alți membri — ieșim doar noi
                 familyMemberRepository.delete(membership);
                 log.info("User scos din familie: userId={}, familyId={}", userId, familyId);
             }
         }
 
-        // 2. Decuplăm cheltuielile userului (rămân în familie cu user_id = NULL)
         expenseRepository.nullifyUserFromExpenses(userId);
-
-        // 3. Ștergem răspunsurile la întrebările de securitate
         answerRepository.findByUserId(userId).ifPresent(answerRepository::delete);
-
-        // 4. Ștergem invitațiile primite (după email) și trimise (după invitedBy)
         familyInvitationRepository.deleteByInviteeEmail(user.getEmail());
         familyInvitationRepository.deleteByInvitedById(userId);
 
-        // 5. Ștergem userul
         userRepository.delete(user);
         log.info("Cont șters complet: userId={}", userId);
     }
@@ -140,7 +150,7 @@ public class ProfileService {
      * S5145 – Log Injection: sanitizează valorile provenite din input extern
      * înainte de a fi scrise în log, eliminând caracterele CR/LF.
      */
-    private static String sanitizeForLog(String input) {
+    static String sanitizeForLog(String input) {
         if (input == null) return "null";
         return input.replace('\n', '_').replace('\r', '_');
     }

@@ -34,7 +34,7 @@ public class VisualIntentExtractor {
                                   String defaultGroupBy,
                                   String defaultSeriesBy) {
         this.chatLanguageModel = chatLanguageModel;
-        this.maxRetries = maxRetries;
+        this.maxRetries = Math.min(maxRetries, 2);
         this.retryDelaysMs = retryDelaysMs;
         this.defaultGroupBy = defaultGroupBy;
         this.defaultSeriesBy = defaultSeriesBy;

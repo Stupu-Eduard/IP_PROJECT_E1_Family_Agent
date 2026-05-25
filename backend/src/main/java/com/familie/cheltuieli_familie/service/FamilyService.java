@@ -54,7 +54,7 @@ public class FamilyService {
         familyMemberRepository.save(member);
         expenseRepository.linkUserExpensesToFamily(requester.getId(), savedFamily.getId());
 
-        log.info("Familie nouă creată: '{}' (id={}) de către {}", savedFamily.getName(), savedFamily.getId(), requester.getEmail());
+        log.info("Familie nouă creată: '{}' (id={}) de către {}", sanitizeForLog(savedFamily.getName()), savedFamily.getId(), sanitizeForLog(requester.getEmail()));
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",   requester.getId());
@@ -97,7 +97,7 @@ public class FamilyService {
         budgetRepository.clearFamilyFromBudgets(familyId);
         familyMemberRepository.deleteAll(allMembers);
         familyRepository.delete(family);
-        log.info("Familie ștearsă: id={} de către {}", familyId, requester.getEmail());
+        log.info("Familie ștearsă: id={} de către {}", familyId, sanitizeForLog(requester.getEmail()));
     }
 
     public void leaveFamily(Long familyId, User requester) {
@@ -160,7 +160,7 @@ public class FamilyService {
 
         member.setRole(normalized);
         familyMemberRepository.save(member);
-        log.info("Rol schimbat: membrul {} → {} de către {}", member.getUser().getEmail(), normalized, requester.getEmail());
+        log.info("Rol schimbat: membrul {} → {} de către {}", sanitizeForLog(member.getUser().getEmail()), normalized, sanitizeForLog(requester.getEmail()));
         return toDTO(member);
     }
 
@@ -190,7 +190,7 @@ public class FamilyService {
         }
 
         User targetUser = member.getUser();
-        log.info("Părinte {} șterge contul copilului {} din familia {}", requester.getEmail(), targetUser.getEmail(), familyId);
+        log.info("Părinte {} șterge contul copilului {} din familia {}", sanitizeForLog(requester.getEmail()), sanitizeForLog(targetUser.getEmail()), familyId);
 
         // 5. Ștergem complet contul copilului
         profileService.deleteAccount(targetUser);
@@ -266,5 +266,11 @@ public class FamilyService {
             case "adult"     -> "Adult";
             default          -> "Child";
         };
+    }
+
+    // ── S5145 Log Injection prevention ─────────────────────────────────────
+    private static String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replace('\n', '_').replace('\r', '_');
     }
 }

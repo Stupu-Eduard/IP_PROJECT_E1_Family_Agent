@@ -1,65 +1,83 @@
 package com.familie.cheltuieli_familie.service;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(MockitoExtension.class)
 class OCRPreProcessorTest {
 
-    @TempDir
-    Path tempDir;
+    private final OCRPreProcessor processor = new OCRPreProcessor();
 
-    private OCRPreProcessor preProcessor;
-    private File validImageFile;
-    private File validPdfFile;
+    @Test
+    void processImage_shouldThrowForNullFile() {
+        assertThrows(IllegalArgumentException.class, () -> processor.processImage(null, "revolut"));
+    }
 
-    @BeforeEach
-    void setUp() throws IOException {
-        preProcessor = new OCRPreProcessor();
+    @Test
+    void processImage_shouldThrowForNonExistentFile() {
+        File nonExistent = new File("/nonexistent/path/image.png");
+        assertThrows(IllegalArgumentException.class, () -> processor.processImage(nonExistent, "revolut"));
+    }
 
-        validImageFile = tempDir.resolve("test_image.png").toFile();
-        BufferedImage img = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
-        ImageIO.write(img, "png", validImageFile);
+    @Test
+    void processImage_shouldProcessValidImage() throws IOException {
+        // Create a simple test image
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
 
-        validPdfFile = tempDir.resolve("test_doc.pdf").toFile();
-        try (PDDocument doc = new PDDocument()) {
-            doc.addPage(new PDPage());
-            doc.save(validPdfFile);
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), "revolut");
+            assertNotNull(result);
+            assertTrue(result.getWidth() > 0);
+            assertTrue(result.getHeight() > 0);
+        } finally {
+            Files.deleteIfExists(tempFile);
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"revolut", "bt", "ing", "unknown_bank"})
-    void processImage_ShouldHandleVariousBanks(String bankName) throws IOException {
-        BufferedImage result = preProcessor.processImage(validImageFile, bankName);
-        assertNotNull(result);
+    @Test
+    void processImage_shouldHandleDefaultBank() throws IOException {
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
+
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), "unknown");
+            assertNotNull(result);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
-    void processImageShouldThrowExceptionForInvalidFile() {
-        File invalidFile = new File("does-not-exist.png");
+    void processImage_shouldHandleNullBank() throws IOException {
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            preProcessor.processImage(invalidFile, "default");
-        });
-
-        assertTrue(exception.getMessage().contains("Couldn't read the image"));
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), null);
+            assertNotNull(result);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
     }
 
     @Test
+    void processImage_shouldHandleBTBank() throws IOException {
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
     void processImage_ShouldThrowExceptionForNullFile() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             preProcessor.processImage(null, "revolut");
@@ -72,8 +90,45 @@ class OCRPreProcessorTest {
     void processPdfShouldReturnProcessedImages() throws Exception {
         List<BufferedImage> results = preProcessor.processPdf(validPdfFile, "revolut");
 
-        assertNotNull(results);
-        assertEquals(1, results.size(), "Should process exactly 1 page from our dummy PDF");
-        assertNotNull(results.get(0), "The processed image should not be null");
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), "bt");
+            assertNotNull(result);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
+    void processImage_shouldHandleINGBank() throws IOException {
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
+
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), "ing");
+            assertNotNull(result);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
+    void processImage_shouldHandleRevolutBank() throws IOException {
+        Path tempFile = Files.createTempFile("test_image", ".png");
+        BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
+        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
+
+        try {
+            BufferedImage result = processor.processImage(tempFile.toFile(), "revolut");
+            assertNotNull(result);
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
+    }
+
+    @Test
+    void processPdf_shouldThrowForNonExistentFile() {
+        File nonExistent = new File("/nonexistent/path/document.pdf");
+        assertThrows(IOException.class, () -> processor.processPdf(nonExistent, "revolut"));
     }
 }

@@ -29,6 +29,7 @@ class ExtractionOCRControllerUnitTest {
     @Mock private ExtractionPipelineService extractionPipelineService;
     @Mock private StorageService storageService;
     @Mock private CloudinaryService cloudinaryService;
+    @Mock private com.familie.cheltuieli_familie.security.util.SecurityService securityService;
 
     @InjectMocks
     private ExtractionOCRController controller;
@@ -41,6 +42,7 @@ class ExtractionOCRControllerUnitTest {
         user.setName("TestUser");
         user.setPasswordH("hash");
 
+        when(securityService.getCurrentUser()).thenReturn(user);
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(user);
 
@@ -54,12 +56,28 @@ class ExtractionOCRControllerUnitTest {
         when(cloudinaryService.uploadFile(any(File.class), anyString(), anyString()))
                 .thenReturn("https://cloudinary.com/receipt.pdf");
 
+        ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "ing", null);
         ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "ing", auth);
 
         assertEquals(200, response.getStatusCode().value());
         verify(cloudinaryService).uploadFile(any(File.class), anyString(), anyString());
         assertNotNull(response.getBody());
         assertEquals("https://cloudinary.com/receipt.pdf", response.getBody().get(0).getReceiptUrl());
+        assertEquals(42L, response.getBody().get(0).getUserId());
+    }
+
+    @Test
+    void extractAndSave_withNullAuthentication_returnsUnauthorized() throws Exception {
+        when(securityService.getCurrentUser()).thenReturn(null);
+
+        MockMultipartFile fakePdf = new MockMultipartFile(
+                "file", "receipt.pdf", "application/pdf", "content".getBytes());
+
+        ResponseEntity<List<Transaction>> response = controller.extractAndSave(fakePdf, "bt", null);
+
+        assertEquals(401, response.getStatusCode().value());
+        verifyNoInteractions(cloudinaryService);
+        verifyNoInteractions(extractionPipelineService);
     }
 
     @Test

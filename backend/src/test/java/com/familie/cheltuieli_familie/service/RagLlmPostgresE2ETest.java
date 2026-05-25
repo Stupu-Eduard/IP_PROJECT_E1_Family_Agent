@@ -197,7 +197,7 @@ class RagLlmPostgresE2ETest {
             List<EmbeddedExpense> results = Awaitility.await()
                 .atMost(Duration.ofSeconds(15))
                 .pollInterval(Duration.ofMillis(200))
-                .until(() -> qdrantVectorService.searchSimilar(description.substring(0, Math.min(20, description.length())), 5),
+                .until(() -> qdrantVectorService.searchSimilar(description.substring(0, Math.min(20, description.length())), 5, null, null),
                     r -> !r.isEmpty());
 
             assertFalse(results.isEmpty(), "Should find the stored expense");

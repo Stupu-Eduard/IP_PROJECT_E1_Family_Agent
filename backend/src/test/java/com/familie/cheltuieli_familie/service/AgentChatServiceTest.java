@@ -14,8 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -29,7 +27,6 @@ class AgentChatServiceTest {
     @Mock private VisualIntentExtractor visualIntentExtractor;
     @Mock private ChartGenerationService chartGenerationService;
     @Mock private RagRetrievalService ragRetrievalService;
-    @Mock private FamilyMemberRepository familyMemberRepository;
 
     @InjectMocks
     private AgentChatService agentChatService;
@@ -57,12 +54,12 @@ class AgentChatServiceTest {
     @Test
     void processQuery_shouldFallbackToRag_onException() {
         when(visualIntentExtractor.extract(anyString())).thenThrow(new RuntimeException("Extractor failed"));
-        when(ragRetrievalService.askWithContext(anyString())).thenReturn("RAG Answer");
 
         AgentResponseDTO result = agentChatService.processQuery("buna salut te rog");
 
         assertTrue(result instanceof TextResponseDTO);
-        assertEquals("RAG Answer", ((TextResponseDTO)result).getMessage());
+        assertEquals("Nu am putut procesa cererea. Încearcă din nou sau reformulează întrebarea.",
+                ((TextResponseDTO)result).getMessage());
     }
 
     @Test
@@ -109,7 +106,7 @@ class AgentChatServiceTest {
         ChartQueryIntent intent = new ChartQueryIntent();
         intent.setResponseType("text");
         when(visualIntentExtractor.extract(anyString())).thenReturn(intent);
-        when(ragRetrievalService.askWithContext(contains("John"))).thenReturn("Hello John");
+        when(ragRetrievalService.askWithContext("hi")).thenReturn("Hello John");
 
         AgentResponseDTO result = agentChatService.processQuery("hi");
 
@@ -152,6 +149,7 @@ class AgentChatServiceTest {
 
         String msg = ((TextResponseDTO) result).getMessage();
         assertEquals("No family answer", msg);
+        verify(ragRetrievalService).askWithContext("hello");
         verify(ragRetrievalService).askWithContext(argThat(q -> q.contains("Alice") && !q.contains("familia")));
     }
 
@@ -184,6 +182,7 @@ class AgentChatServiceTest {
         AgentResponseDTO result = agentChatService.processQuery("test");
 
         assertEquals("Family answer", ((TextResponseDTO) result).getMessage());
+        verify(ragRetrievalService).askWithContext("test");
         verify(ragRetrievalService).askWithContext(argThat(q -> q.contains("SmithFamily")));
     }
 }

@@ -40,12 +40,14 @@ public class ReceiptParser {
             return null;
         }
 
+        String sanitized = sanitizeOcrText(ocrText);
+
         try {
             ReceiptExtractor extractor = AiServices.builder(ReceiptExtractor.class)
                     .chatLanguageModel(chatLanguageModel)
                     .build();
 
-            String json = extractor.extract(ocrText);
+            String json = extractor.extract(sanitized);
             log.info("LLM receipt extraction raw JSON: {}", json);
 
             // Clean markdown code blocks if present
@@ -72,6 +74,27 @@ public class ReceiptParser {
             log.error("Failed to parse receipt with LLM: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Sanitizes OCR text before sending to LLM to prevent prompt injection.
+     * Removes control characters (except newlines/tabs) and limits length
+     * to prevent context overflow attacks. Does NOT strip markdown or HTML;
+     * those are handled by the frontend renderer with rehype-sanitize.
+     */
+    private String sanitizeOcrText(String ocrText) {
+        if (ocrText == null) {
+            return null;
+        }
+        // Remove control characters except newlines and tabs
+        String sanitized = ocrText.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "");
+        // Limit length to prevent context overflow attacks
+        int maxLength = 8000;
+        if (sanitized.length() > maxLength) {
+            log.warn("OCR text exceeds {} chars, truncating", maxLength);
+            sanitized = sanitized.substring(0, maxLength);
+        }
+        return sanitized.trim();
     }
 
     private String normalizeDate(String dateStr) {

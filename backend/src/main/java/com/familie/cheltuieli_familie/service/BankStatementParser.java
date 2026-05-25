@@ -41,7 +41,9 @@ public class BankStatementParser {
             return transactions;
         }
 
-        String[] lines = ocrText.split("\\r?\\n");
+        String redactedText = redactPii(ocrText);
+
+        String[] lines = redactedText.split("\\r?\\n");
         logger.info("START PARSARE | Linii: {}", lines.length);
 
         for (String line : lines) {
@@ -52,6 +54,31 @@ public class BankStatementParser {
 
         logger.info("FINAL PARSARE | Total: {}", transactions.size());
         return transactions;
+    }
+
+    /**
+     * Redacts PII from OCR text before parsing.
+     * Removes IBANs, account numbers, card numbers, and CNP.
+     */
+    private String redactPii(String text) {
+        if (text == null) {
+            return null;
+        }
+        String redacted = text;
+
+        // Redact Romanian IBANs (RO + 22-24 digits)
+        redacted = redacted.replaceAll("\\bRO\\d{22,24}\\b", "[IBAN_REDACTED]");
+
+        // Redact account numbers (8-16 digit sequences)
+        redacted = redacted.replaceAll("\\b\\d{8,16}\\b", "[ACCOUNT_REDACTED]");
+
+        // Redact Romanian CNP (13 digits starting with 1-8)
+        redacted = redacted.replaceAll("\\b[1-8]\\d{12}\\b", "[CNP_REDACTED]");
+
+        // Redact card numbers (13-19 digit sequences, possibly with spaces)
+        redacted = redacted.replaceAll("\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4,7}\\b", "[CARD_REDACTED]");
+
+        return redacted;
     }
 
     private Optional<Transaction> parseLine(String originalLine) {

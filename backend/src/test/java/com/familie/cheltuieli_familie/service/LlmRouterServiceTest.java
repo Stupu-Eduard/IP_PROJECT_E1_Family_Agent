@@ -16,16 +16,20 @@ class LlmRouterServiceTest {
     @Mock
     private LlmConfig.RagAssistant ragAssistant;
 
+    @Mock
+    private HallucinationGuard hallucinationGuard;
+
     private LlmRouterService llmRouterService;
 
     @BeforeEach
     void setUp() {
-        llmRouterService = new LlmRouterService(ragAssistant);
+        llmRouterService = new LlmRouterService(ragAssistant, hallucinationGuard);
     }
 
     @Test
     void routeAndChat_shouldReturnResponse_whenAllValid() {
         when(ragAssistant.chat("hello")).thenReturn("Hi there");
+        when(hallucinationGuard.validate("Hi there", "hello")).thenReturn("Hi there");
 
         String result = llmRouterService.routeAndChat("hello");
         assertEquals("Hi there", result);

@@ -42,4 +42,14 @@ public class SyncService {
 
         return savedEntity;
     }
+
+    /**
+     * Checks if an expense with the given idempotency key already exists.
+     */
+    public boolean existsByIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return false;
+        }
+        return jpaRepository.existsByIdempotencyKey(idempotencyKey);
+    }
 }

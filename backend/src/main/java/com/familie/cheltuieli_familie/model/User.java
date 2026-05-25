@@ -2,6 +2,8 @@ package com.familie.cheltuieli_familie.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.time.LocalDate;
 
@@ -25,6 +27,12 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDate createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Family family;
 
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;

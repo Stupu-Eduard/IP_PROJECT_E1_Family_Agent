@@ -3,12 +3,8 @@ package com.familie.cheltuieli_familie.service;
 import com.familie.cheltuieli_familie.dto.response.AgentResponseDTO;
 import com.familie.cheltuieli_familie.dto.response.TextResponseDTO;
 import com.familie.cheltuieli_familie.model.ChartQueryIntent;
-import com.familie.cheltuieli_familie.model.User;
-import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,15 +12,24 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class AgentChatService {
 
+    private static final int MAX_MESSAGE_LENGTH = 2000;
+
     private final VisualIntentExtractor visualIntentExtractor;
     private final ChartGenerationService chartGenerationService;
     private final RagRetrievalService ragRetrievalService;
-    private final FamilyMemberRepository familyMemberRepository;
 
     public AgentResponseDTO processQuery(String userMessage) {
-        String userContext = buildUserContext();
+        if (userMessage == null || userMessage.isBlank()) {
+            return new TextResponseDTO("Mesajul nu poate fi gol.");
+        }
+        if (userMessage.length() > MAX_MESSAGE_LENGTH) {
+            return new TextResponseDTO(
+                    "Mesajul este prea lung. Limita maximă este de " + MAX_MESSAGE_LENGTH + " caractere.");
+        }
+        String sanitized = sanitizeInput(userMessage);
+
         try {
-            ChartQueryIntent intent = visualIntentExtractor.extract(userMessage);
+            ChartQueryIntent intent = visualIntentExtractor.extract(sanitized);
             log.info("Extracted intent: type={}, chartType={}, groupBy={}",
                     intent.getResponseType(), intent.getChartType(), intent.getGroupBy());
 
@@ -32,39 +37,19 @@ public class AgentChatService {
                 return chartGenerationService.generate(intent);
             }
 
-            String query = userContext + userMessage;
-            log.info("Query for RAG: {}", query);
-
-            String textAnswer = ragRetrievalService.askWithContext(query);
+            String textAnswer = ragRetrievalService.askWithContext(sanitized);
             return toTextResponse(textAnswer);
 
         } catch (Exception e) {
-            log.warn("Chart pipeline failed for query '{}', falling back to text RAG: {}",
-                    userMessage, e.getMessage());
-            String query = userContext + userMessage;
-            String textAnswer = ragRetrievalService.askWithContext(query);
-            return toTextResponse(textAnswer);
+            log.warn("Chart pipeline failed for query '{}': {}", sanitized, e.getMessage());
+            return new TextResponseDTO(
+                    "Nu am putut procesa cererea. Încearcă din nou sau reformulează întrebarea.");
         }
     }
 
-    private String buildUserContext() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
-            return "";
-        }
-        String familyName = familyMemberRepository.findByUserId(user.getId())
-                .stream()
-                .findFirst()
-                .map(fm -> fm.getFamily() != null ? fm.getFamily().getName() : null)
-                .orElse(null);
-        StringBuilder ctx = new StringBuilder("[IDENTITATE_AUTENTIFICATA: nume='")
-                .append(user.getName())
-                .append("', user_id=").append(user.getId());
-        if (familyName != null) {
-            ctx.append(", familia='").append(familyName).append("'");
-        }
-        ctx.append("] ");
-        return ctx.toString();
+    private String sanitizeInput(String input) {
+        // Remove null bytes and control characters (except newlines and tabs)
+        return input.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "").trim();
     }
 
     private TextResponseDTO toTextResponse(String textAnswer) {
