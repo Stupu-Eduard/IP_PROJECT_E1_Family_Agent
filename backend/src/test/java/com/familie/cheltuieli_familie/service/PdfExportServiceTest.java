@@ -268,4 +268,134 @@ class PdfExportServiceTest {
         assertNotNull(pdf);
         assertTrue(pdf.length > 0);
     }
+
+    // ── Teste filtrare pe persoană ────────────────────────────────────────────
+
+    @Test
+    void generatePdf_passesPersonFilterToRepository() throws Exception {
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, "Ana Popescu"))
+                .thenReturn(List.of(expense(LocalDate.now().minusDays(1), 100.0, "Supermarket", "Ana Popescu")));
+
+        byte[] pdf = pdfExportService.generatePdf(
+                LocalDate.now().minusDays(6), LocalDate.now(), "Ana Popescu", parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+        verify(expenseRepository).findAllByFamilyFiltered(10L, null, null, "Ana Popescu");
+    }
+
+    @Test
+    void generatePdf_withNullPerson_fetchesAllFamilyExpenses() throws Exception {
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of(
+                        expense(LocalDate.now().minusDays(1), 100.0, "Supermarket", "Ana"),
+                        expense(LocalDate.now().minusDays(2), 80.0,  "Transport",   "Mihai")
+                ));
+
+        byte[] pdf = pdfExportService.generatePdf(
+                LocalDate.now().minusDays(6), LocalDate.now(), null, parentAuth);
+
+        assertNotNull(pdf);
+        verify(expenseRepository).findAllByFamilyFiltered(10L, null, null, null);
+    }
+
+    @Test
+    void generatePdf_withPerson_returnsOnlyMatchingExpenses() throws Exception {
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, "Mihai"))
+                .thenReturn(List.of(
+                        expense(LocalDate.now().minusDays(1), 150.0, "Transport", "Mihai")
+                ));
+
+        byte[] pdf = pdfExportService.generatePdf(
+                LocalDate.now().minusDays(6), LocalDate.now(), "Mihai", parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+        verify(expenseRepository).findAllByFamilyFiltered(10L, null, null, "Mihai");
+        verify(expenseRepository, never()).findAllByFamilyFiltered(10L, null, null, null);
+    }
+
+    @Test
+    void generatePdf_withPerson_andNoExpenses_returnsValidPdf() throws Exception {
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, "MembruInexistent"))
+                .thenReturn(List.of());
+
+        byte[] pdf = pdfExportService.generatePdf(
+                LocalDate.now().minusDays(6), LocalDate.now(), "MembruInexistent", parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    void generatePdf_backwardCompatibility_threeArgOverload_stillWorks() throws Exception {
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of(expense(LocalDate.now().minusDays(1), 100.0, "Supermarket", "Ana")));
+
+        // Apel cu semnatura veche (3 argumente) — compatibilitate backward
+        byte[] pdf = pdfExportService.generatePdf(
+                LocalDate.now().minusDays(6), LocalDate.now(), parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+        verify(expenseRepository).findAllByFamilyFiltered(10L, null, null, null);
+    }
+
+    // ── Teste acoperire coverage gaps ────────────────────────────────────────
+
+    @Test
+    void generatePdf_usesZeroAverage_whenDatesInverted() throws Exception {
+        // Acoperă ramura `diffDays <= 0` → average = BigDecimal.ZERO
+        // from > to implică ChronoUnit.DAYS.between(from, to) + 1 = 0
+        LocalDate from = LocalDate.now();
+        LocalDate to   = LocalDate.now().minusDays(1); // inversate intenționat
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of());
+
+        byte[] pdf = pdfExportService.generatePdf(from, to, parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    void generatePdf_drawsEmptyChartMessage_forLongPeriodWithNoExpenses() throws Exception {
+        // Acoperă `labels.isEmpty()` în drawChart — perioada > 31 zile (buildWeeklyMap)
+        // fără cheltuieli → map gol → labels empty → "Nu exista cheltuieli" mesaj
+        LocalDate from = LocalDate.now().minusDays(60);
+        LocalDate to   = LocalDate.now();
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of()); // fără nicio cheltuială
+
+        byte[] pdf = pdfExportService.generatePdf(from, to, parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    void generatePdf_drawsEmptyChartMessage_forYearPeriodWithNoExpenses() throws Exception {
+        // Acoperă `labels.isEmpty()` în drawChart — perioada > 90 zile (buildMonthlyMap)
+        // fără cheltuieli → map gol → labels empty
+        LocalDate from = LocalDate.now().minusDays(365);
+        LocalDate to   = LocalDate.now();
+
+        when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(familyMember));
+        when(expenseRepository.findAllByFamilyFiltered(10L, null, null, null))
+                .thenReturn(List.of()); // fără nicio cheltuială
+
+        byte[] pdf = pdfExportService.generatePdf(from, to, parentAuth);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
 }
