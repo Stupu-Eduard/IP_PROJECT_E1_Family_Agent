@@ -81,6 +81,7 @@ function AvatarSelectionSection({ currentAvatarUrl, onSaved }: AvatarSelectionSe
     const [error, setError] = useState<string | null>(null)
     const prevObjectUrl = useRef<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const pendingFile = useRef<File | null>(null)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -101,6 +102,7 @@ function AvatarSelectionSection({ currentAvatarUrl, onSaved }: AvatarSelectionSe
         }
         const objectUrl = URL.createObjectURL(file)
         prevObjectUrl.current = objectUrl
+        pendingFile.current = file
         setPreview(objectUrl)
         setSelected(objectUrl)
     }
@@ -110,14 +112,13 @@ function AvatarSelectionSection({ currentAvatarUrl, onSaved }: AvatarSelectionSe
         setSaving(true)
         setError(null)
         try {
-            if (isRemoteAvatarUrl(selected) && selected.startsWith('blob')) {
-                const response = await fetch(selected)
-                const blob = await response.blob()
+            if (pendingFile.current) {
                 const formData = new FormData()
-                formData.append('file', blob, 'avatar.jpg')
+                formData.append('file', pendingFile.current, pendingFile.current.name)
                 const res = await profileApi.uploadAvatarFile(formData)
+                pendingFile.current = null
                 onSaved(res.data.avatarUrl)
-            } else if (isRemoteAvatarUrl(selected)) {
+            } else if (isRemoteAvatarUrl(selected) && !selected.startsWith('blob')) {
                 onSaved(selected)
             } else {
                 await profileApi.updatePredefinedAvatar(selected)

@@ -50,6 +50,11 @@ public class ProfileService {
             "image/jpeg", "image/png", "image/webp", "image/gif"
     );
 
+    public AvatarResponseDTO getAvatar(User user) {
+        String url = user.getAvatarUrl();
+        return new AvatarResponseDTO(url != null ? url : "");
+    }
+
     @Transactional
     public AvatarResponseDTO updatePredefinedAvatar(String avatarId, User user) {
         if (avatarId == null || avatarId.isBlank()) {
