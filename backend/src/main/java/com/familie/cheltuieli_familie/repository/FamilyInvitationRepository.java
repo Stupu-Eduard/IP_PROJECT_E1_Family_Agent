@@ -15,4 +15,8 @@ public interface FamilyInvitationRepository extends JpaRepository<FamilyInvitati
     Optional<FamilyInvitation> findByFamilyIdAndInviteeEmail(Long familyId, String email);
 
     boolean existsByFamilyIdAndInviteeEmailAndStatus(Long familyId, String email, String status);
+
+    void deleteByInviteeEmail(String email);
+
+    void deleteByInvitedById(Long invitedById);
 }

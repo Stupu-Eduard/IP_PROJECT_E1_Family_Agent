@@ -52,6 +52,7 @@ public class OCRPreProcessor {
         return gray;
     }
 
+
     private BufferedImage matToBufferedImage(Mat matrix) throws IOException {
         MatOfByte mob = new MatOfByte();
         Imgcodecs.imencode(".png", matrix, mob);

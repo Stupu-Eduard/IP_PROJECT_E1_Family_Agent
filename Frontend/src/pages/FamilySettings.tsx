@@ -9,6 +9,16 @@ import {
     ArrowLeft, Baby, Crown, Loader2, Check, LogOut, Bell, FolderX, UserCheck
 } from 'lucide-react';
 
+interface JwtPayload {
+    role?: string;
+    userId?: number;
+    familyId?: number | null;
+    name?: string;
+    familyName?: string;
+    sub?: string;
+    exp?: number;
+}
+
 interface ChildBudgetState {
     amount: number;
     input: string;
@@ -50,6 +60,7 @@ export default function FamilySettings() {
 
     const [childBudgets, setChildBudgets] = useState<Record<number, ChildBudgetState>>({});
     const [roleChanging, setRoleChanging] = useState<number | null>(null);
+    const [deletingChildId, setDeletingChildId] = useState<number | null>(null);
 
     const loadMembers = useCallback(async () => {
         if (!familyId) return;
@@ -235,6 +246,25 @@ export default function FamilySettings() {
         }
     };
 
+    const handleDeleteChildAccount = async (member: GroupMemberDTO) => {
+        if (!familyId) return;
+        const label = member.name || member.email;
+        if (!window.confirm(`Esti sigur ca vrei sa stergi COMPLET contul lui ${label}? Aceasta actiune este ireversibila.`)) return;
+        setDeletingChildId(member.id);
+        try {
+            await familyApi.deleteChildAccount(familyId, member.id);
+            setMembers(prev => prev.filter(m => m.id !== member.id));
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: { message?: string } | string } };
+            const msg = e?.response?.data instanceof Object
+                ? (e.response.data as { message?: string }).message ?? 'Eroare la stergerea contului.'
+                : e?.response?.data ?? 'Eroare la stergerea contului.';
+            alert(typeof msg === 'string' ? msg : 'Eroare la stergerea contului.');
+        } finally {
+            setDeletingChildId(null);
+        }
+    };
+
     const handleSetChildBudget = async (e: React.FormEvent, childUserId: number) => {
         e.preventDefault();
         const state = childBudgets[childUserId];
@@ -409,7 +439,7 @@ export default function FamilySettings() {
                         <div className="md:col-span-4">
                             <select
                                 value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value as any)}
+                                onChange={(e) => setInviteRole(e.target.value as 'Co-Parent' | 'Adult' | 'Child')}
                                 className="w-full bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] py-2.5 px-4 text-[13px] text-[#2D2926] appearance-none cursor-pointer focus:outline-none"
                             >
                                 <option value="Child">Rol: Copil</option>
@@ -520,6 +550,19 @@ export default function FamilySettings() {
                                                 >
                                                     <Trash2 size={16} /> <span className="sm:hidden">Elimină</span>
                                                 </button>
+                                                {currentUserRole === 'Parent' && isChild && (
+                                                    <button
+                                                        onClick={() => handleDeleteChildAccount(member)}
+                                                        disabled={deletingChildId === member.id}
+                                                        className="text-red-700 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-[12px] font-medium disabled:opacity-50"
+                                                        title="Sterge contul complet"
+                                                    >
+                                                        {deletingChildId === member.id
+                                                            ? <Loader2 size={13} className="animate-spin" />
+                                                            : <Trash2 size={13} />}
+                                                        Sterge cont
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -556,6 +599,7 @@ export default function FamilySettings() {
                                                         : 'Setează'}
                                             </button>
                                             {bs?.error && <span className="text-[11px] text-red-500">{bs.error}</span>}
+                               
                                         </form>
                                     )}
                                 </div>

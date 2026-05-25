@@ -60,6 +60,9 @@ export const familyApi = {
   removeMember: (familyId: number, memberId: number) =>
     api.delete(`/api/v1/families/${familyId}/members/${memberId}`),
 
+  deleteChildAccount: (familyId: number, memberId: number) =>
+    api.delete(`/api/v1/families/${familyId}/members/${memberId}/account`),
+
   leaveFamily: (familyId: number) =>
     api.delete(`/api/v1/families/${familyId}/leave`),
 
@@ -83,3 +86,19 @@ export const invitationApi = {
     api.post(`/api/v1/invitations/${id}/decline`),
 }
 
+export interface AvatarResponseDTO {
+  avatarUrl: string
+}
+
+export const profileApi = {
+  updatePredefinedAvatar: (avatarId: string) =>
+    api.patch<AvatarResponseDTO>('/api/v1/profile/avatar', { avatarId }),
+
+  uploadAvatarFile: (formData: FormData) =>
+    api.post<AvatarResponseDTO>('/api/v1/profile/avatar/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  deleteAccount: () =>
+    api.delete('/api/v1/profile/account'),
+}
