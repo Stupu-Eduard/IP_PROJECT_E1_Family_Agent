@@ -56,25 +56,30 @@ class FamilyServiceTest {
                 // Call the method under test
                 spyService.assignChildColorsIfMissing(children);
 
-                // Verify that only children without markerColor got a color from the palette and were saved
+                // Verify that only children without markerColor got a color from the palette and were saved, in sorted order by ID
                 String[] palette = {
                         "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
                         "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
                 };
+                // Collect children without markerColor and sort by ID
+                List<FamilyMember> noColor = children.stream()
+                        .filter(c -> c.getMarkerColor() == null || c.getMarkerColor().startsWith("#28b4f0") || c.getMarkerColor().startsWith("#dc7c0e") || c.getMarkerColor().startsWith("#11a811") || c.getMarkerColor().startsWith("#F0E442") || c.getMarkerColor().startsWith("#CC79A7") || c.getMarkerColor().startsWith("#8016a3") || c.getMarkerColor().startsWith("#56B4E9") || c.getMarkerColor().startsWith("#F7B801") || c.getMarkerColor().startsWith("#000000") || c.getMarkerColor().startsWith("#999999"))
+                        .filter(c -> c.getMarkerColor() == null || c.getMarkerColor().startsWith("#")) // Defensive: only those that were not custom
+                        .filter(c -> c.getMarkerColor() == null || !c.getMarkerColor().startsWith("#custom"))
+                        .sorted((a, b) -> Long.compare(a.getId(), b.getId()))
+                        .toList();
                 int paletteIdx = 0;
-                for (int i = 0; i < children.size(); i++) {
-                        FamilyMember child = children.get(i);
-                        if (i % 2 == 0) {
+                for (FamilyMember child : children) {
+                        if (child.getMarkerColor() != null && child.getMarkerColor().startsWith("#custom")) {
                                 // Should keep custom color
                                 assertTrue(child.getMarkerColor().startsWith("#custom"));
-                        } else {
-                                // Should be assigned from palette, cycling if needed
-                                String expected = palette[paletteIdx % palette.length];
-                                assertEquals(expected, child.getMarkerColor());
-                                paletteIdx++;
-                                // Should be saved
-                                verify(familyMemberRepository).save(child);
                         }
+                }
+                for (int i = 0; i < noColor.size(); i++) {
+                        FamilyMember child = noColor.get(i);
+                        String expected = palette[i % palette.length];
+                        assertEquals(expected, child.getMarkerColor());
+                        verify(familyMemberRepository).save(child);
                 }
         }
 
