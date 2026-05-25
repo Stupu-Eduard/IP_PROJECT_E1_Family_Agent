@@ -174,7 +174,8 @@ export default function ExpensesMapAll() {
 
   // helper to create colored pin URL
   function getColoredPin(color: string) {
-    return `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z' fill='${encodeURIComponent(color)}'/><circle cx='16' cy='13' r='4' fill='white'/></svg>`
+    const svg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z" fill="${color}"/><circle cx="16" cy="13" r="4" fill="white"/></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
 
   // polygon drawing state (expense filter)
