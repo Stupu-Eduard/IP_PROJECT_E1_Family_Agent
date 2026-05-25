@@ -9,6 +9,7 @@ import com.familie.cheltuieli_familie.repository.ExpenseRepository;
 import com.familie.cheltuieli_familie.repository.FamilyMemberRepository;
 import com.familie.cheltuieli_familie.repository.FamilyRepository;
 import com.familie.cheltuieli_familie.security.util.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -50,6 +51,24 @@ class FamilyServiceTest {
 
     @InjectMocks
     private FamilyService familyService;
+
+    private Family family;
+    private User requester;
+    private FamilyMember parentMembership;
+
+    @BeforeEach
+    void setUp() {
+        family = new Family();
+        family.setId(10L);
+        family.setOwnerId(1L);
+
+        requester = createUser(1L, "test@test.com", "Test");
+
+        parentMembership = new FamilyMember();
+        parentMembership.setFamily(family);
+        parentMembership.setUser(requester);
+        parentMembership.setRole("Parent");
+    }
 
     private User createUser(Long id, String email, String name) {
         User user = new User();
