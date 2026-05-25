@@ -18,7 +18,7 @@ async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: n
   }
 }
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
+import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager } from '@react-google-maps/api';
 import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } from 'lucide-react';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames } from '../services/lookups';
@@ -177,13 +177,6 @@ export default function ExpensesMapAll() {
     const svg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z" fill="${color}"/><circle cx="16" cy="13" r="4" fill="white"/></svg>`;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
-
-  // cluster palette — matches backend CHILD_PIN_COLORS + common fallbacks
-  const CLUSTER_COLORS = ['#28b4f0','#dc7c0e','#11a811','#F0E442','#CC79A7','#8016a3','#56B4E9','#F7B801','#000000','#999999','#FF0000','#E53E3E'];
-  const clusterStyles = CLUSTER_COLORS.map(color => ({
-    textColor: 'white', textSize: 13, width: 40, height: 40,
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="${color}" stroke="white" stroke-width="2"/></svg>`)}`,
-  }));
 
   const [clusterExpenses, setClusterExpenses] = useState<MapExpense[]>([]);
 
@@ -642,39 +635,17 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer
-                    onLoad={(clustererInstance: any) => {
-                      clustererInstance.addListener('clusterclick', (cluster: any) => {
-                        const expenses = cluster.getMarkers().map((m: any) => m._expense).filter(Boolean);
-                        setClusterExpenses(expenses);
-                        setSelectedExpense(null);
-                        setPlace(null);
-                      });
-                    }}
-                    options={{
-                      gridSize: 30,
-                      styles: clusterStyles,
-                      calculator: (markers: any[], numStyles: number) => {
-                        const color = markers[0]?._expenseColor;
-                        const idx = CLUSTER_COLORS.indexOf(color);
-                        return { text: String(markers.length), index: idx >= 0 ? idx + 1 : numStyles };
-                      },
-                    }}
-                  >
-                    {(clusterer: any) => (
-                      <>
-                        {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => {
-                          const member = familyMembers.find(m => m.name === (e.person ?? ''));
-                          const pinColor = member?.markerColor ?? '#FF0000';
-                          return (
-                          <Marker
-                            key={e.id}
-                            position={{ lat: e.lat, lng: e.lng }}
-                            clusterer={clusterer}
-                            title={e.description || e.location || ''}
-                            icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
-                            label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
-                            onLoad={(markerInstance: any) => { markerInstance._expenseColor = pinColor; markerInstance._expense = e; }}
+                  <>
+                    {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => {
+                      const member = familyMembers.find(m => m.name === (e.person ?? ''));
+                      const pinColor = member?.markerColor ?? '#FF0000';
+                      return (
+                        <Marker
+                          key={e.id}
+                          position={{ lat: e.lat, lng: e.lng }}
+                          title={e.description || e.location || ''}
+                          icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
+                          label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
                             onClick={() => {
                               setSelectedExpense(e);
                               setPlace(null);
@@ -728,11 +699,9 @@ export default function ExpensesMapAll() {
                               })();
                             }}
                           />
-                          );
-                        })}
-                      </>
-                    )}
-                  </MarkerClusterer>
+                        );
+                      })}
+                  </>
                 </GoogleMap>
               </div>
             </div>
