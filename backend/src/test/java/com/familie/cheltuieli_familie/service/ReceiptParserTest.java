@@ -5,6 +5,8 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -56,23 +58,29 @@ class ReceiptParserTest {
         assertEquals("Mâncare", result.getCategory());
     }
 
-    @Test
-    void parseReceipt_shouldNormalizeStoreName() {
+    @ParameterizedTest
+    @CsvSource({
+        "l1dl, Lidl",
+        "kaufl@nd, Kaufland",
+        "'mega 1mage', Mega Image",
+        "peny, Penny"
+    })
+    void parseReceipt_shouldNormalizeStoreName(String rawName, String expectedName) {
         String json = """
             {
-              "storeName": "l1dl",
+              "storeName": "%s",
               "totalAmount": 100.00,
               "date": "01/01/2025",
               "category": "Food"
             }
-            """;
+            """.formatted(rawName);
 
         when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
 
         ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("some receipt");
 
         assertNotNull(result);
-        assertEquals("Lidl", result.getStoreName());
+        assertEquals(expectedName, result.getStoreName());
     }
 
     @Test
@@ -179,62 +187,6 @@ class ReceiptParserTest {
         assertEquals("2025-03-15", result.getDate());
     }
 
-    @Test
-    void parseReceipt_shouldNormalizeKauflandOcr() {
-        String json = """
-            {
-              "storeName": "kaufl@nd",
-              "totalAmount": 100.00,
-              "date": "01/01/2025",
-              "category": "Food"
-            }
-            """;
-
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
-
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("ocr receipt");
-
-        assertNotNull(result);
-        assertEquals("Kaufland", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNormalizeMegaImageOcr() {
-        String json = """
-            {
-              "storeName": "mega 1mage",
-              "totalAmount": 100.00,
-              "date": "01/01/2025",
-              "category": "Food"
-            }
-            """;
-
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
-
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("ocr receipt");
-
-        assertNotNull(result);
-        assertEquals("Mega Image", result.getStoreName());
-    }
-
-    @Test
-    void parseReceipt_shouldNormalizePennyOcr() {
-        String json = """
-            {
-              "storeName": "peny",
-              "totalAmount": 100.00,
-              "date": "01/01/2025",
-              "category": "Food"
-            }
-            """;
-
-        when(chatLanguageModel.generate(anyList())).thenReturn(Response.from(AiMessage.from(json)));
-
-        ReceiptParser.ParsedReceipt result = receiptParser.parseReceipt("ocr receipt");
-
-        assertNotNull(result);
-        assertEquals("Penny", result.getStoreName());
-    }
 
     @Test
     void parseReceipt_shouldHandleEmptyItems() {

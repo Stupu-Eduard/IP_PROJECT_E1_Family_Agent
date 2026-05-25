@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -218,34 +221,19 @@ class ExpenseToolsTest {
         assertTrue(result.contains("increased"));
     }
 
-    @Test
-    void getVisualDescription_shouldReturnIncreaseDescription() {
+    @ParameterizedTest
+    @CsvSource({
+        "Spending on Food has increased by 15%, creștere",
+        "Spending on Food has decreased by 10%, scădere",
+        "'Spending on Food is 100 RON. No data for the previous period to compare.', stabil"
+    })
+    void getVisualDescription_shouldReturnCorrectDescription(String trend, String expected) {
         when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
-                .thenReturn("Spending on Food has increased by 15%");
+                .thenReturn(trend);
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
 
-        assertTrue(result.contains("creștere"));
-    }
-
-    @Test
-    void getVisualDescription_shouldReturnDecreaseDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
-                .thenReturn("Spending on Food has decreased by 10%");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertTrue(result.contains("scădere"));
-    }
-
-    @Test
-    void getVisualDescription_shouldReturnStableDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
-                .thenReturn("Spending on Food is 100 RON. No data for the previous period to compare.");
-
-        String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
-
-        assertTrue(result.contains("stabil"));
+        assertTrue(result.contains(expected));
     }
 
     @Test

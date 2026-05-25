@@ -2,6 +2,9 @@ package com.familie.cheltuieli_familie.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.awt.image.BufferedImage;
@@ -45,70 +48,16 @@ class OCRPreProcessorTest {
         }
     }
 
-    @Test
-    void processImage_shouldHandleDefaultBank() throws IOException {
-        Path tempFile = Files.createTempFile("test_image", ".png");
-        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
-        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
-
-        try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), "unknown");
-            assertNotNull(result);
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
-    }
-
-    @Test
-    void processImage_shouldHandleNullBank() throws IOException {
-        Path tempFile = Files.createTempFile("test_image", ".png");
-        BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
-        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
-
-        try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), null);
-            assertNotNull(result);
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
-    }
-
-    @Test
-    void processImage_shouldHandleBTBank() throws IOException {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"unknown", "bt", "ing", "revolut"})
+    void processImage_shouldHandleVariousBanks(String bank) throws IOException {
         Path tempFile = Files.createTempFile("test_image", ".png");
         BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
         javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
 
         try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), "bt");
-            assertNotNull(result);
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
-    }
-
-    @Test
-    void processImage_shouldHandleINGBank() throws IOException {
-        Path tempFile = Files.createTempFile("test_image", ".png");
-        BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
-        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
-
-        try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), "ing");
-            assertNotNull(result);
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
-    }
-
-    @Test
-    void processImage_shouldHandleRevolutBank() throws IOException {
-        Path tempFile = Files.createTempFile("test_image", ".png");
-        BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
-        javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
-
-        try {
-            BufferedImage result = processor.processImage(tempFile.toFile(), "revolut");
+            BufferedImage result = processor.processImage(tempFile.toFile(), bank);
             assertNotNull(result);
         } finally {
             Files.deleteIfExists(tempFile);

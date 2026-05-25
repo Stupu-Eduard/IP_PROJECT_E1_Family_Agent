@@ -2,7 +2,6 @@ package com.familie.cheltuieli_familie.controller;
 
 import com.familie.cheltuieli_familie.dto.CreateExpenseRequest;
 import com.familie.cheltuieli_familie.dto.ExpenseListDto;
-import com.familie.cheltuieli_familie.dto.LocationDto;
 import com.familie.cheltuieli_familie.mapper.ExpenseMapper;
 import com.familie.cheltuieli_familie.model.Category;
 import com.familie.cheltuieli_familie.model.Expense;

@@ -80,8 +80,6 @@ class FamilyServiceTest {
 
     @Test
     void createFamily_shouldCreateNewFamily() {
-        User requester = createUser(1L, "test@test.com", "Test");
-
         when(familyMemberRepository.findByUserId(1L)).thenReturn(Collections.emptyList());
         when(familyRepository.save(any(Family.class))).thenAnswer(inv -> {
             Family f = inv.getArgument(0);
@@ -99,7 +97,6 @@ class FamilyServiceTest {
 
     @Test
     void createFamily_shouldThrowWhenAlreadyInFamily() {
-        User requester = createUser(1L, "test@test.com", "Test");
         FamilyMember member = new FamilyMember();
         when(familyMemberRepository.findByUserId(1L)).thenReturn(List.of(member));
 
@@ -110,11 +107,6 @@ class FamilyServiceTest {
 
     @Test
     void getMembers_shouldReturnMembers() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        Family family = new Family();
-        family.setId(10L);
-        family.setOwnerId(1L);
-
         User memberUser = createUser(2L, "member@test.com", "Member");
         FamilyMember member = new FamilyMember();
         member.setFamily(family);
@@ -132,7 +124,6 @@ class FamilyServiceTest {
 
     @Test
     void getMembers_shouldThrowWhenNotMember() {
-        User requester = createUser(1L, "test@test.com", "Test");
         when(familyMemberRepository.existsByFamilyIdAndUserId(10L, 1L)).thenReturn(false);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
@@ -142,10 +133,6 @@ class FamilyServiceTest {
 
     @Test
     void deleteFamily_shouldDeleteWhenLastParent() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        Family family = new Family();
-        family.setId(10L);
-
         FamilyMember member = new FamilyMember();
         member.setFamily(family);
         member.setUser(requester);
@@ -161,10 +148,6 @@ class FamilyServiceTest {
 
     @Test
     void deleteFamily_shouldThrowWhenMultipleMembers() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        Family family = new Family();
-        family.setId(10L);
-
         FamilyMember member1 = new FamilyMember();
         member1.setRole("Parent");
         FamilyMember member2 = new FamilyMember();
@@ -180,7 +163,6 @@ class FamilyServiceTest {
 
     @Test
     void leaveFamily_shouldAllowMemberToLeave() {
-        User requester = createUser(1L, "test@test.com", "Test");
         FamilyMember member = new FamilyMember();
         member.setRole("Child");
 
@@ -193,7 +175,6 @@ class FamilyServiceTest {
 
     @Test
     void leaveFamily_shouldThrowWhenLastParent() {
-        User requester = createUser(1L, "test@test.com", "Test");
         FamilyMember member = new FamilyMember();
         member.setRole("Parent");
 
@@ -207,12 +188,8 @@ class FamilyServiceTest {
 
     @Test
     void updateMemberRole_shouldUpdateRole() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        User target = createUser(2L, "target@test.com", "Target");
-
-        Family family = new Family();
-        family.setId(10L);
         family.setOwnerId(3L);
+        User target = createUser(2L, "target@test.com", "Target");
 
         FamilyMember requesterMember = new FamilyMember();
         requesterMember.setRole("Parent");
@@ -236,7 +213,6 @@ class FamilyServiceTest {
 
     @Test
     void updateMemberRole_shouldThrowWhenNotParent() {
-        User requester = createUser(1L, "test@test.com", "Test");
         FamilyMember member = new FamilyMember();
         member.setRole("Child");
 
@@ -249,12 +225,8 @@ class FamilyServiceTest {
 
     @Test
     void removeMember_shouldRemoveMember() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        User target = createUser(2L, "target@test.com", "Target");
-
-        Family family = new Family();
-        family.setId(10L);
         family.setOwnerId(3L);
+        User target = createUser(2L, "target@test.com", "Target");
 
         FamilyMember requesterMember = new FamilyMember();
         requesterMember.setRole("Parent");
@@ -273,12 +245,8 @@ class FamilyServiceTest {
 
     @Test
     void removeMember_shouldThrowWhenRemovingOwner() {
-        User requester = createUser(1L, "test@test.com", "Test");
-        User target = createUser(2L, "target@test.com", "Target");
-
-        Family family = new Family();
-        family.setId(10L);
         family.setOwnerId(2L);
+        User target = createUser(2L, "target@test.com", "Target");
 
         FamilyMember requesterMember = new FamilyMember();
         requesterMember.setRole("Parent");
