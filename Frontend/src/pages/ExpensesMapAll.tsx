@@ -609,7 +609,16 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
+                  <MarkerClusterer options={{
+                    gridSize: 30,
+                    styles: [1, 2, 3].map(size => ({
+                      textColor: 'white',
+                      textSize: 13,
+                      width: 40,
+                      height: 40,
+                      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="18" fill="#E53E3E" stroke="white" stroke-width="2"/></svg>`)}`,
+                    })),
+                  }}>
                     {(clusterer: any) => (
                       <>
                         {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
