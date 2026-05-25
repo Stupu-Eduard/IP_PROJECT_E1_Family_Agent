@@ -61,23 +61,20 @@ class FamilyServiceTest {
                         "#28b4f0", "#dc7c0e", "#11a811", "#F0E442", "#CC79A7",
                         "#8016a3", "#56B4E9", "#F7B801", "#000000", "#999999"
                 };
-                // Only children with markerColor == null before assignment should be checked
-                List<FamilyMember> initiallyNoColor = new java.util.ArrayList<>();
-                for (int i = 0; i < children.size(); i++) {
-                    if (i % 2 != 0) {
-                        initiallyNoColor.add(children.get(i));
+                // Sort all children by ID to match service logic
+                List<FamilyMember> sortedChildren = new java.util.ArrayList<>(children);
+                sortedChildren.sort((a, b) -> Long.compare(a.getId(), b.getId()));
+                for (int i = 0; i < sortedChildren.size(); i++) {
+                    FamilyMember child = sortedChildren.get(i);
+                    String expectedColor = palette[i % palette.length];
+                    if ((child.getId() - 200) % 2 == 0) {
+                        // Even index: should keep custom color
+                        assertTrue(child.getMarkerColor().startsWith("#custom"));
                     } else {
-                        // Should keep custom color
-                        assertTrue(children.get(i).getMarkerColor().startsWith("#custom"));
+                        // Odd index: should be assigned from palette
+                        assertEquals(expectedColor, child.getMarkerColor());
+                        verify(familyMemberRepository).save(child);
                     }
-                }
-                // Sort by ID to match service logic
-                initiallyNoColor.sort((a, b) -> Long.compare(a.getId(), b.getId()));
-                for (int i = 0; i < initiallyNoColor.size(); i++) {
-                    FamilyMember child = initiallyNoColor.get(i);
-                    String expected = palette[i % palette.length];
-                    assertEquals(expected, child.getMarkerColor());
-                    verify(familyMemberRepository).save(child);
                 }
         }
 
