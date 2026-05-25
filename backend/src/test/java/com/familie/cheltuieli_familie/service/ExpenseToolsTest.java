@@ -116,6 +116,7 @@ class ExpenseToolsTest {
 
     @Test
     void detectAnomalies_shouldReturnFormattedResult() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
         when(analyticsService.detectAnomalies(any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("category", "Food", "amount", new BigDecimal("500"), "date", "2024-01-15"),
@@ -125,7 +126,7 @@ class ExpenseToolsTest {
         String result = expenseTools.detectAnomalies("100");
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Car"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
@@ -140,13 +141,14 @@ class ExpenseToolsTest {
 
     @Test
     void byCategory_shouldReturnFormattedResult() {
+        when(securityService.resolveScope()).thenReturn(new Long[]{1L, 2L});
         when(analyticsService.byCategory(any(), any(), any(), any()))
                 .thenReturn(Map.of("Food", new BigDecimal("300"), "Transport", new BigDecimal("150")));
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
 
         assertTrue(result.contains("Food"));
-        assertTrue(result.contains("Car"));
+        assertTrue(result.contains("Transport"));
     }
 
     @Test
