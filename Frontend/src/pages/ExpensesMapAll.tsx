@@ -18,7 +18,7 @@ async function geocodeAddress(address: string, apiKey: string): Promise<{ lat: n
   }
 }
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager, MarkerClusterer } from '@react-google-maps/api';
+import { GoogleMap, Marker, Polygon, useJsApiLoader, DrawingManager } from '@react-google-maps/api';
 import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } from 'lucide-react';
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames } from '../services/lookups';
@@ -174,8 +174,11 @@ export default function ExpensesMapAll() {
 
   // helper to create colored pin URL
   function getColoredPin(color: string) {
-    return `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z' fill='${encodeURIComponent(color)}'/><circle cx='16' cy='13' r='4' fill='white'/></svg>`
+    const svg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z" fill="${color}"/><circle cx="16" cy="13" r="4" fill="white"/></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
   }
+
+  const [clusterExpenses, setClusterExpenses] = useState<MapExpense[]>([]);
 
   // polygon drawing state (expense filter)
   const polygonRef = useRef<any>(null);
@@ -290,7 +293,19 @@ export default function ExpensesMapAll() {
   const firstWithCoords = (expenses || []).find(
     (e: any): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number'
   );
-  const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 44.4268, lng: 26.1025 };
+  const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 47.1585, lng: 27.6014 };
+
+  // Group expenses by exact lat/lng — multiple at same spot → single pin with total
+  const locationGroups = (() => {
+    const map = new Map<string, (MapExpense & { lat: number; lng: number })[]>();
+    filteredExpenses.forEach((e: any) => {
+      if (typeof e.lat !== 'number' || typeof e.lng !== 'number') return;
+      const key = `${e.lat},${e.lng}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    });
+    return Array.from(map.values());
+  })();
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
@@ -496,8 +511,32 @@ export default function ExpensesMapAll() {
         {mapsApiKey && isLoaded && (
           <div className="w-full bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="flex flex-col md:flex-row">
+              {!selectedExpense && clusterExpenses.length > 0 && (
+                <aside className="md:w-[300px] md:border-r border-[#EDE9E3] p-5 overflow-y-auto max-h-[600px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[14px] font-medium text-[#2D2926]">{clusterExpenses.length} cheltuieli</span>
+                    <button onClick={() => setClusterExpenses([])} className="text-[12px] text-[#9A8A7C] hover:text-[#2D2926]">✕</button>
+                  </div>
+                  {clusterExpenses.map((e: any) => (
+                    <div
+                      key={e.id}
+                      className="p-3 mb-2 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] cursor-pointer hover:border-[#C4B9AC] transition-colors"
+                      onClick={() => { setSelectedExpense(e); setClusterExpenses([]); setPlace(null); setGoogleMapsUri(null); setMessage(null); }}
+                    >
+                      <div className="text-[14px] font-semibold text-[#2D2926]">{e.amount?.toFixed(2)} RON</div>
+                      <div className="text-[12px] text-[#9A8A7C] mt-0.5">{e.description || e.location || 'Fără descriere'}</div>
+                      {e.rawDate && <div className="text-[11px] text-[#C4B9AC] mt-0.5">{e.rawDate}</div>}
+                    </div>
+                  ))}
+                </aside>
+              )}
+
               {selectedExpense && (
                 <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[13px] text-[#9A8A7C]">Detalii cheltuială</span>
+                    <button onClick={() => { setSelectedExpense(null); setPlace(null); setGoogleMapsUri(null); setMessage(null); }} className="text-[12px] text-[#9A8A7C] hover:text-[#2D2926]">✕</button>
+                  </div>
                   <div>
                     {placePhotoSrc && (
                       <div className="mb-4 overflow-hidden rounded-[12px] border border-[#EDE9E3] bg-[#FAF8F5]">
@@ -608,32 +647,39 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer options={{ imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m', gridSize: 30 }}>
-                    {(clusterer: any) => (
-                      <>
-                        {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
-                          <Marker
-                            key={e.id}
-                            position={{ lat: e.lat, lng: e.lng }}
-                            clusterer={clusterer}
-                            title={e.description || e.location || ''}
-                            icon={(() => {
-                              const personName = e.person ?? ''
-                              const member = familyMembers.find(m => m.name === personName)
-                              const color = member?.markerColor ?? '#FF0000'
-                              return { url: getColoredPin(color), scaledSize: new (window as any).google.maps.Size(32, 32) }
-                            })()}
-                            label={{ text: e.amount ? `${e.amount} RON` : '', className: 'text-xs' }}
-                            onClick={() => {
-                              setSelectedExpense(e);
+                  <>
+                    {locationGroups.map((group) => {
+                      const first = group[0];
+                      const isGroup = group.length > 1;
+                      const total = group.reduce((s, e) => s + (e.amount ?? 0), 0);
+                      const member = familyMembers.find(m => m.name === (first.person ?? ''));
+                      const pinColor = member?.markerColor ?? '#FF0000';
+                      const labelText = isGroup
+                        ? (total >= 1000 ? `${(total / 1000).toFixed(1)}k RON` : `${Math.round(total)} RON`)
+                        : (first.amount ? `${first.amount} RON` : '');
+                      return (
+                        <Marker
+                          key={`${first.lat},${first.lng}`}
+                          position={{ lat: first.lat, lng: first.lng }}
+                          title={isGroup ? `${group.length} cheltuieli — ${Math.round(total)} RON` : (first.description || first.location || '')}
+                          icon={{ url: getColoredPin(pinColor), scaledSize: new (window as any).google.maps.Size(32, 32) }}
+                          label={{ text: labelText, className: 'text-xs' }}
+                          onClick={() => {
+                              if (isGroup) {
+                                setClusterExpenses(group);
+                                setSelectedExpense(null);
+                                setPlace(null);
+                                return;
+                              }
+                              setSelectedExpense(first);
+                              setClusterExpenses([]);
                               setPlace(null);
                               setGoogleMapsUri(null);
                               setMessage(null);
-                              // fetch nearby place details (best-effort)
                               (async () => {
                                 try {
                                   if (!mapsApiKey) return;
-                                  const textQuery = (e.location || e.description || '').toString();
+                                  const textQuery = (first.location || first.description || '').toString();
                                   const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
                                     method: 'POST',
                                     headers: {
@@ -641,15 +687,15 @@ export default function ExpensesMapAll() {
                                       'X-Goog-Api-Key': mapsApiKey,
                                       'X-Goog-FieldMask': 'places.id,places.googleMapsUri',
                                     },
-                                    body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: e.lat, longitude: e.lng }, radius: 800 } } }),
+                                    body: JSON.stringify({ textQuery, locationBias: { circle: { center: { latitude: first.lat, longitude: first.lng }, radius: 800 } } }),
                                   });
                                   if (!res.ok) return;
                                   const data: any = await res.json();
-                                  const first = data?.places?.[0];
-                                  if (!first?.id) return;
-                                  setPlaceId(first.id);
-                                  setGoogleMapsUri(first.googleMapsUri ?? null);
-                                  const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(first.id)}`, {
+                                  const place0 = data?.places?.[0];
+                                  if (!place0?.id) return;
+                                  setPlaceId(place0.id);
+                                  setGoogleMapsUri(place0.googleMapsUri ?? null);
+                                  const detRes = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(place0.id)}`, {
                                     method: 'GET',
                                     headers: {
                                       'X-Goog-Api-Key': mapsApiKey,
@@ -677,10 +723,9 @@ export default function ExpensesMapAll() {
                               })();
                             }}
                           />
-                        ))}
-                      </>
-                    )}
-                  </MarkerClusterer>
+                        );
+                      })}
+                  </>
                 </GoogleMap>
               </div>
             </div>
