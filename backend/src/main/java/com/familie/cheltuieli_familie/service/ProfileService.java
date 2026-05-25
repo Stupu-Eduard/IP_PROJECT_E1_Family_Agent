@@ -78,9 +78,13 @@ public class ProfileService {
 
         Path tempPath = null;
         try {
-            // S5443 fix: folosim director temp privat, nu directorul public al sistemului
-            Path privateTemp = Files.createTempDirectory("avatar-uploads");
-            tempPath = privateTemp.resolve(UUID.randomUUID().toString() + ".tmp");
+            // S5443 fix: Creăm un folder dedicat în interiorul proiectului, nu în temp-ul public
+            Path privateTempDir = Path.of(System.getProperty("user.dir"), "temp_avatars");
+            if (!Files.exists(privateTempDir)) {
+                Files.createDirectories(privateTempDir);
+            }
+
+            tempPath = privateTempDir.resolve(UUID.randomUUID().toString() + ".tmp");
             file.transferTo(tempPath);
 
             String publicId = "user_" + user.getId() + "_avatar";
