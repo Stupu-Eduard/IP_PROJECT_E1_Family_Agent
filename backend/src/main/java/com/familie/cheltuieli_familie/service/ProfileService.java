@@ -76,10 +76,11 @@ public class ProfileService {
                     "Format nepermis. Acceptă doar: JPEG, PNG, WEBP, GIF.");
         }
 
-        // S2083 fix: prefix/suffix fix, fără date din user în numele fișierului temporar
         Path tempPath = null;
         try {
-            tempPath = Files.createTempFile("avatar-upload-", "-" + UUID.randomUUID().toString() + ".tmp");
+            // S5443 fix: folosim director temp privat, nu directorul public al sistemului
+            Path privateTemp = Files.createTempDirectory("avatar-uploads");
+            tempPath = privateTemp.resolve(UUID.randomUUID().toString() + ".tmp");
             file.transferTo(tempPath);
 
             String publicId = "user_" + user.getId() + "_avatar";
@@ -98,6 +99,9 @@ public class ProfileService {
             if (tempPath != null) {
                 try {
                     Files.deleteIfExists(tempPath);
+                    if (tempPath.getParent() != null) {
+                        Files.deleteIfExists(tempPath.getParent());
+                    }
                 } catch (IOException ex) {
                     log.warn("Nu s-a putut șterge fișierul temporar");
                 }
