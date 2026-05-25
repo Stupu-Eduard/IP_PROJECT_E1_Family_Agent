@@ -74,7 +74,7 @@ class ExpenseToolsTest {
 
     @Test
     void calculateTotal_shouldReturnFormattedTotal() {
-        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTotal(any(), any(), any(), any()))
                 .thenReturn(new BigDecimal("150.50"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -85,7 +85,7 @@ class ExpenseToolsTest {
 
     @Test
     void calculateTotal_shouldHandleError() {
-        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTotal(any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("DB error"));
 
         String result = expenseTools.calculateTotal("2024-01-01", "2024-01-31");
@@ -95,7 +95,7 @@ class ExpenseToolsTest {
 
     @Test
     void compareMembers_shouldReturnFormattedResult() {
-        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.compareMembers(any(), any(), any(), any()))
                 .thenReturn(Map.of("Alice", new BigDecimal("100"), "Bob", new BigDecimal("200")));
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -106,7 +106,7 @@ class ExpenseToolsTest {
 
     @Test
     void compareMembers_shouldReturnMessageWhenEmpty() {
-        when(analyticsService.compareMembers(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.compareMembers(any(), any(), any(), any()))
                 .thenReturn(Collections.emptyMap());
 
         String result = expenseTools.compareMembers("2024-01-01", "2024-01-31");
@@ -116,7 +116,7 @@ class ExpenseToolsTest {
 
     @Test
     void detectAnomalies_shouldReturnFormattedResult() {
-        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
+        when(analyticsService.detectAnomalies(any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("category", "Food", "amount", new BigDecimal("500"), "date", "2024-01-15"),
                         Map.of("category", "Transport", "amount", new BigDecimal("300"), "date", "2024-01-20")
@@ -130,7 +130,7 @@ class ExpenseToolsTest {
 
     @Test
     void detectAnomalies_shouldReturnMessageWhenEmpty() {
-        when(analyticsService.detectAnomalies(any(), eq(1L), eq(2L)))
+        when(analyticsService.detectAnomalies(any(), any(), any()))
                 .thenReturn(Collections.emptyList());
 
         String result = expenseTools.detectAnomalies("1000");
@@ -140,7 +140,7 @@ class ExpenseToolsTest {
 
     @Test
     void byCategory_shouldReturnFormattedResult() {
-        when(analyticsService.byCategory(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.byCategory(any(), any(), any(), any()))
                 .thenReturn(Map.of("Food", new BigDecimal("300"), "Transport", new BigDecimal("150")));
 
         String result = expenseTools.byCategory("2024-01-01", "2024-01-31");
@@ -151,7 +151,7 @@ class ExpenseToolsTest {
 
     @Test
     void byPerson_shouldReturnFormattedResult() {
-        when(analyticsService.findByPerson(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.findByPerson(anyString(), any(), any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("100"), "category", "Food", "date", "2024-01-15"),
                         Map.of("amount", new BigDecimal("200"), "category", "Transport", "date", "2024-01-20")
@@ -165,7 +165,7 @@ class ExpenseToolsTest {
 
     @Test
     void comparePeriods_shouldReturnComparison() {
-        when(analyticsService.calculateTotal(any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTotal(any(), any(), any(), any()))
                 .thenReturn(new BigDecimal("500"))
                 .thenReturn(new BigDecimal("600"));
 
@@ -177,7 +177,7 @@ class ExpenseToolsTest {
 
     @Test
     void topExpenses_shouldReturnFormattedResult() {
-        when(analyticsService.getTopExpenses(anyInt(), eq(1L), eq(2L)))
+        when(analyticsService.getTopExpenses(anyInt(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("500"), "category", "Electronics", "person", "Alice", "date", "2024-01-15"),
                         Map.of("amount", new BigDecimal("300"), "category", "Food", "person", "Bob", "date", "2024-01-20")
@@ -191,7 +191,7 @@ class ExpenseToolsTest {
 
     @Test
     void monthlyAverage_shouldReturnFormattedResult() {
-        when(analyticsService.calculateMonthlyAverage(anyInt(), eq(1L), eq(2L)))
+        when(analyticsService.calculateMonthlyAverage(anyInt(), any(), any()))
                 .thenReturn(new BigDecimal("450.00"));
 
         String result = expenseTools.monthlyAverage("3");
@@ -202,7 +202,7 @@ class ExpenseToolsTest {
 
     @Test
     void describeTrend_shouldReturnTrend() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
                 .thenReturn("Spending on Food has increased by 10%");
 
         String result = expenseTools.describeTrend("Food", "2024-01-01", "2024-01-31");
@@ -212,7 +212,7 @@ class ExpenseToolsTest {
 
     @Test
     void getVisualDescription_shouldReturnIncreaseDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
                 .thenReturn("Spending on Food has increased by 15%");
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -222,7 +222,7 @@ class ExpenseToolsTest {
 
     @Test
     void getVisualDescription_shouldReturnDecreaseDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
                 .thenReturn("Spending on Food has decreased by 10%");
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -232,7 +232,7 @@ class ExpenseToolsTest {
 
     @Test
     void getVisualDescription_shouldReturnStableDescription() {
-        when(analyticsService.calculateTrend(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.calculateTrend(anyString(), any(), any(), any(), any()))
                 .thenReturn("Spending on Food is 100 RON. No data for the previous period to compare.");
 
         String result = expenseTools.getVisualDescription("Food", "2024-01-01", "2024-01-31");
@@ -242,7 +242,7 @@ class ExpenseToolsTest {
 
     @Test
     void byCategoryDetailed_shouldReturnFormattedResult() {
-        when(analyticsService.findByCategory(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.findByCategory(anyString(), any(), any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("100"), "location", "Store", "date", "2024-01-15", "description", "Test", "raw_input", "receipt text")
                 ));
@@ -254,7 +254,7 @@ class ExpenseToolsTest {
 
     @Test
     void byLocation_shouldReturnFormattedResult() {
-        when(analyticsService.findByLocation(anyString(), any(), any(), eq(1L), eq(2L)))
+        when(analyticsService.findByLocation(anyString(), any(), any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("amount", new BigDecimal("50"), "category", "Food", "date", "2024-01-15", "description", "Lunch")
                 ));
@@ -266,7 +266,7 @@ class ExpenseToolsTest {
 
     @Test
     void searchByAmount_shouldReturnFormattedResult() {
-        when(analyticsService.findByAmount(any(), eq(1L), eq(2L)))
+        when(analyticsService.findByAmount(any(), any(), any()))
                 .thenReturn(List.of(
                         Map.of("category", "Food", "amount", new BigDecimal("99.99"), "location", "Lidl", "date", "2024-01-15", "description", "Groceries", "raw_input", "receipt")
                 ));
@@ -303,7 +303,7 @@ class ExpenseToolsTest {
 
     @Test
     void getExpenseItems_shouldReturnUnauthorizedMessage() {
-        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), eq(1L), eq(2L)))
+        when(expenseJpaRepository.findByIdAndFamilyIdOrUserId(anyLong(), any(), any()))
                 .thenReturn(Optional.empty());
 
         String result = expenseTools.getExpenseItems("999");
