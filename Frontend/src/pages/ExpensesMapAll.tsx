@@ -23,7 +23,6 @@ import { ArrowLeft, MapPin, Calendar, ChevronDown, Filter, Shield, ShieldOff } f
 import { fetchExpenses } from '../services/expenses';
 import { fetchCategoryNames } from '../services/lookups';
 import { familyApi } from '../services/api';
-import type { GroupMemberDTO } from '../types/GroupMemberDTO';
 import { decodeJwtPayload } from '../utils/jwt';
 import { saveGeofenceZone, getMyGeofenceZone, deleteGeofenceZone, type LatLng } from '../services/geofencing';
 
@@ -107,7 +106,6 @@ export default function ExpensesMapAll() {
   const [endDate, setEndDate] = useState(filters.endDate || '');
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [availablePeople, setAvailablePeople] = useState<string[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<GroupMemberDTO[]>([]);
 
   const inputStyle = "w-full bg-white border border-[#EDE9E3] rounded-[10px] px-4 py-2.5 text-[13px] text-[#2D2926] placeholder:text-[#C4B9AC] focus:outline-none focus:border-[#C4B9AC] transition-colors appearance-none";
 
@@ -122,7 +120,7 @@ export default function ExpensesMapAll() {
         const catsPromise = fetchCategoryNames(controller.signal);
         // If user has a family, fetch family members; otherwise do not fetch global user list.
         const peoplePromise = familyId
-          ? familyApi.getMembers(familyId).then(r => { setFamilyMembers(r.data); return r.data.map((m: any) => m.name).filter(Boolean) })
+          ? familyApi.getMembers(familyId).then(r => r.data.map((m: any) => m.name).filter(Boolean))
           : Promise.resolve([] as string[]);
 
         const [cats, people] = await Promise.all([catsPromise, peoplePromise]);
@@ -172,11 +170,6 @@ export default function ExpensesMapAll() {
     };
   }, [hasInjectedExpenses]);
 
-  // helper to create colored pin URL
-  function getColoredPin(color: string) {
-    return `data:image/svg+xml;utf8,<svg width='32' height='32' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M16 30s10-10.571 10-19A10 10 0 0 0 6 11c0 8.429 10 19 10 19z' fill='${encodeURIComponent(color)}'/><circle cx='16' cy='13' r='4' fill='white'/></svg>`
-  }
-
   // polygon drawing state (expense filter)
   const polygonRef = useRef<any>(null);
   const [drawingEnabled, setDrawingEnabled] = useState(false);
@@ -191,6 +184,7 @@ export default function ExpensesMapAll() {
 
   // selected expense / place details for left panel
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
+  const [clusterExpenses, setClusterExpenses] = useState<MapExpense[]>([]);
   const [place, setPlace] = useState<any | null>(null);
   const [placeId, setPlaceId] = useState<string | null>(null);
   const [googleMapsUri, setGoogleMapsUri] = useState<string | null>(null);
@@ -290,7 +284,7 @@ export default function ExpensesMapAll() {
   const firstWithCoords = (expenses || []).find(
     (e: any): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number'
   );
-  const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 44.4268, lng: 26.1025 };
+  const center = firstWithCoords ? { lat: firstWithCoords.lat, lng: firstWithCoords.lng } : { lat: 47.1585, lng: 27.6014 };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] font-sans flex flex-col">
@@ -496,6 +490,29 @@ export default function ExpensesMapAll() {
         {mapsApiKey && isLoaded && (
           <div className="w-full bg-white border border-[#EDE9E3] rounded-[14px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="flex flex-col md:flex-row">
+              {!selectedExpense && clusterExpenses.length > 0 && (
+                <aside className="md:w-[300px] md:border-r border-[#EDE9E3] p-5 overflow-y-auto max-h-[600px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[14px] font-medium text-[#2D2926]">{clusterExpenses.length} cheltuieli</span>
+                    <button
+                      onClick={() => setClusterExpenses([])}
+                      className="text-[12px] text-[#9A8A7C] hover:text-[#2D2926]"
+                    >✕</button>
+                  </div>
+                  {clusterExpenses.map((e: any) => (
+                    <div
+                      key={e.id}
+                      className="p-3 mb-2 bg-[#FAF8F5] border border-[#EDE9E3] rounded-[10px] cursor-pointer hover:border-[#C4B9AC] transition-colors"
+                      onClick={() => { setSelectedExpense(e); setClusterExpenses([]); setPlace(null); setGoogleMapsUri(null); setMessage(null); }}
+                    >
+                      <div className="text-[14px] font-semibold text-[#2D2926]">{e.amount?.toFixed(2)} RON</div>
+                      <div className="text-[12px] text-[#9A8A7C] mt-0.5">{e.description || e.location || 'Fără descriere'}</div>
+                      {e.rawDate && <div className="text-[11px] text-[#C4B9AC] mt-0.5">{e.rawDate}</div>}
+                    </div>
+                  ))}
+                </aside>
+              )}
+
               {selectedExpense && (
                 <aside className="md:w-[340px] md:border-r border-[#EDE9E3] p-5">
                   <div>
@@ -608,7 +625,35 @@ export default function ExpensesMapAll() {
                     />
                   )}
 
-                  <MarkerClusterer options={{ gridSize: 40, minimumClusterSize: 3 }}>
+                  <MarkerClusterer
+                    onLoad={(clustererInstance: any) => {
+                      (window as any).google.maps.event.addListener(clustererInstance, 'clusterclick', (cluster: any) => {
+                        const positions = cluster.getMarkers().map((m: any) => ({
+                          lat: m.getPosition().lat(),
+                          lng: m.getPosition().lng(),
+                        }));
+                        const matched = (filteredExpenses as any[]).filter((e: any) =>
+                          typeof e.lat === 'number' && typeof e.lng === 'number' &&
+                          positions.some((p: any) => Math.abs(p.lat - e.lat) < 0.00001 && Math.abs(p.lng - e.lng) < 0.00001)
+                        );
+                        setClusterExpenses(matched);
+                        setSelectedExpense(null);
+                        setPlace(null);
+                      });
+                    }}
+                    options={{
+                      gridSize: 40,
+                      minimumClusterSize: 2,
+
+                      styles: [{
+                        textColor: 'white',
+                        textSize: 12,
+                        width: 36,
+                        height: 36,
+                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><circle cx="18" cy="18" r="16" fill="#E53E3E" stroke="white" stroke-width="2"/></svg>')}`,
+                      }],
+                    }}
+                  >
                     {(clusterer: any) => (
                       <>
                         {filteredExpenses.filter((e: MapExpense): e is MapExpense & { lat: number; lng: number } => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (
@@ -618,8 +663,7 @@ export default function ExpensesMapAll() {
                             clusterer={clusterer}
                             title={`${e.description || e.location || ''} — ${e.amount ?? ''} RON`}
                             icon={(() => {
-                              const personName = e.person ?? ''
-                              const member = (familyMembers as any[]).find((m: any) => m.name === personName)
+                              const member = (familyMembers as any[]).find((m: any) => m.name === (e.person ?? ''))
                               const color = member?.markerColor ?? '#E53E3E'
                               return { url: getColoredPin(color), scaledSize: new (window as any).google.maps.Size(32, 32) }
                             })()}
@@ -683,18 +727,6 @@ export default function ExpensesMapAll() {
                 </GoogleMap>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Legend: person colors */}
-        {familyMembers.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
-            {familyMembers.map(m => (
-              <div key={m.userId} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
-                <span style={{ width: 12, height: 12, borderRadius: 4, background: m.markerColor ?? '#FF0000' }} />
-                <span style={{ color: '#9A8A7C' }}>{m.name}</span>
-              </div>
-            ))}
           </div>
         )}
 
