@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,7 +31,6 @@ class OCRPreProcessorTest {
 
     @Test
     void processImage_shouldProcessValidImage() throws IOException {
-        // Create a simple test image
         Path tempFile = Files.createTempFile("test_image", ".png");
         BufferedImage testImage = new BufferedImage(100, 100, BufferedImage.TYPE_3BYTE_BGR);
         javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
@@ -63,9 +63,16 @@ class OCRPreProcessorTest {
     void processImageShouldThrowExceptionForInvalidFile() {
         File invalidFile = new File("does-not-exist.png");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            preProcessor.processImage(invalidFile, "default");
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                processor.processImage(invalidFile, "default"));
+
+        assertTrue(exception.getMessage().contains("nu a fost găsit"));
+    }
+
+    @Test
+    void processImage_ShouldThrowExceptionForNullFile() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                processor.processImage(null, "revolut"));
 
         assertTrue(exception.getMessage().contains("nu a fost găsit"));
     }
@@ -75,17 +82,6 @@ class OCRPreProcessorTest {
         Path tempFile = Files.createTempFile("test_image", ".png");
         BufferedImage testImage = new BufferedImage(200, 200, BufferedImage.TYPE_3BYTE_BGR);
         javax.imageio.ImageIO.write(testImage, "png", tempFile.toFile());
-    void processImage_ShouldThrowExceptionForNullFile() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            preProcessor.processImage(null, "revolut");
-        });
-
-        assertTrue(exception.getMessage().contains("nu a fost găsit"));
-    }
-
-    @Test
-    void processPdfShouldReturnProcessedImages() throws Exception {
-        List<BufferedImage> results = preProcessor.processPdf(validPdfFile, "revolut");
 
         try {
             BufferedImage result = processor.processImage(tempFile.toFile(), "bt");
