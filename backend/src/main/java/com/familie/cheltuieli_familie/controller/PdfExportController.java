@@ -24,24 +24,32 @@ import java.time.format.DateTimeFormatter;
 @PreAuthorize("isAuthenticated()")
 public class PdfExportController {
 
+    private static final DateTimeFormatter PDF_DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     private final PdfExportService pdfExportService;
 
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportPdf(
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
+            @RequestParam(required = false) String person,
             Authentication auth) {
-        log.info("PDF export requested from={} to={}", from, to);
+        // S5145 — sanitizare înainte de logare (prevenire log injection)
+        log.info("PDF export requested from={} to={} person={}",
+                sanitizeForLog(from), sanitizeForLog(to), sanitizeForLog(person));
         try {
             LocalDate fromDate = (from != null) ? LocalDate.parse(from) : LocalDate.now().minusDays(6);
             LocalDate toDate   = (to   != null) ? LocalDate.parse(to)   : LocalDate.now();
+            String personFilter = (person != null && !person.isBlank()) ? person : null;
 
-            byte[] pdf = pdfExportService.generatePdf(fromDate, toDate, auth);
+            byte[] pdf = pdfExportService.generatePdf(fromDate, toDate, personFilter, auth);
 
+            String personSuffix = (personFilter != null)
+                    ? "-" + personFilter.replaceAll("\\s+", "-")
+                    : "";
             String filename = "evolutie-cheltuieli-"
-                    + fromDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    + "-" + toDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    + ".pdf";
+                    + fromDate.format(PDF_DATE_FMT) + "-" + toDate.format(PDF_DATE_FMT)
+                    + personSuffix + ".pdf";
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
@@ -52,5 +60,10 @@ public class PdfExportController {
             log.error("Error generating PDF", e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /** Elimină CR/LF din string-uri venite din input utilizator (S5145 — log injection). */
+    private static String sanitizeForLog(String value) {
+        return value != null ? value.replaceAll("[\r\n\t]", "_") : null;
     }
 }
